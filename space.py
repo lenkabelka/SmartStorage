@@ -57,26 +57,27 @@ class ImageWithPolygon(QGraphicsPixmapItem):
         elif event.button() == Qt.MouseButton.RightButton:
             self.polygon_item.finish_polygon()
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
 
-    scene = QGraphicsScene()
-
-    pixmap = QPixmap("space.png")
-    polygon_item = ClickablePolygon()
-    pixmap_item = ImageWithPolygon(pixmap, polygon_item)
-
-    scene.addItem(pixmap_item)
-    scene.addItem(polygon_item)
-
-    view = QGraphicsView(scene)
-
-    def finish_on_key(event):
-        if event.key() == Qt.Key.Key_Return:  # Enter
-            polygon_item.finish_polygon()
-
-    view.keyPressEvent = finish_on_key
-    view.setScene(scene)
-    view.show()
-
-    sys.exit(app.exec())
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#
+#     scene = QGraphicsScene()
+#
+#     pixmap = QPixmap("space.png")
+#     polygon_item = ClickablePolygon()
+#     pixmap_item = ImageWithPolygon(pixmap, polygon_item)
+#
+#     scene.addItem(pixmap_item)
+#     scene.addItem(polygon_item)
+#
+#     view = QGraphicsView(scene)
+#
+#     def finish_on_key(event):
+#         if event.key() == Qt.Key.Key_Return:
+#             polygon_item.finish_polygon()
+#
+#     view.keyPressEvent = finish_on_key
+#     view.setScene(scene)
+#     view.show()
+#
+#     sys.exit(app.exec())
