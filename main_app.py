@@ -2,9 +2,10 @@ from PyQt6.QtWidgets import (
     QApplication, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
     QGraphicsItem, QVBoxLayout, QPushButton, QWidget, QGraphicsColorizeEffect,
     QMenu, QGridLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QMessageBox, QStackedLayout, QFrame,
-    QStackedWidget, QFileDialog, QTreeView
+    QStackedWidget, QFileDialog, QTreeView, QMenuBar, QMainWindow
 )
-from PyQt6.QtGui import QPixmap, QImage, QKeyEvent, qAlpha, QBrush, QColor, QMouseEvent, QPainter, QFont, QStandardItemModel, QStandardItem, QPainterPath
+from PyQt6.QtGui import QPixmap, QImage, QKeyEvent, qAlpha, QBrush, QColor, QMouseEvent, QPainter, QFont, \
+    QStandardItemModel, QStandardItem, QPainterPath, QAction
 from PyQt6.QtCore import Qt, QRect, QPointF, pyqtSignal, QRectF
 import sys
 import add_projection as add_projection
@@ -15,15 +16,18 @@ import queries_for_DB as query
 import image_container
 import space
 
-
-
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle("Smart Storage")
-        self.space_name = ""
-        self.background = None
-        self.background_item = None
+
+        action_exit = QAction("Exit", self)
+        action_exit.triggered.connect(self.close)
+        menu = self.menuBar()
+        file_menu = menu.addMenu("&File")
+        about_menu = menu.addMenu("&About")
+        file_menu.addAction(action_exit)
 
         screen = QApplication.primaryScreen().geometry()
         coef_width = 0.9
@@ -35,6 +39,31 @@ class MainWindow(QWidget):
         y = 0
         #y = (screen.height() - window_height) // 2
         self.move(x, y)
+
+        self.setCentralWidget(MainWidget())
+
+
+class MainWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.space_name = ""
+        self.background = None
+        self.background_item = None
+
+        # screen = QApplication.primaryScreen().geometry()
+        # coef_width = 0.9
+        # coef_height = 0.9
+        # window_width = int(screen.width() * coef_width)
+        # window_height = int(screen.height() * coef_height)
+        # self.resize(window_width, window_height)
+        # x = (screen.width() - window_width) // 2
+        # y = 0
+        # #y = (screen.height() - window_height) // 2
+        # self.move(x, y)
+
+        # menubar = QMenuBar(self)
+        # file_menu = QMenu("Open space ...", self)
+        # exit_action = QAction("Exit", self)
 
         self.parent_space = space.Space("", "")
         self.subspaces = []
