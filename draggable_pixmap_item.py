@@ -43,25 +43,25 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.path_2 = utils.get_path(utils.get_contours(pixmap)[0], utils.get_contours(pixmap)[1])
 
 
-    def paint(self, painter, option, widget=None):
-        # Сначала рисуем само изображение
-        super().paint(painter, option, widget)
-
-        # Рисуем контур background (path_1), с трансляцией в локальные координаты self
-        if self.path_1:
-            pen = QPen(Qt.GlobalColor.red)
-            pen.setWidth(2)
-            painter.setPen(pen)
-            path_translated = self.path_1.translated(self.mapFromItem(self.parent_background_item, 0, 0))
-            painter.drawPath(path_translated)
-
-        # Рисуем контур self (path_1)
-        if self.path_2:
-            pen_bg = QPen(Qt.GlobalColor.green)
-            pen_bg.setWidth(2)
-            pen_bg.setStyle(Qt.PenStyle.DashLine)
-            painter.setPen(pen_bg)
-            painter.drawPath(self.path_2)
+    # def paint(self, painter, option, widget=None):
+    #     # Сначала рисуем само изображение
+    #     super().paint(painter, option, widget)
+    #
+    #     # Рисуем контур background (path_1), с трансляцией в локальные координаты self
+    #     if self.path_1:
+    #         pen = QPen(Qt.GlobalColor.red)
+    #         pen.setWidth(2)
+    #         painter.setPen(pen)
+    #         path_translated = self.path_1.translated(self.mapFromItem(self.parent_background_item, 0, 0))
+    #         painter.drawPath(path_translated)
+    #
+    #     # Рисуем контур self (path_1)
+    #     if self.path_2:
+    #         pen_bg = QPen(Qt.GlobalColor.green)
+    #         pen_bg.setWidth(2)
+    #         pen_bg.setStyle(Qt.PenStyle.DashLine)
+    #         painter.setPen(pen_bg)
+    #         painter.drawPath(self.path_2)
 
 
     def mousePressEvent(self, event):
@@ -102,15 +102,13 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
     def hoverLeaveEvent(self, event):
         if not self.is_editable:
-            effect = QGraphicsColorizeEffect()
-            effect.setColor(QColor("black"))
-            self.setGraphicsEffect(effect)
+            self.setGraphicsEffect(None)
 
 
     def freeze(self):
-        # Зафиксировать картинку, блокируя её перемещение
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
         self.fixed = True
+        self.setGraphicsEffect(None)
 
 
     def unfreeze(self):
