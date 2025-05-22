@@ -121,7 +121,13 @@ def insert_subspace(id_parent_space, space_name, space_description):
 # x_pos_in_parent_projection
 # y_pos_in_parent_projection
 # projection_image
-def insert_projection_of_subspace(id_parent_projection, id_parent_space, projection_name, projection_description, projection_image):
+def insert_projection_of_subspace(id_parent_projection,
+                                  id_parent_space,
+                                  projection_name,
+                                  projection_description,
+                                  x_pos_in_parent_projection,
+                                  y_pos_in_parent_projection,
+                                  projection_image):
     query = """
             INSERT INTO spaces.projections (id_parent_projection, id_parent_space, projection_name, 
             projection_description, x_pos_in_parent_projection, y_pos_in_parent_projection, projection_image)
@@ -129,7 +135,13 @@ def insert_projection_of_subspace(id_parent_projection, id_parent_space, project
             RETURNING id_projection;
         """
     image_bytes = utils.pixmap_to_bytes(projection_image.pixmap())
-    values = (id_parent_projection, id_parent_space, projection_name, projection_description, None, None, psycopg2.Binary(image_bytes))
+    values = (id_parent_projection,
+              id_parent_space,
+              projection_name,
+              projection_description,
+              x_pos_in_parent_projection,
+              y_pos_in_parent_projection,
+              psycopg2.Binary(image_bytes))
 
     conn = None
     try:
@@ -174,3 +186,10 @@ def insert_image(image, parent_id):
     finally:
         if conn:
             conn.close()
+
+
+""" В рамках одного пространства развертки имеют уникальное имя.
+ Нужно найти все развертки пространства, потом найти для каждой развертки все её подразвертки (подпространства), 
+ у которых она родительская развертка (id_parent_projection).
+ При этом в MainWidget хранить словарь {развертка_1: [[подразвертка_1, x, y], [подразвертка_2, x, y]], 
+                                        развертка_2: [[подразвертка_1, x, y], [подразвертка_2, x, y]] ... } """

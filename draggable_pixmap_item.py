@@ -3,8 +3,9 @@ from PyQt6.QtWidgets import (QGraphicsPixmapItem,
                              QGraphicsColorizeEffect,
                              QMenu
                              )
-from PyQt6.QtGui import QColor, QPen
-from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtGui import QColor, QPen, QPainterPath, QPixmap
+from PyQt6.QtCore import Qt, QPointF, pyqtSlot
+from PyQt6.QtGui import QWheelEvent
 import image_utils as utils
 import math
 
@@ -16,7 +17,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.scene_ref = scene
         self.drag_offset = QPointF()
         self.binary_search = "version_1"
-        self.parent_background_item = QGraphicsPixmapItem(background_pixmap)
+        self.pixmap = pixmap
+        #self.parent_background_item = QGraphicsPixmapItem(background_pixmap)
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
 
@@ -38,9 +40,10 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.item_id = id(self)
 
         self.background_pixmap = background_pixmap
+        #self.path_1 = background_path
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(pixmap)[0], utils.get_contours(pixmap)[1])
+        self.path_2 = utils.get_path(utils.get_contours(self.pixmap)[0], utils.get_contours(self.pixmap)[1])
 
 
     # def paint(self, painter, option, widget=None):
@@ -64,6 +67,22 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
     #         painter.drawPath(self.path_2)
 
 
+    # @pyqtSlot(QPixmap)
+    # def change_background_path(self, new_background_pixmap):
+    #     self.background_pixmap = new_background_pixmap
+    #     self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0],
+    #                                  utils.get_contours(self.background_pixmap)[1])
+
+
+    def update_path(self, new_background_pixmap):
+        print(f"old_background: {self.background_pixmap}")
+        self.background_pixmap = new_background_pixmap
+        print(f"new_background: {self.background_pixmap}")
+
+        self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        self.path_2 = utils.get_path(utils.get_contours(self.pixmap)[0], utils.get_contours(self.pixmap)[1])
+
+
     def mousePressEvent(self, event):
         self.drag_offset = event.pos()
 
@@ -71,15 +90,21 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
             delete_action = menu.addAction("Удалить")
-            action2 = menu.addAction("Подвинуть")
+            freeze_action = menu.addAction("Зафиксировать")
+            move_action = menu.addAction("Подвинуть")
             # Используем screenPos, чтобы меню открылось в нужном месте
             selected_action = menu.exec(event.screenPos())
             if selected_action == delete_action:
                 print("Выбрана опция: Удалить")
                 self.scene_ref.removeItem(self)
-                self.app_ref.remove_item(self)
+                self.app_ref.remove_subspace(self)
                 self.app_ref.update_tree_view()
-            elif selected_action == action2:
+
+            elif selected_action == freeze_action:
+                self.freeze()
+                self.is_editable = False
+
+            elif selected_action == move_action:
                 self.app_ref.unfreeze_subspace(self)
                 print("Выбрана опция: Подвинуть")
         else:
