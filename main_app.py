@@ -467,6 +467,9 @@ class MainWidget(QWidget):
 
                         new_space = space.Space(name, dict_of_new_space["description"])
 
+
+                        #print(self.parent_space)
+
                         if self.parent_space.subspaces is None:
                             self.parent_space.subspaces = []
                         self.parent_space.subspaces.append(new_space)
@@ -477,7 +480,6 @@ class MainWidget(QWidget):
 
                         #self.add_projection_of_subspace(new_space)
                         self.add_subspace_projection(new_space)
-
                         self.update_tree_view()
 
                     break  # успех — выходим из цикла
@@ -487,7 +489,7 @@ class MainWidget(QWidget):
 
 
     def add_subspace_projection(self, subspace: space.Space):
-        if not self.parent_space.current_projection.projection_image:
+        if not self.parent_space.current_projection:
             QMessageBox.warning(self, "Добавьте проекцию пространства",
                                 "Чтобы добавить проекцию подпространства в пространство, "
                                 "необходимо вначале добавить проекцию пространства!")
