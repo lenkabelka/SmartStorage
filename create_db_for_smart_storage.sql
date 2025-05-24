@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
     x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
     y_pos_in_parent_projection NUMERIC,  -- Y coordinate relative to parent projection
     projection_image BYTEA,
+    projection_width NUMERIC,
+    projection_height NUMERIC,
     CONSTRAINT fk_parent_projection
         FOREIGN KEY (id_parent_projection)
         REFERENCES spaces.projections(id_projection)
@@ -37,6 +39,7 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
 -- Table: images
 CREATE TABLE IF NOT EXISTS spaces.images (
     id_image SERIAL PRIMARY KEY,
+    thing_name TEXT,
     image BYTEA NOT NULL,
     id_parent_space INTEGER NOT NULL,    -- Reference to the parent space
     CONSTRAINT fk_space_image
@@ -45,33 +48,25 @@ CREATE TABLE IF NOT EXISTS spaces.images (
         ON DELETE CASCADE
 );
 
--- Table: items
-CREATE TABLE spaces.items (
-    id_item SERIAL PRIMARY KEY,
-    item_name TEXT NOT NULL,
-    item_description TEXT,
+-- Table: things
+CREATE TABLE spaces.things (
+    id_thing SERIAL PRIMARY KEY,
+    thing_name TEXT NOT NULL,
+    thing_description TEXT,
+    thing_image BYTEA,
     id_parent_space INTEGER NOT NULL,
-    CONSTRAINT fk_item_space
+    id_parent_projection INTEGER,
+    x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
+    y_pos_in_parent_projection NUMERIC,  -- Y coordinate relative to parent projection
+    thing_projection_image BYTEA,
+    thing_projection_width NUMERIC,
+    thing_projection_height NUMERIC,
+    CONSTRAINT fk_parent_space
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)
-        ON DELETE CASCADE
-);
-
-
--- Table: items_projections
-CREATE TABLE spaces.items_projections (
-    id_item_projection SERIAL PRIMARY KEY,
-    id_parent_item INTEGER NOT NULL,
-    id_parent_projection INTEGER NOT NULL,
-    x_pos_in_parent_projection NUMERIC,
-    y_pos_in_parent_projection NUMERIC,
-    CONSTRAINT fk_item
-        FOREIGN KEY (id_parent_item)
-        REFERENCES spaces.items(id_item)
         ON DELETE CASCADE,
-    CONSTRAINT fk_projection
+    CONSTRAINT fk_parent_projection
         FOREIGN KEY (id_parent_projection)
         REFERENCES spaces.projections(id_projection)
-        ON DELETE CASCADE,
-    CONSTRAINT uq_item_projection UNIQUE (id_parent_item, id_parent_projection)
+        ON DELETE CASCADE
 );

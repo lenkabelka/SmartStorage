@@ -15,3 +15,4 @@ class Space:
     sub_projections: list[projection.Projection] | None = None
     subspaces: list[Optional["Space"]] | None = None
     space_images: list[QPixmap] | None = None
+    id_space: int | None = None

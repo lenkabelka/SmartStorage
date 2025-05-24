@@ -51,15 +51,33 @@ def insert_space(space_name, space_description):
 # x_pos_in_parent_projection
 # y_pos_in_parent_projection
 # projection_image
-def insert_projection_of_space(id_parent_space, projection_name, projection_description, projection_image):
+# projection_width
+# projection_height
+def insert_projection_of_space(id_parent_space,
+                               projection_name,
+                               projection_description,
+                               projection_image,
+                               projection_width,
+                               projection_height):
+
     query = """
-            INSERT INTO spaces.projections (id_parent_projection, id_parent_space, projection_name, 
-            projection_description, x_pos_in_parent_projection, y_pos_in_parent_projection, projection_image)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO spaces.projections (
+            id_parent_projection, 
+            id_parent_space, 
+            projection_name, 
+            projection_description, 
+            x_pos_in_parent_projection, 
+            y_pos_in_parent_projection, 
+            projection_image, 
+            projection_width, 
+            projection_height
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_projection;
         """
-    image_bytes = utils.pixmap_to_bytes(projection_image.pixmap())
-    values = (None, id_parent_space, projection_name, projection_description, None, None, psycopg2.Binary(image_bytes))
+
+    image_bytes = utils.pixmap_to_bytes(projection_image)
+    values = (None, id_parent_space, projection_name, projection_description, None, None, psycopg2.Binary(image_bytes), projection_width, projection_height)
 
     conn = None
     try:
@@ -121,27 +139,42 @@ def insert_subspace(id_parent_space, space_name, space_description):
 # x_pos_in_parent_projection
 # y_pos_in_parent_projection
 # projection_image
+# projection_width
+# projection_height
 def insert_projection_of_subspace(id_parent_projection,
                                   id_parent_space,
                                   projection_name,
                                   projection_description,
                                   x_pos_in_parent_projection,
                                   y_pos_in_parent_projection,
-                                  projection_image):
+                                  projection_image,
+                                  projection_width,
+                                  projection_height):
     query = """
-            INSERT INTO spaces.projections (id_parent_projection, id_parent_space, projection_name, 
-            projection_description, x_pos_in_parent_projection, y_pos_in_parent_projection, projection_image)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO spaces.projections (
+            id_parent_projection, 
+            id_parent_space, 
+            projection_name, 
+            projection_description, 
+            x_pos_in_parent_projection, 
+            y_pos_in_parent_projection, 
+            projection_image,
+            projection_width,
+            projection_height
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_projection;
         """
-    image_bytes = utils.pixmap_to_bytes(projection_image.pixmap())
+    image_bytes = utils.pixmap_to_bytes(projection_image)
     values = (id_parent_projection,
               id_parent_space,
               projection_name,
               projection_description,
               x_pos_in_parent_projection,
               y_pos_in_parent_projection,
-              psycopg2.Binary(image_bytes))
+              psycopg2.Binary(image_bytes),
+              projection_width,
+              projection_height)
 
     conn = None
     try:

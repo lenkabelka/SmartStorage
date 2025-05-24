@@ -120,6 +120,7 @@ def get_scaled_pixmap_1(image: QImage,
 def pixmap_to_bytes(pixmap: QPixmap) -> bytes:
     buffer = QBuffer()
     buffer.open(QBuffer.OpenModeFlag.ReadWrite)
+    # TODO сделать обработку других форматов
     pixmap.save(buffer, "PNG")
     return bytes(buffer.data())
 
