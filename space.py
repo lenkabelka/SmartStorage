@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from PyQt6.QtGui import QPixmap
 
 import projection
+import object_state
 from typing import Optional
 
 
@@ -16,3 +17,5 @@ class Space:
     subspaces: list[Optional["Space"]] | None = None
     space_images: list[QPixmap] | None = None
     id_space: int | None = None
+
+    space_object_state: object_state.State = object_state.State.NEW

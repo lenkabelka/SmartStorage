@@ -16,8 +16,8 @@ import queries_for_DB as query
 import image_container
 import space
 import zoomable_graphics_view
-from typing import Optional, List
 import projection as pr
+import projection_container as container
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -66,6 +66,8 @@ class MainWidget(QWidget):
         #self.items = []
         self.current_subspace = None
 
+        self.saved_current_space_projection = False
+
 ############## wellcome page ###########################################################################################
 
         self.wellcome_page = QFrame()
@@ -93,18 +95,29 @@ class MainWidget(QWidget):
 
         self.layout_space_creation = QVBoxLayout()
         self.container_images_of_space = QWidget()
+
         #container_images_of_space.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        self.layout_images = QVBoxLayout()
         self.layout_images_of_space = QHBoxLayout()
 
         self.scroll_for_images = QScrollArea()
         self.scroll_for_images.setWidgetResizable(True)
         self.scroll_for_images.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.scroll_for_images.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         #scroll_for_images.setWidgetResizable(True)
         #scroll_for_images.adjustSize()
         #scroll_for_images.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
 
+        #self.layout_projections = QVBoxLayout()
+
         self.layout_projections_of_space = QVBoxLayout()
+
+
+
+        #self.layout_projections.addLayout(self.layout_projections_of_space)
+        #self.layout_projections.addWidget(self.add_new_space_projection_button)
+
         self.container_projections_of_space = QWidget()  # контейнер для развертки
 
         self.scroll_for_projections_of_space = QScrollArea()
@@ -115,6 +128,18 @@ class MainWidget(QWidget):
         self.container_projections_of_space.adjustSize()
         self.scroll_for_projections_of_space.setWidget(self.container_projections_of_space)
 
+        self.layout_projections = QVBoxLayout()
+
+        self.add_new_space_projection_button = QPushButton("Add new space projection")
+
+        self.layout_projections.addWidget(self.scroll_for_projections_of_space)
+        self.layout_projections.addWidget(self.add_new_space_projection_button)
+
+        #self.layout_projections_of_space.addWidget(self.add_new_space_projection_button)
+
+
+        #self.add_image_of_space_button = QPushButton("Add image of space")
+        #self.add_image_of_space_button.clicked.connect(self.add_image_of_space)
 
         self.container_images_of_space.setLayout(self.layout_images_of_space)
         self.container_images_of_space.adjustSize()
@@ -122,6 +147,8 @@ class MainWidget(QWidget):
         #layout_images_of_space.setContentsMargins(0, 0, 0, 0)
         #scroll_for_images.setContentsMargins(0, 0, 0, 0)
         #scroll_for_images.adjustSize()
+        self.layout_images.addLayout(self.layout_images_of_space)
+        #self.layout_images.addWidget(self.add_image_of_space_button)
 
 
         #layout_images_of_space.addWidget(scroll_for_images)
@@ -161,9 +188,12 @@ class MainWidget(QWidget):
         self.save_space_button = QPushButton("Save space")
         self.save_space_button.clicked.connect(self.save_space_to_DB)
 
+        self.save_current_projection_button = QPushButton("Save current projection")
+        self.save_current_projection_button.clicked.connect(self.save_current_projection)
+
         self.button_layout.addWidget(self.add_projection_of_space_button)
         self.button_layout.addWidget(self.add_subspace_button)
-        self.button_layout.addWidget(self.add_image_of_space_button)
+        self.button_layout.addWidget(self.save_current_projection_button)
         self.button_layout.addWidget(self.save_space_button)
 
         self.layout_space_creation.addWidget(self.view)
@@ -178,7 +208,12 @@ class MainWidget(QWidget):
 
         self.layout_main.addLayout(self.button_layout, 1, 0)
         self.layout_main.setRowStretch(1, 1)
-        self.layout_main.addWidget(self.scroll_for_images, 2, 0)#, 1, 2)
+
+        self.layout_images.addWidget(self.scroll_for_images)
+        self.layout_images.addWidget(self.add_image_of_space_button)
+
+        self.layout_main.addLayout(self.layout_images, 2, 0)  # , 1, 2)###################################
+        #self.layout_main.addWidget(self.scroll_for_images, 2, 0)#, 1, 2)###################################
         self.layout_main.setRowStretch(2, 2)
 
         #self.left_view_frame = QFrame()
@@ -192,7 +227,9 @@ class MainWidget(QWidget):
 
 
         #self.left_layout = QHBoxLayout()
-        self.right_layout.addWidget(self.scroll_for_projections_of_space, 0, 0)
+
+        self.right_layout.addLayout(self.layout_projections, 0, 0)
+        #self.right_layout.addWidget(self.scroll_for_projections_of_space, 0, 0)
         self.layout_main.setColumnStretch(0, 1)
         self.right_layout.addWidget(self.tree, 0, 1)
         self.layout_main.setColumnStretch(1, 1)
@@ -251,6 +288,7 @@ class MainWidget(QWidget):
 
                     if name != self.parent_space.name:
                         self.parent_space = space.Space(name, dict_of_new_space["description"])
+                        print(f"object_state: {self.parent_space.space_object_state}")
 
                         self.current_index = 1
                         self.stack_widget.setCurrentIndex(self.current_index)
@@ -369,6 +407,9 @@ class MainWidget(QWidget):
                             break
 
                         # Замена существующей фоновой картинки и других данных о развертке
+
+                        #TODO пересчет размеров подразверток при изменении размера развертки
+
                         else:
                             print("PUNKT_ELSE!")
                             if self.background_item:
@@ -632,6 +673,42 @@ class MainWidget(QWidget):
             print(f"После удаления: {self.parent_space.space_images}")
 
 
+
+    def save_current_projection(self):
+        self.saved_current_space_projection = True
+
+        # Сохраняем относительные позиции всех подпроекций
+        if self.parent_space.sub_projections:
+            print("Всё ок!")
+
+        for sub_projection in self.parent_space.sub_projections:
+
+            if sub_projection.scaled_projection_pixmap:
+                print(sub_projection.scaled_projection_pixmap)
+                print("Всё тоже ок!")
+
+            item = sub_projection.scaled_projection_pixmap
+            if item is None or self.background_item is None:
+                continue  # пропустить, если что-то не инициализировано
+            relative_pos = self.background_item.mapFromItem(item, 0, 0)
+            sub_projection.x_pos = relative_pos.x()
+            sub_projection.y_pos = relative_pos.y()
+            print("И тут ок!")
+        # Создание миниатюры текущей сцены
+        mini_projection = container.ProjectionContainer(
+            self.background_item,
+            self.parent_space.sub_projections,
+            self.container_projections_of_space.contentsRect().width()
+        )
+        #mini_projection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
+        self.layout_projections_of_space.addWidget(mini_projection)
+        print(mini_projection.scene.sceneRect())
+
+
+
+
+
     def save_space_to_DB(self):
 
         print("save")
@@ -686,7 +763,7 @@ class MainWidget(QWidget):
               sub_projection.projection_description,
               relative_pos.x(),
               relative_pos.y(),
-              QPixmap(sub_projection.projection_image),
+              QPixmap.fromImage(sub_projection.projection_image),
               sub_projection.projection_width,
               sub_projection.projection_height)
 
@@ -732,11 +809,13 @@ class MainWidget(QWidget):
         # При удалении подпространства необходимо удалить
         # его подразвертку из self.sub_projections
         # и его пространство из self.subspaces и также саму картинку со сцены
+
+
     def remove_subspace(self, draggable_item_pointer):
         # Находим объект Projection, который содержит картинку , по которой был произведен щелчок:
         print("Punkt_1")
         subprojection_to_remove = next((projection for projection in self.parent_space.sub_projections
-                                    if projection.scaled_projection_image == draggable_item_pointer), None)
+                                    if projection.scaled_projection_pixmap == draggable_item_pointer), None)
         print(subprojection_to_remove)
         print("Punkt_2")
         subspace_to_remove = next((subspace for subspace in self.parent_space.subspaces

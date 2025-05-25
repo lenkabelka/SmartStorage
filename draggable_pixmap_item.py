@@ -17,7 +17,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.scene_ref = scene
         self.drag_offset = QPointF()
         self.binary_search = "version_1"
-        self.pixmap = pixmap
+        self.original_pixmap = pixmap
         #self.parent_background_item = QGraphicsPixmapItem(background_pixmap)
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
@@ -43,7 +43,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         #self.path_1 = background_path
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.pixmap)[0], utils.get_contours(self.pixmap)[1])
+        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
     # def paint(self, painter, option, widget=None):
@@ -80,7 +80,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         print(f"new_background: {self.background_pixmap}")
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.pixmap)[0], utils.get_contours(self.pixmap)[1])
+        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
     def mousePressEvent(self, event):
@@ -97,8 +97,11 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             if selected_action == delete_action:
                 print("Выбрана опция: Удалить")
                 self.scene_ref.removeItem(self)
+                print("Выбрана опция: Удалить_1")
                 self.app_ref.remove_subspace(self)
+                print("Выбрана опция: Удалить_2")
                 self.app_ref.update_tree_view()
+                print("Выбрана опция: Удалить_3")
 
             elif selected_action == freeze_action:
                 self.freeze()
