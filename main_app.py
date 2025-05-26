@@ -457,9 +457,9 @@ class MainWidget(QWidget):
                             # self.view.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorViewCenter)
                             # self.view.fitInView(self.background_item, Qt.AspectRatioMode.KeepAspectRatio)
 
-                            if self.parent_space.sub_projections:
-
-                                for subproj in self.parent_space.sub_projections:
+                            if self.parent_space.current_projection.sub_projections:
+                                # TODO нужен ли if после переноса подразверток
+                                for subproj in self.parent_space.current_projection.sub_projections:
                                     if subproj.reference_to_parent_projection == self.parent_space.current_projection:
                                         print(f"subproj: {subproj}")
                                         subproj.scaled_projection_pixmap.update_path(self.background)
@@ -553,8 +553,8 @@ class MainWidget(QWidget):
 
 
                     is_projection_name_busy = False
-                    if self.parent_space.sub_projections:
-                        is_projection_name_busy = next((name for name in self.parent_space.sub_projections
+                    if self.parent_space.current_projection.sub_projections:
+                        is_projection_name_busy = next((name for name in self.parent_space.current_projection.sub_projections
                                                         if name.projection_name == projection_name), None)
 
 
@@ -587,16 +587,12 @@ class MainWidget(QWidget):
                                                        temp_dict_new_subspace_projection["x_sm"],
                                                        temp_dict_new_subspace_projection["y_sm"],
                                                        subspace)
-                        print("I am here!")
-                        if self.parent_space.sub_projections is None:
-                            print(type(self.parent_space.sub_projections))
-                            self.parent_space.sub_projections = []
-                            print(self.parent_space.sub_projections)
-                        #self.parent_space.sub_projections.append(sub_projection)
-                        print(type(self.parent_space.sub_projections))
+
+                        if self.parent_space.current_projection.sub_projections is None:
+                            self.parent_space.current_projection.sub_projections = []
 
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
-                        sub_projection.reference_to_parent_projection = self.parent_space.current_projection
+                        sub_projection.reference_to_parent_projection = self.parent_space.current_projection  # TODO нужен ли if после переноса подразверток
 
                         item = draggable_item.DraggablePixmapItem(pixmap, self.scene, self, self.background)
 
@@ -606,7 +602,7 @@ class MainWidget(QWidget):
                         if temp_dict_new_subspace_projection["description"]:
                             sub_projection.projection_description = temp_dict_new_subspace_projection["description"]
 
-                        self.parent_space.sub_projections.append(sub_projection)
+                        self.parent_space.current_projection.sub_projections.append(sub_projection)
 
                         item.setPos(0, 0)
                         item.old_pos = item.pos()
@@ -682,11 +678,11 @@ class MainWidget(QWidget):
         if self.background_item:
             self.scene.removeItem(self.background_item)
 
-        if self.parent_space.sub_projections:
-            for subprojection in self.parent_space.sub_projections:
+        if self.parent_space.current_projection.sub_projections:
+            for subprojection in self.parent_space.current_projection.sub_projections:
                 self.scene.removeItem(subprojection.scaled_projection_pixmap)
 
-        self.parent_space.current_projection = None
+        self.parent_space.current_projection = None   # TODO проверить, что содержит Projection, ранее бывшая current_projection
         #self.parent_space.sub_projections = []
 
         self.add_space_projection()
@@ -698,9 +694,9 @@ class MainWidget(QWidget):
             return
         else:
             if not self.mini_projections_list:
-                if self.parent_space.sub_projections:
+                if self.parent_space.current_projection.sub_projections:
                     print("Я тут!,,,,")
-                    for sub_projection in self.parent_space.sub_projections:
+                    for sub_projection in self.parent_space.current_projection.sub_projections:
 
                         item = sub_projection.scaled_projection_pixmap
                         if item is None or self.background_item is None:
@@ -712,7 +708,7 @@ class MainWidget(QWidget):
                     mini_projection = container.ProjectionContainer(
                         self.background_item,
                         self.parent_space.current_projection,
-                        self.parent_space.sub_projections
+                        self.parent_space.current_projection.sub_projections # TODO см предыдущую строчку
                     )
                     print("Я тут!!!!!!!!!!")
                 else:
@@ -731,8 +727,8 @@ class MainWidget(QWidget):
                                                   mini.saved_projection == self.parent_space.current_projection), None)
                 print(mini_projection_to_change)
                 if mini_projection_to_change:
-                    if self.parent_space.sub_projections:
-                        for sub_projection in self.parent_space.sub_projections:
+                    if self.parent_space.current_projection.sub_projections:
+                        for sub_projection in self.parent_space.current_projection.sub_projections:
 
                             item = sub_projection.scaled_projection_pixmap
                             if item is None or self.background_item is None:
@@ -740,7 +736,7 @@ class MainWidget(QWidget):
                             relative_pos = self.background_item.mapFromItem(item, 0, 0)
                             sub_projection.x_pos = relative_pos.x()
                             sub_projection.y_pos = relative_pos.y()
-                        mini_projection_to_change.update_scene(self.background_item, self.parent_space.sub_projections)
+                        mini_projection_to_change.update_scene(self.background_item, self.parent_space.current_projection.sub_projections)
 
                     else:
                         mini_projection_to_change.update_scene(self.background_item)
@@ -756,15 +752,15 @@ class MainWidget(QWidget):
                         new_widget = container.ProjectionContainer(
                             self.background_item,
                             self.parent_space.current_projection,
-                            self.parent_space.sub_projections
+                            self.parent_space.current_projection.sub_projections # TODO см строчку выше
                         )
                         self.mini_projections_list[index] = new_widget
                         self.layout_projections_of_space.insertWidget(index, new_widget)
 
                 else:
-                    if self.parent_space.sub_projections:
+                    if self.parent_space.current_projection.sub_projections:
                         print("Я тут!,,,,")
-                        for sub_projection in self.parent_space.sub_projections:
+                        for sub_projection in self.parent_space.current_projection.sub_projections:
 
                             item = sub_projection.scaled_projection_pixmap
                             if item is None or self.background_item is None:
@@ -776,7 +772,7 @@ class MainWidget(QWidget):
                         mini_projection = container.ProjectionContainer(
                             self.background_item,
                             self.parent_space.current_projection,
-                            self.parent_space.sub_projections
+                            self.parent_space.current_projection.sub_projections # TODO см строчку выше
                         )
                         print("Я тут!!!!!!!!!!")
                     else:
@@ -791,19 +787,6 @@ class MainWidget(QWidget):
                     for mini in self.mini_projections_list:
                         self.layout_projections_of_space.addWidget(mini)
                         self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -978,14 +961,14 @@ class MainWidget(QWidget):
 
     def remove_subspace(self, draggable_item_pointer):
         # Находим объект Projection, который содержит картинку, по которой был произведен щелчок:
-        subprojection_to_remove = next((projection for projection in self.parent_space.sub_projections
+        subprojection_to_remove = next((projection for projection in self.parent_space.current_projection.sub_projections
                                     if projection.scaled_projection_pixmap == draggable_item_pointer), None)
 
         subspace_to_remove = next((subspace for subspace in self.parent_space.subspaces
                                    if subspace == subprojection_to_remove.reference_to_parent_space), None)
 
         self.parent_space.subspaces.remove(subspace_to_remove)
-        self.parent_space.sub_projections.remove(subprojection_to_remove)
+        self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
 
 
     def unfreeze_subspace(self, item):

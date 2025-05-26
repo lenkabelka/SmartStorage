@@ -21,5 +21,6 @@ class Projection:
     id_projection: int | None = None
     id_parent_projection: int | None = None
     id_parent_space: int | None = None
+    sub_projections: list[Optional["Projection"]] | None = None
 
     projection_object_state: object_state.State = object_state.State.NEW

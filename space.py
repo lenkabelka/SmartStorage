@@ -13,7 +13,7 @@ class Space:
     description: str
     projections: list[projection.Projection] | None = None
     current_projection: projection.Projection | None = None
-    sub_projections: list[projection.Projection] | None = None
+    #sub_projections: list[projection.Projection] | None = None
     subspaces: list[Optional["Space"]] | None = None
     space_images: list[QPixmap] | None = None
     id_space: int | None = None
