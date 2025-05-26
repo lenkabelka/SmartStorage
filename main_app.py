@@ -66,7 +66,7 @@ class MainWidget(QWidget):
         #self.items = []
         self.current_subspace = None
 
-        self.saved_current_space_projection = False
+        self.mini_projections_list = []
 
 ############## wellcome page ###########################################################################################
 
@@ -112,11 +112,6 @@ class MainWidget(QWidget):
         #self.layout_projections = QVBoxLayout()
 
         self.layout_projections_of_space = QVBoxLayout()
-
-
-
-        #self.layout_projections.addLayout(self.layout_projections_of_space)
-        #self.layout_projections.addWidget(self.add_new_space_projection_button)
 
         self.container_projections_of_space = QWidget()  # контейнер для развертки
 
@@ -673,40 +668,70 @@ class MainWidget(QWidget):
             print(f"После удаления: {self.parent_space.space_images}")
 
 
-
     def save_current_projection(self):
-        self.saved_current_space_projection = True
+        if not self.background_item:
+            QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
+            return
+        else:
+            if self.mini_projections_list:
+                print(f"self.mini_projections_list: {self.mini_projections_list}")
+                mini_projection_to_change = next(mini for mini in self.mini_projections_list if mini.saved_projection == self.parent_space.current_projection)
+                if mini_projection_to_change:
+                    if self.parent_space.sub_projections:
+                        for sub_projection in self.parent_space.sub_projections:
 
-        # Сохраняем относительные позиции всех подпроекций
-        if self.parent_space.sub_projections:
-            print("Всё ок!")
+                            item = sub_projection.scaled_projection_pixmap
+                            if item is None or self.background_item is None:
+                                continue
+                            relative_pos = self.background_item.mapFromItem(item, 0, 0)
+                            sub_projection.x_pos = relative_pos.x()
+                            sub_projection.y_pos = relative_pos.y()
+                        mini_projection_to_change.update_scene(self.background_item, self.parent_space.sub_projections)
 
-        for sub_projection in self.parent_space.sub_projections:
+                    else:
+                        mini_projection_to_change.update_scene(self.background_item)
 
-            if sub_projection.scaled_projection_pixmap:
-                print(sub_projection.scaled_projection_pixmap)
-                print("Всё тоже ок!")
+                    index = self.layout_projections_of_space.indexOf(mini_projection_to_change)
+                    if index != -1:
+                        # Удаляю виджет из layout и памяти
+                        widget_item = self.layout_projections_of_space.itemAt(index)
+                        old_widget = widget_item.widget()
+                        self.layout_projections_of_space.removeWidget(old_widget)
+                        old_widget.setParent(None)  # Открепить и удалить
 
-            item = sub_projection.scaled_projection_pixmap
-            if item is None or self.background_item is None:
-                continue  # пропустить, если что-то не инициализировано
-            relative_pos = self.background_item.mapFromItem(item, 0, 0)
-            sub_projection.x_pos = relative_pos.x()
-            sub_projection.y_pos = relative_pos.y()
-            print("И тут ок!")
-        # Создание миниатюры текущей сцены
-        mini_projection = container.ProjectionContainer(
-            self.background_item,
-            self.parent_space.sub_projections,
-            self.container_projections_of_space.contentsRect().width()
-        )
-        #mini_projection.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+                        new_widget = container.ProjectionContainer(
+                            self.background_item,
+                            self.parent_space.current_projection,
+                            self.parent_space.sub_projections
+                        )
+                        self.mini_projections_list[index] = new_widget
+                        self.layout_projections_of_space.insertWidget(index, new_widget)
 
-        self.layout_projections_of_space.addWidget(mini_projection)
-        print(mini_projection.scene.sceneRect())
+            else:
+                if self.parent_space.sub_projections:
+                    for sub_projection in self.parent_space.sub_projections:
 
+                        item = sub_projection.scaled_projection_pixmap
+                        if item is None or self.background_item is None:
+                            continue
+                        relative_pos = self.background_item.mapFromItem(item, 0, 0)
+                        sub_projection.x_pos = relative_pos.x()
+                        sub_projection.y_pos = relative_pos.y()
 
+                    mini_projection = container.ProjectionContainer(
+                        self.background_item,
+                        self.parent_space.current_projection,
+                        self.parent_space.sub_projections
+                    )
 
+                else:
+                    mini_projection = container.ProjectionContainer(self.background_item,
+                                                                    self.parent_space.current_projection)
+
+                self.mini_projections_list.append(mini_projection)
+                print(f"self.mini_projections_list: {self.mini_projections_list}")
+                self.layout_projections_of_space.addWidget(mini_projection)
+                self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
     def save_space_to_DB(self):
