@@ -39,9 +39,9 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
 -- Table: images
 CREATE TABLE IF NOT EXISTS spaces.images (
     id_image SERIAL PRIMARY KEY,
-    thing_name TEXT,
-    image BYTEA NOT NULL,
     id_parent_space INTEGER NOT NULL,    -- Reference to the parent space
+    image BYTEA NOT NULL,
+    image_name TEXT,
     CONSTRAINT fk_space_image
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)

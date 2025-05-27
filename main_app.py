@@ -689,6 +689,7 @@ class MainWidget(QWidget):
 
 
     def save_current_projection(self):
+
         if not self.background_item:
             QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
             return
@@ -697,7 +698,6 @@ class MainWidget(QWidget):
                 if self.parent_space.current_projection.sub_projections:
                     print("Я тут!,,,,")
                     for sub_projection in self.parent_space.current_projection.sub_projections:
-
                         item = sub_projection.scaled_projection_pixmap
                         if item is None or self.background_item is None:
                             continue
@@ -859,100 +859,65 @@ class MainWidget(QWidget):
 
     def save_space_to_DB(self):
 
-        print("save")
         id_parent_space = query.insert_space(self.parent_space.name, self.parent_space.description)
-        print(id_parent_space)
-        print(self.parent_space.projections)
 
-        for projection in self.parent_space.projections:
-
-
-            id_parent_projection = query.insert_projection_of_space(id_parent_space,
-                                                                    projection.projection_name,
-                                                                    projection.projection_description,
-                                                                    QPixmap(projection.projection_image),
-                                                                    projection.projection_width,
-                                                                    projection.projection_height)
-            print("ЦИКЛ")
-
-            for sub_projection in self.parent_space.sub_projections:
-                if sub_projection.reference_to_parent_projection == projection:
-                    sub_projection.id_parent_projection = id_parent_projection
-
-        for subspace in self.parent_space.subspaces:
-            id_parent_subspace = query.insert_subspace(id_parent_space, subspace.name, subspace.description)
-
-            for sub_projection in self.parent_space.sub_projections:
-                if sub_projection.reference_to_parent_space == subspace:
-                    sub_projection.id_parent_space = id_parent_subspace
+        if self.parent_space.projections:
+            for projection in self.parent_space.projections:
 
 
-        for sub_projection in self.parent_space.sub_projections:
-            pixmap_item = sub_projection.scaled_projection_pixmap
-            background_item = self.background_item
+                id_parent_projection = query.insert_projection_of_space(id_parent_space,
+                                                                        projection.projection_name,
+                                                                        projection.projection_description,
+                                                                        QPixmap(projection.projection_image),
+                                                                        projection.projection_width,
+                                                                        projection.projection_height)
 
-            if pixmap_item and background_item:
-                if pixmap_item.scene() and background_item.scene():
-                    scene_pos = pixmap_item.mapToScene(0, 0)
-                    relative_pos = background_item.mapFromScene(scene_pos)
-                    print(f"Relative position: {relative_pos}")
-                else:
-                    print("Один из элементов не добавлен в сцену")
-            else:
-                print("Один из элементов не инициализирован")
+                if projection:
+                    for each in projection.sub_projections:
+                        each.id_parent_projection = id_parent_projection
 
-            print("scaled_projection_pixmap:", sub_projection.scaled_projection_pixmap)
-            print("background_item:", self.background_item)
+        if self.parent_space.subspaces:
+            for subspace in self.parent_space.subspaces:
+                sub = subspace
+                id_parent_subspace = query.insert_subspace(id_parent_space, subspace.name, subspace.description)
 
-            relative_pos = self.background_item.mapFromItem(sub_projection.scaled_projection_pixmap, 0, 0)
-            query.insert_projection_of_subspace(sub_projection.id_parent_projection,
-              sub_projection.id_parent_space,
-              sub_projection.projection_name,
-              sub_projection.projection_description,
-              relative_pos.x(),
-              relative_pos.y(),
-              QPixmap.fromImage(sub_projection.projection_image),
-              sub_projection.projection_width,
-              sub_projection.projection_height)
+                for proj in self.parent_space.projections:
+                    for sub_projection in proj.sub_projections:
+                        if sub_projection.reference_to_parent_space == sub:
+                            sub_projection.id_parent_space = id_parent_subspace
 
+        if self.parent_space.projections:
+            for pr in self.parent_space.projections:
 
+                for sub_projection in pr.sub_projections:
+                    pixmap_item = sub_projection.scaled_projection_pixmap
+                    background_item = self.background_item
 
+                    if pixmap_item and background_item:
+                        if pixmap_item.scene() and background_item.scene():
+                            scene_pos = pixmap_item.mapToScene(0, 0)
+                            relative_pos = background_item.mapFromScene(scene_pos)
+                            print(f"Relative position: {relative_pos}")
+                        else:
+                            print("Один из элементов не добавлен в сцену")
+                    else:
+                        print("Один из элементов не инициализирован")
 
+                    relative_pos = self.background_item.mapFromItem(sub_projection.scaled_projection_pixmap, 0, 0)
+                    query.insert_projection_of_subspace(sub_projection.id_parent_projection,
+                        sub_projection.id_parent_space,
+                        sub_projection.projection_name,
+                        sub_projection.projection_description,
+                        relative_pos.x(),
+                        relative_pos.y(),
+                        QPixmap.fromImage(sub_projection.projection_image),
+                        sub_projection.projection_width,
+                        sub_projection.projection_height)
 
-
-
-        # id_parent_projection = query.insert_projection_of_space(id_parent_space, self.parent_space.projection_name,
-        #                                                  self.parent_space.projection_description,
-        #                                                  self.parent_space.projection_image)
-        # print(id_parent_projection)
-        #
-        # if self.subspaces:
-        #     for subspace in self.subspaces:
-        #         print(subspace.name)
-        #         print(subspace.description)
-        #         id_parent_subspace = query.insert_subspace(id_parent_space, subspace.name, subspace.description)
-
-                # id_projection
-                # id_parent_projection
-                # id_parent_space (id_parent_subspace)
-                # projection_name
-                # projection_description
-                # x_pos_in_parent_projection
-                # y_pos_in_parent_projection
-                # projection_image
-
-                # query.insert_projection_of_subspace(id_parent_projection,
-                #                                     id_parent_subspace,
-                #                                     subspace.projection_name,
-                #                                     subspace.projection_description,
-                #                                     subspace.x_pos,
-                #                                     subspace.y_pos,
-                #                                     subspace.projection_image)
-
-        # if self.images_of_space:
-        #     for item in self.images_of_space:
-        #         query.insert_image(utils.pixmap_to_bytes(item), parent_id)
-        # print("saved")
+        if self.parent_space.space_images:
+            for item in self.parent_space.space_images:
+                print(item)
+                query.insert_image(id_parent_space, utils.pixmap_to_bytes(item))
 
         # При удалении подпространства необходимо удалить
         # его подразвертку из self.sub_projections

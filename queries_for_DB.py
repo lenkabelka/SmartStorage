@@ -197,12 +197,13 @@ def insert_projection_of_subspace(id_parent_projection,
 
 
 
-def insert_image(image, parent_id):
+def insert_image(id_parent_space, image, image_name=None):
+
     query = """
-        INSERT INTO spaces.images (image, id_projection)
-        VALUES (%s, %s)
+        INSERT INTO spaces.images (id_parent_space, image, image_name)
+        VALUES (%s, %s, %s)
     """
-    values = (image, parent_id)
+    values = (id_parent_space, image, image_name)
 
     conn = None
     try:
