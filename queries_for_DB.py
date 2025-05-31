@@ -16,13 +16,13 @@ def db_connect(config):
 # id_parent_space
 # space_name
 # space_description
-def insert_space(space_name, space_description):
-    query = """
+def insert_space(space_name, space_description, id_space=None):
+    insert_query = """
         INSERT INTO spaces.spaces (id_parent_space, space_name, space_description)
         VALUES (%s, %s, %s)
         RETURNING id_space;
     """
-    values = (None, space_name, space_description)
+    insert_values = (None, space_name, space_description)
 
     conn = None
     try:
@@ -30,7 +30,7 @@ def insert_space(space_name, space_description):
         conn = db_connect(config)
         with conn:
             with conn.cursor() as cur:
-                cur.execute(query, values)
+                cur.execute(insert_query, insert_values)
                 print("saved_DB")
                 inserted_id = cur.fetchone()[0]
                 return inserted_id
@@ -42,6 +42,74 @@ def insert_space(space_name, space_description):
     finally:
         if conn:
             conn.close()
+
+
+# id_space
+# id_parent_space
+# space_name
+# space_description
+def update_space(id_space, space_name, space_description):
+
+    update_query = """ 
+        UPDATE spaces.spaces
+        SET space_name = %s, space_description = %s
+        WHERE id_space = %s
+    """
+
+    update_values = (space_name, space_description, id_space)
+
+    conn = None
+    try:
+        config = load_config()
+        conn = db_connect(config)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(update_query, update_values)
+                print("saved_DB")
+                inserted_id = cur.fetchone()[0]
+                return inserted_id
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("Error by insert:", e)
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+# id_space
+# id_parent_space
+# space_name
+# space_description
+def delete_space(id_space):
+
+    delete_query = """
+        DELETE FROM spaces.spaces
+        WHERE id_space = %s
+    """
+
+    delete_values = (id_space,)
+
+    conn = None
+    try:
+        config = load_config()
+        conn = db_connect(config)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(delete_query, delete_values)
+                print("saved_DB")
+                inserted_id = cur.fetchone()[0]
+                return inserted_id
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("Error by insert:", e)
+        return None
+    finally:
+        if conn:
+            conn.close()
+
 
 # id_projection
 # id_parent_projection
@@ -220,6 +288,30 @@ def insert_image(id_parent_space, image, image_name=None):
     finally:
         if conn:
             conn.close()
+
+
+def get_all_space_names():
+    query = "SELECT space_name FROM spaces.spaces"
+
+    conn = None
+    try:
+        config = load_config()
+        conn = db_connect(config)
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                results = cur.fetchall()
+                # Список строк: [('Name1',), ('Name2',)] → можно преобразовать в список имен
+                return [row[0] for row in results]
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("Error by select:", e)
+        return []
+    finally:
+        if conn:
+            conn.close()
+
 
 
 """ В рамках одного пространства развертки имеют уникальное имя.

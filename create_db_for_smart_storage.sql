@@ -6,7 +6,7 @@ AUTHORIZATION postgres;
 CREATE TABLE IF NOT EXISTS spaces.spaces (
     id_space SERIAL PRIMARY KEY,
     id_parent_space INTEGER,    -- Reference to the parent space
-    space_name TEXT NOT NULL UNIQUE,
+    space_name TEXT NOT NULL,
     space_description TEXT,
     CONSTRAINT fk_parent_space
         FOREIGN KEY (id_parent_space)
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
     id_projection SERIAL PRIMARY KEY,
     id_parent_projection INTEGER,        -- Optional reference to another projection
     id_parent_space INTEGER NOT NULL,    -- Reference to the parent space
-    projection_name TEXT NOT NULL UNIQUE,
+    projection_name TEXT NOT NULL,
     projection_description TEXT,
     x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
     y_pos_in_parent_projection NUMERIC,  -- Y coordinate relative to parent projection

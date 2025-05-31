@@ -43,5 +43,5 @@ class AddSpace(QDialog):
         # Возвращаем имя и описание
         return {
             "name": self.name_edit.text(),
-            "description": self.description_edit.toPlainText(),
+            "description": self.description_edit.toPlainText() if self.description_edit.toPlainText() else None,
         }

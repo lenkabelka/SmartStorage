@@ -1,26 +1,180 @@
-from dataclasses import dataclass
-from PyQt6.QtGui import QPixmap, QImage
+from dataclasses import dataclass, field
 from typing import Optional
+
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtWidgets import QMessageBox
+import psycopg2
+
 import draggable_pixmap_item
 import space
-import object_state
+import track_object_state
+import queries_for_DB as q
+import image_utils as utils
 
 
 @dataclass
-class Projection:
-    projection_name: str
-    projection_image: QImage
-    projection_width: float | None
-    projection_height: float | None
-    reference_to_parent_space: Optional["space.Space"]
-    scaled_projection_pixmap: draggable_pixmap_item.DraggablePixmapItem | QPixmap | None = None
-    reference_to_parent_projection: Optional["Projection"] | None = None
-    projection_description: str | None = None
-    x_pos: float | None = None
-    y_pos: float | None = None
-    id_projection: int | None = None
-    id_parent_projection: int | None = None
-    id_parent_space: int | None = None
-    sub_projections: list[Optional["Projection"]] | None = None
+class Projection(track_object_state.Trackable):
+    projection_name: str  # DB
+    projection_image: QImage  # DB
+    projection_width: Optional[float] = None  # DB
+    projection_height: Optional[float] = None  # DB
+    reference_to_parent_space: Optional["space.Space"] = None
+    scaled_projection_pixmap: Optional[draggable_pixmap_item.DraggablePixmapItem | QPixmap] = None
+    reference_to_parent_projection: Optional["Projection"] = None
+    projection_description: Optional[str] = None  # DB
+    x_pos: Optional[float] = None  # DB
+    y_pos: Optional[float] = None  # DB
+    id_projection: Optional[int] = None  # DB
+    id_parent_projection: Optional[int] = None  # DB
+    id_parent_space: Optional[int] = None  # DB
+    sub_projections: list["Projection"] = field(default_factory=list)
 
-    projection_object_state: object_state.State = object_state.State.NEW
+    def __post_init__(self):
+        self._db_fields = {
+            'projection_name',
+            'projection_image',
+            'projection_width',
+            'projection_height',
+            'projection_description',
+            'x_pos',
+            'y_pos',
+            'id_projection',
+            'id_parent_projection',
+            'id_parent_space'
+        }
+        super().__post_init__()
+
+    # id_projection
+    # id_parent_projection
+    # id_parent_space
+    # projection_name
+    # projection_description
+    # x_pos_in_parent_projection
+    # y_pos_in_parent_projection
+    # projection_image
+    # projection_width
+    # projection_height
+    def show_message(self, title: str, message: str, icon=QMessageBox.Icon.Information):
+        msg = QMessageBox()
+        msg.setWindowTitle(title)
+        msg.setText(message)
+        msg.setIcon(icon)
+        msg.exec()
+
+    def insert(self):
+        query = """
+            INSERT INTO spaces.projections (
+                id_parent_projection, 
+                id_parent_space, 
+                projection_name, 
+                projection_description, 
+                x_pos_in_parent_projection, 
+                y_pos_in_parent_projection, 
+                projection_image, 
+                projection_width, 
+                projection_height
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id_projection;
+        """
+        image_bytes = utils.pixmap_to_bytes(QPixmap(self.projection_image))
+        values = (
+            self.id_parent_projection,
+            self.id_parent_space,
+            self.projection_name,
+            self.projection_description,
+            self.x_pos,
+            self.y_pos,
+            psycopg2.Binary(image_bytes),
+            self.projection_width,
+            self.projection_height
+        )
+
+        conn = None
+        try:
+            config = q.load_config()
+            conn = q.db_connect(config)
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, values)
+                    self.id_projection = cur.fetchone()[0]
+                    self.show_message("Успешно", f"Проекция добавлена с ID: {self.id_projection}")
+                    self.reset_state()
+        except psycopg2.Error as e:
+            if conn:
+                conn.rollback()
+            self.show_message("Ошибка при вставке", str(e), icon=QMessageBox.Icon.Critical)
+        finally:
+            if conn:
+                conn.close()
+
+    def update(self):
+        if self.id_projection is None:
+            self.show_message("Ошибка", "Невозможно обновить: id_projection отсутствует", icon=QMessageBox.Icon.Warning)
+            return
+
+        query = """
+            UPDATE spaces.projections
+            SET 
+                projection_name = %s,
+                projection_description = %s,
+                x_pos_in_parent_projection = %s,
+                y_pos_in_parent_projection = %s,
+                projection_image = %s,
+                projection_width = %s,
+                projection_height = %s
+            WHERE id_projection = %s
+        """
+
+        image_bytes = utils.pixmap_to_bytes(QPixmap(self.projection_image))
+        values = (
+            self.projection_name,
+            self.projection_description,
+            self.x_pos,
+            self.y_pos,
+            psycopg2.Binary(image_bytes),
+            self.projection_width,
+            self.projection_height,
+            self.id_projection
+        )
+
+        conn = None
+        try:
+            config = q.load_config()
+            conn = q.db_connect(config)
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, values)
+                    self.show_message("Успешно", f"Проекция с ID {self.id_projection} обновлена")
+                    self.reset_state()
+        except psycopg2.Error as e:
+            if conn:
+                conn.rollback()
+            self.show_message("Ошибка при обновлении", str(e), icon=QMessageBox.Icon.Critical)
+        finally:
+            if conn:
+                conn.close()
+
+    def delete(self):
+        if self.id_projection is None:
+            self.show_message("Ошибка", "Невозможно удалить: id_projection отсутствует", icon=QMessageBox.Icon.Warning)
+            return
+
+        query = "DELETE FROM spaces.projections WHERE id_projection = %s"
+        values = (self.id_projection,)
+
+        conn = None
+        try:
+            config = q.load_config()
+            conn = q.db_connect(config)
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, values)
+                    self.show_message("Успешно", f"Проекция с ID {self.id_projection} удалена")
+        except psycopg2.Error as e:
+            if conn:
+                conn.rollback()
+            self.show_message("Ошибка при удалении", str(e), icon=QMessageBox.Icon.Critical)
+        finally:
+            if conn:
+                conn.close()

@@ -165,7 +165,7 @@ class AddProjection(QDialog):
         # Возвращаем имя, описание, картинку в байтах и коэффициенты масштабирования
         return {
             "name": self.name_edit.text(),
-            "description": self.description_edit.toPlainText(),
+            "description": self.description_edit.toPlainText() if self.description_edit.toPlainText() else None,
             "image": self.image if self.image else None,
             "x_sm": float(self.x_sm.text()) if self.image else None,
             "y_sm": float(self.y_sm.text()) if self.image else None

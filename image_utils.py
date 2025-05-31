@@ -81,7 +81,7 @@ def calculate_new_image_size(image, x_sm, y_sm):
         return image.scaled(new_width, new_height)
 
 
-def get_scaled_pixmap_1(image: QImage,
+def get_scaled_pixmap(image: QImage,
                         target_width,
                         target_height) -> QPixmap:
 

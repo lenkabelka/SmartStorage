@@ -89,26 +89,25 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         print(f"Клик по картинке + {self.item_id}")
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
-            delete_action = menu.addAction("Удалить")
             freeze_action = menu.addAction("Зафиксировать")
             move_action = menu.addAction("Подвинуть")
+            delete_action = menu.addAction("Удалить")
             # Используем screenPos, чтобы меню открылось в нужном месте
             selected_action = menu.exec(event.screenPos())
             if selected_action == delete_action:
                 print("Выбрана опция: Удалить")
                 self.scene_ref.removeItem(self)
                 print("Выбрана опция: Удалить_1")
-                self.app_ref.remove_subspace(self)
+                self.app_ref.delete_subspace(self)
                 print("Выбрана опция: Удалить_2")
                 self.app_ref.update_tree_view()
                 print("Выбрана опция: Удалить_3")
 
             elif selected_action == freeze_action:
                 self.freeze()
-                self.is_editable = False
 
             elif selected_action == move_action:
-                self.app_ref.unfreeze_subspace(self)
+                self.unfreeze()
                 print("Выбрана опция: Подвинуть")
         else:
             super().mousePressEvent(event)
@@ -180,9 +179,6 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             dy = end.y() - end.y()
             distance = math.hypot(dx, dy)
             if  distance < 0.5:
-                print(f"distance: {distance}")
-                print(f"possible_pos: {possible_pos}")
-                print(f"best: {best_pos}")
                 break
 
         return best_pos
