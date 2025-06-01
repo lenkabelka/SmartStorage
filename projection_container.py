@@ -3,8 +3,12 @@ from PyQt6.QtCore import Qt
 
 
 class ProjectionContainer(QWidget):
-    def __init__(self, original_background, projection_to_save, subprojections_list=None):
+    def __init__(self, original_background, projection_to_save):
         super().__init__()
+
+        subprojections_list = None
+        if projection_to_save.sub_projections:
+            subprojections_list = projection_to_save.sub_projections
 
         self.saved_projection = projection_to_save
 

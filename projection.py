@@ -8,8 +8,9 @@ import psycopg2
 import draggable_pixmap_item
 import space
 import track_object_state
-import queries_for_DB as q
+import connect_DB as connection
 import image_utils as utils
+from track_object_state import ObjectState
 
 
 @dataclass
@@ -92,8 +93,8 @@ class Projection(track_object_state.Trackable):
 
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -140,8 +141,8 @@ class Projection(track_object_state.Trackable):
 
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -165,8 +166,8 @@ class Projection(track_object_state.Trackable):
 
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -178,3 +179,33 @@ class Projection(track_object_state.Trackable):
         finally:
             if conn:
                 conn.close()
+
+
+    def save_projection(self, subspaces=None):
+        self.save()
+
+        subprojections_to_remove = []
+
+        if self.sub_projections:
+            for sub_projection in self.sub_projections:
+                if subspaces:
+
+                    if sub_projection.state == ObjectState.DELETED:
+                        subprojections_to_remove.append(sub_projection)
+                        sub_projection.save()
+
+                    else:
+                        if not sub_projection.id_parent_space:
+                            parent_subspace = next((subspace for subspace in subspaces if sub_projection.reference_to_parent_space == subspace), None)
+                            if parent_subspace:
+                                sub_projection.id_parent_space = parent_subspace.id_space
+
+                        if not sub_projection.id_parent_projection:
+                            sub_projection.id_parent_projection = self.id_projection
+
+                        sub_projection.save()
+
+
+        if subprojections_to_remove:
+            for sub_projection in self.sub_projections:
+                self.sub_projections.remove(sub_projection)

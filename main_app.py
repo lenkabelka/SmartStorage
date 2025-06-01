@@ -12,7 +12,7 @@ import add_projection as add_projection
 import add_space as add_space
 import draggable_pixmap_item as draggable_item
 import image_utils as utils
-import queries_for_DB as query
+import connect_DB as connection
 import image_container
 import space
 import zoomable_graphics_view
@@ -255,9 +255,11 @@ class MainWidget(QWidget):
 
         if self.parent_space.subspaces:
             for subspace in self.parent_space.subspaces:
-                sub_space = QStandardItem(subspace.name)
-                sub_space.setEditable(False)
-                root_space.appendRow(sub_space)
+
+                if subspace.state != ObjectState.DELETED:
+                    sub_space = QStandardItem(subspace.name)
+                    sub_space.setEditable(False)
+                    root_space.appendRow(sub_space)
 
         model.appendRow(root_space)
         self.tree.setModel(model)
@@ -573,10 +575,12 @@ class MainWidget(QWidget):
                     clear_layout(self.layout_images_of_space)
 
                     for item in self.parent_space.space_images:
-                        image_widget = image_container.ImageContainer(item.image, self.container_images_of_space.contentsRect().height())
+
+                        image_widget = image_container.ImageContainer(item, self.container_images_of_space.contentsRect().height())
                         image_widget.delete_image.connect(self.delete_image)
 
-                        self.layout_images_of_space.addWidget(image_widget)
+                        if not image_widget.space_image.state == ObjectState.DELETED:
+                            self.layout_images_of_space.addWidget(image_widget)
                         self.layout_images_of_space.setAlignment(Qt.AlignmentFlag.AlignLeft)
                     break
             else:
@@ -625,21 +629,25 @@ class MainWidget(QWidget):
             QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
             return
         else:
+
+            mini_projection = None
+
             if not self.mini_projections_list:
                 if self.parent_space.current_projection.sub_projections:
                     for sub_projection in self.parent_space.current_projection.sub_projections:
-                        item = sub_projection.scaled_projection_pixmap
-                        if item is None or self.background_item is None:
-                            continue
-                        relative_pos = self.background_item.mapFromItem(item, 0, 0)
-                        sub_projection.x_pos = relative_pos.x()
-                        sub_projection.y_pos = relative_pos.y()
+                        if sub_projection.state != ObjectState.DELETED:
+                            item = sub_projection.scaled_projection_pixmap
+                            if item is None or self.background_item is None:
+                                continue
+                            relative_pos = self.background_item.mapFromItem(item, 0, 0)
+                            sub_projection.x_pos = relative_pos.x()
+                            sub_projection.y_pos = relative_pos.y()
 
-                    mini_projection = container.ProjectionContainer(
-                        self.background_item,
-                        self.parent_space.current_projection,
-                        self.parent_space.current_projection.sub_projections # TODO см предыдущую строчку
-                    )
+                        mini_projection = container.ProjectionContainer(
+                            self.background_item,
+                            self.parent_space.current_projection
+                            #self.parent_space.current_projection.sub_projections # TODO см предыдущую строчку
+                        )
 
                 else:
                     print(self.background_item)
@@ -659,13 +667,14 @@ class MainWidget(QWidget):
                     if self.parent_space.current_projection.sub_projections:
                         for sub_projection in self.parent_space.current_projection.sub_projections:
 
-                            item = sub_projection.scaled_projection_pixmap
-                            if item is None or self.background_item is None:
-                                continue
-                            relative_pos = self.background_item.mapFromItem(item, 0, 0)
-                            sub_projection.x_pos = relative_pos.x()
-                            sub_projection.y_pos = relative_pos.y()
-                        mini_projection_to_change.update_scene(self.background_item, self.parent_space.current_projection.sub_projections)
+                            if sub_projection.state != ObjectState.DELETED:
+                                item = sub_projection.scaled_projection_pixmap
+                                if item is None or self.background_item is None:
+                                    continue
+                                relative_pos = self.background_item.mapFromItem(item, 0, 0)
+                                sub_projection.x_pos = relative_pos.x()
+                                sub_projection.y_pos = relative_pos.y()
+                            mini_projection_to_change.update_scene(self.background_item, self.parent_space.current_projection.sub_projections)
 
                     else:
                         mini_projection_to_change.update_scene(self.background_item)
@@ -680,8 +689,8 @@ class MainWidget(QWidget):
 
                         new_widget = container.ProjectionContainer(
                             self.background_item,
-                            self.parent_space.current_projection,
-                            self.parent_space.current_projection.sub_projections # TODO см строчку выше
+                            self.parent_space.current_projection
+                            #self.parent_space.current_projection.sub_projections # TODO см строчку выше
                         )
                         self.mini_projections_list[index] = new_widget
                         self.layout_projections_of_space.insertWidget(index, new_widget)
@@ -690,18 +699,19 @@ class MainWidget(QWidget):
                     if self.parent_space.current_projection.sub_projections:
                         for sub_projection in self.parent_space.current_projection.sub_projections:
 
-                            item = sub_projection.scaled_projection_pixmap
-                            if item is None or self.background_item is None:
-                                continue
-                            relative_pos = self.background_item.mapFromItem(item, 0, 0)
-                            sub_projection.x_pos = relative_pos.x()
-                            sub_projection.y_pos = relative_pos.y()
+                            if sub_projection.state != ObjectState.DELETED:
+                                item = sub_projection.scaled_projection_pixmap
+                                if item is None or self.background_item is None:
+                                    continue
+                                relative_pos = self.background_item.mapFromItem(item, 0, 0)
+                                sub_projection.x_pos = relative_pos.x()
+                                sub_projection.y_pos = relative_pos.y()
 
-                        mini_projection = container.ProjectionContainer(
-                            self.background_item,
-                            self.parent_space.current_projection,
-                            self.parent_space.current_projection.sub_projections # TODO см строчку выше
-                        )
+                            mini_projection = container.ProjectionContainer(
+                                self.background_item,
+                                self.parent_space.current_projection
+                                #self.parent_space.current_projection.sub_projections # TODO см строчку выше
+                            )
 
                     else:
                         print(self.background_item)
@@ -709,12 +719,13 @@ class MainWidget(QWidget):
                         mini_projection = container.ProjectionContainer(self.background_item,
                                                                         self.parent_space.current_projection)
 
+                    if mini_projection is not None:
+                        self.mini_projections_list.insert(0, mini_projection)
 
-                    self.mini_projections_list.insert(0, mini_projection)
-
-                    for mini in self.mini_projections_list:
-                        self.layout_projections_of_space.addWidget(mini)
-                        self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
+                    if self.mini_projections_list:
+                        for mini in self.mini_projections_list:
+                            self.layout_projections_of_space.addWidget(mini)
+                            self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
         # При удалении подпространства необходимо удалить
@@ -745,6 +756,8 @@ class MainWidget(QWidget):
             else:
                 subspace_to_remove.mark_deleted()
 
+            self.tree.update()
+
         # Удаляем projection с учётом его состояния
         if subprojection_to_remove:
             if subprojection_to_remove.state == ObjectState.NEW:
@@ -755,106 +768,10 @@ class MainWidget(QWidget):
 
     def save_space_to_DB(self):
 
-        self.parent_space.save()
+        self.save_current_projection()
 
-        for subspace in self.parent_space.subspaces:
-            if not subspace.id_parent_space:
-                subspace.id_parent_space = self.parent_space.id_space
-                subspace.save()
+        self.parent_space.save_space()
 
-
-        for projection in self.parent_space.projections:
-            if not projection.id_parent_space:
-                projection.id_parent_space = self.parent_space.id_space
-                projection.save()
-
-
-        for projection in self.parent_space.projections:
-            for sub_projection in projection.sub_projections:
-                if not sub_projection.id_parent_projection:
-                    print(f"sub_projection.id_parent_projection: {projection.id_projection}")
-                    sub_projection.id_parent_projection = projection.id_projection
-
-
-        for subspace in self.parent_space.subspaces:
-            for projection in self.parent_space.projections:
-                for sub_projection in projection.sub_projections:
-                    if sub_projection.reference_to_parent_space == subspace:
-                        if not sub_projection.id_parent_space:
-                            print(f"sub_projection.id_parent_space: {subspace.id_space}")
-                            sub_projection.id_parent_space = subspace.id_space
-
-
-        for projection in self.parent_space.projections:
-            for sub_projection in projection.sub_projections:
-                sub_projection.save()
-
-
-        # if self.parent_space.state == ObjectState.NEW:
-        #     id_parent_space = query.insert_space(self.parent_space.name, self.parent_space.description)
-        # elif self.parent_space.state == ObjectState.MODIFIED:
-        #     query.update_space(self.parent_space.id_space, self.parent_space.name, self.parent_space.description)
-        # elif self.parent_space.state == ObjectState.MODIFIED:
-        #     query.delete_space(self.parent_space.id_space)
-
-
-        # if self.parent_space.projections:
-        #     for projection in self.parent_space.projections:
-        #
-        #
-        #         id_parent_projection = query.insert_projection_of_space(id_parent_space,
-        #                                                                 projection.projection_name,
-        #                                                                 projection.projection_description,
-        #                                                                 QPixmap(projection.projection_image),
-        #                                                                 projection.projection_width,
-        #                                                                 projection.projection_height)
-        #
-        #         if projection:
-        #             for each in projection.sub_projections:
-        #                 each.id_parent_projection = id_parent_projection
-        #
-        # if self.parent_space.subspaces:
-        #     for subspace in self.parent_space.subspaces:
-        #         sub = subspace
-        #         id_parent_subspace = query.insert_subspace(id_parent_space, subspace.name, subspace.description)
-        #
-        #         for proj in self.parent_space.projections:
-        #             for sub_projection in proj.sub_projections:
-        #                 if sub_projection.reference_to_parent_space == sub:
-        #                     sub_projection.id_parent_space = id_parent_subspace
-        #
-        # if self.parent_space.projections:
-        #     for pr in self.parent_space.projections:
-        #
-        #         for sub_projection in pr.sub_projections:
-        #             pixmap_item = sub_projection.scaled_projection_pixmap
-        #             background_item = self.background_item
-        #
-        #             if pixmap_item and background_item:
-        #                 if pixmap_item.scene() and background_item.scene():
-        #                     scene_pos = pixmap_item.mapToScene(0, 0)
-        #                     relative_pos = background_item.mapFromScene(scene_pos)
-        #                     print(f"Relative position: {relative_pos}")
-        #                 else:
-        #                     print("Один из элементов не добавлен в сцену")
-        #             else:
-        #                 print("Один из элементов не инициализирован")
-        #
-        #             relative_pos = self.background_item.mapFromItem(sub_projection.scaled_projection_pixmap, 0, 0)
-        #             query.insert_projection_of_subspace(sub_projection.id_parent_projection,
-        #                 sub_projection.id_parent_space,
-        #                 sub_projection.projection_name,
-        #                 sub_projection.projection_description,
-        #                 relative_pos.x(),
-        #                 relative_pos.y(),
-        #                 QPixmap.fromImage(sub_projection.projection_image),
-        #                 sub_projection.projection_width,
-        #                 sub_projection.projection_height)
-        #
-        # if self.parent_space.space_images:
-        #     for item in self.parent_space.space_images:
-        #         print(item)
-        #         query.insert_image(id_parent_space, utils.pixmap_to_bytes(item))
 
 
 

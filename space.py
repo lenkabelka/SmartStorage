@@ -1,12 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from PyQt6.QtWidgets import QMessageBox
-from PyQt6.QtGui import QPixmap
 import projection
 import track_object_state
 import image as im
-import queries_for_DB as q
+import connect_DB as connection
 import psycopg2
+
+from track_object_state import ObjectState
 
 
 @dataclass
@@ -46,8 +47,8 @@ class Space(track_object_state.Trackable):
         values = (self.id_parent_space, self.name, self.description)
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -76,8 +77,8 @@ class Space(track_object_state.Trackable):
         values = (self.name, self.description, self.id_space)
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -101,8 +102,8 @@ class Space(track_object_state.Trackable):
         values = (self.id_space,)
         conn = None
         try:
-            config = q.load_config()
-            conn = q.db_connect(config)
+            config = connection.load_config()
+            conn = connection.db_connect(config)
             with conn:
                 with conn.cursor() as cur:
                     cur.execute(query, values)
@@ -115,3 +116,63 @@ class Space(track_object_state.Trackable):
         finally:
             if conn:
                 conn.close()
+
+
+
+    def save_space(self):
+
+        subspaces_to_delete = []
+
+        self.save()
+        if self.subspaces:
+            for subspace in self.subspaces:
+                if not subspace.id_parent_space:
+                    subspace.id_parent_space = self.id_space
+                if subspace.state == ObjectState.DELETED:
+                    subspaces_to_delete.append(subspace)
+                    subspace.save()
+                else:
+                    subspace.save()
+
+        projections_to_delete = []
+
+        if self.projections:
+            for project in self.projections:
+                if project.state == ObjectState.DELETED:
+                    projections_to_delete.append(project)
+                    project.save()
+                else:
+                    if not project.id_parent_space:
+                        project.id_parent_space = self.id_space
+
+                    if self.subspaces:
+                        project.save_projection(self.subspaces)
+                    else:
+                        project.save_projection()
+
+
+        images_to_delete = []
+
+        if self.space_images:
+            for image in self.space_images:
+                if not image.id_parent_space:
+                    image.id_parent_space = self.id_space
+                print(f"image state: {image.state}")
+                if image.state == ObjectState.DELETED:
+                    images_to_delete.append(image)
+                    image.save()
+                else:
+                    image.save()
+
+
+        if images_to_delete:
+            for image in images_to_delete:
+                self.space_images.remove(image)
+
+        if projections_to_delete:
+            for project in projections_to_delete:
+                self.projections.remove(project)
+
+        if subspaces_to_delete:
+            for subspace in subspaces_to_delete:
+                self.subspaces.remove(subspace)
