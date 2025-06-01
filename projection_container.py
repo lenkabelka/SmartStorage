@@ -6,9 +6,9 @@ class ProjectionContainer(QWidget):
     def __init__(self, original_background, projection_to_save):
         super().__init__()
 
-        subprojections_list = None
+        sub_projections_list = None
         if projection_to_save.sub_projections:
-            subprojections_list = projection_to_save.sub_projections
+            sub_projections_list = projection_to_save.sub_projections
 
         self.saved_projection = projection_to_save
 
@@ -29,8 +29,8 @@ class ProjectionContainer(QWidget):
         self.scene.addItem(self.background_copy)
 
         # копии подпроекций
-        if subprojections_list:
-            for sub in subprojections_list:
+        if sub_projections_list:
+            for sub in sub_projections_list:
                 pixmap = sub.scaled_projection_pixmap.pixmap()
                 item_copy = QGraphicsPixmapItem(pixmap)
                 item_copy.setPos(sub.x_pos, sub.y_pos)  # координаты сохраняются заранее

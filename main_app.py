@@ -631,7 +631,6 @@ class MainWidget(QWidget):
         else:
 
             mini_projection = None
-
             if not self.mini_projections_list:
                 if self.parent_space.current_projection.sub_projections:
                     for sub_projection in self.parent_space.current_projection.sub_projections:
@@ -658,7 +657,6 @@ class MainWidget(QWidget):
                 self.mini_projections_list.append(mini_projection)
                 self.layout_projections_of_space.addWidget(mini_projection)
                 self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
-
             else:
                 mini_projection_to_change = next((mini for mini in self.mini_projections_list if
                                                   mini.saved_projection == self.parent_space.current_projection), None)
@@ -666,7 +664,6 @@ class MainWidget(QWidget):
                 if mini_projection_to_change:
                     if self.parent_space.current_projection.sub_projections:
                         for sub_projection in self.parent_space.current_projection.sub_projections:
-
                             if sub_projection.state != ObjectState.DELETED:
                                 item = sub_projection.scaled_projection_pixmap
                                 if item is None or self.background_item is None:
@@ -674,8 +671,7 @@ class MainWidget(QWidget):
                                 relative_pos = self.background_item.mapFromItem(item, 0, 0)
                                 sub_projection.x_pos = relative_pos.x()
                                 sub_projection.y_pos = relative_pos.y()
-                            mini_projection_to_change.update_scene(self.background_item, self.parent_space.current_projection.sub_projections)
-
+                        mini_projection_to_change.update_scene(self.background_item, self.parent_space.current_projection.sub_projections)
                     else:
                         mini_projection_to_change.update_scene(self.background_item)
 
