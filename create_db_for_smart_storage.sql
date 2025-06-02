@@ -55,18 +55,8 @@ CREATE TABLE spaces.things (
     thing_description TEXT,
     thing_image BYTEA,
     id_parent_space INTEGER NOT NULL,
-    id_parent_projection INTEGER,
-    x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
-    y_pos_in_parent_projection NUMERIC,  -- Y coordinate relative to parent projection
-    thing_projection_image BYTEA,
-    thing_projection_width NUMERIC,
-    thing_projection_height NUMERIC,
     CONSTRAINT fk_parent_space
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)
         ON DELETE CASCADE,
-    CONSTRAINT fk_parent_projection
-        FOREIGN KEY (id_parent_projection)
-        REFERENCES spaces.projections(id_projection)
-        ON DELETE CASCADE
 );

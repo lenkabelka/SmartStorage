@@ -19,16 +19,30 @@ class Projection(track_object_state.Trackable):
     projection_image: QImage  # DB
     projection_width: Optional[float] = None  # DB
     projection_height: Optional[float] = None  # DB
+
+    # Связь с родителем
     reference_to_parent_space: Optional["space.Space"] = None
+    reference_to_parent_thing: Optional["thing.Thing"] = None  # !!!!!!!!!
+
     scaled_projection_pixmap: Optional[draggable_pixmap_item.DraggablePixmapItem | QPixmap] = None
     reference_to_parent_projection: Optional["Projection"] = None
     projection_description: Optional[str] = None  # DB
     x_pos: Optional[float] = None  # DB
     y_pos: Optional[float] = None  # DB
+
     id_projection: Optional[int] = None  # DB
     id_parent_projection: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
+    id_parent_thing: Optional[int] = None  # DB  !!!!!!
+
     sub_projections: list["Projection"] = field(default_factory=list)
+
+    # def get_parent(self):
+    #     return self.reference_to_parent_space or self.reference_to_parent_thing
+
+    # def validate_parent(self):
+    #     if (self.reference_to_parent_space is not None) and (self.reference_to_parent_thing is not None):
+    #         raise ValueError("Projection cannot have both space and thing as parent.")
 
     def __post_init__(self):
         self._db_fields = {

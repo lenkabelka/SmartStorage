@@ -6,6 +6,7 @@ import track_object_state
 import image as im
 import connect_DB as connection
 import psycopg2
+import thing
 
 from track_object_state import ObjectState
 
@@ -20,6 +21,8 @@ class Space(track_object_state.Trackable):
     space_images: list[Optional[im.SpaceImage]] = field(default_factory=list)
     id_space: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
+
+    things: list[Optional[thing.Thing]] = field(default_factory=list)
 
     def __post_init__(self):
         self._db_fields = {'id_space', 'name', 'description'}

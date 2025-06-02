@@ -20,6 +20,8 @@ import projection_container as container
 from track_object_state import ObjectState
 import image as im
 import add_image
+import add_thing
+import thing
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -174,6 +176,9 @@ class MainWidget(QWidget):
         #self.add_projection_of_subspace_button = QPushButton("Add projection of subspace")
         #self.add_projection_of_subspace_button.clicked.connect(self.add_projection_of_subspace)
 
+        self.add_thing_button = QPushButton("Добавить вещь в пространство")
+        self.add_thing_button.clicked.connect(self.add_thing)
+
         self.add_image_of_space_button = QPushButton("Add image of space")
         self.add_image_of_space_button.clicked.connect(self.add_image_of_space)
 
@@ -187,6 +192,7 @@ class MainWidget(QWidget):
         self.button_layout.addWidget(self.add_subspace_button)
         self.button_layout.addWidget(self.save_current_projection_button)
         self.button_layout.addWidget(self.save_space_button)
+        self.button_layout.addWidget(self.add_thing_button)
 
         self.layout_space_creation.addWidget(self.view)
         #self.layout_space_creation.addWidget(self.add_projection_of_space_button)
@@ -544,6 +550,40 @@ class MainWidget(QWidget):
                         # не очищаем — пользователь увидит свои прежние данные
             else:
                 break  # пользователь нажал "Отмена" — выходим
+
+
+    def add_thing(self):
+        add_thing_dialog = add_thing.AddThing()
+
+        while True:
+            if add_thing_dialog.exec():
+                dict_of_new_space = add_thing_dialog.get_data()
+
+                if not dict_of_new_space["name"]:
+                    QMessageBox.warning(self, "Заполните обязательные поля",
+                                        "Пожалуйста укажите название вещи!")
+                else:
+                    new_thing = thing.Thing(dict_of_new_space["name"], self.parent_space)
+                    new_thing.mark_new()
+
+                    if dict_of_new_space["description"]:
+                        new_thing.description = dict_of_new_space["description"]
+
+                    if dict_of_new_space["image"]:
+                        new_thing.image = dict_of_new_space["image"]
+
+                    self.parent_space.things.append(new_thing)
+                    print(f"self.parent_space.things: {self.parent_space.things}")
+
+                    #self.update_tree_view()
+
+                    break  # успех — выходим из цикла
+
+            else:
+                break  # пользователь нажал "Отмена" — выходим
+
+    def add_thing_projection(self):
+        pass
 
 
     def add_image_of_space(self):
