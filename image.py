@@ -6,7 +6,7 @@ import psycopg2
 import connect_DB as connection
 from typing import Optional
 import track_object_state
-import image_utils as utils
+import utils as utils
 
 
 @dataclass

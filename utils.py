@@ -199,3 +199,13 @@ def pixmap_to_rgba(pixmap: QPixmap):
     arr = np.array(ptr, dtype=np.uint8).reshape((height, width, 4))
 
     return arr
+
+
+def clear_layout(layout):
+    while layout.count():
+        item = layout.takeAt(0)
+        widget = item.widget()
+        if widget is not None:
+            widget.setParent(None)
+        elif item.layout() is not None:
+            clear_layout(item.layout())

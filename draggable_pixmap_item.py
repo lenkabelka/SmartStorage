@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QGraphicsPixmapItem,
 from PyQt6.QtGui import QColor, QPen, QPainterPath, QPixmap
 from PyQt6.QtCore import Qt, QPointF, pyqtSlot
 from PyQt6.QtGui import QWheelEvent
-import image_utils as utils
+import utils as utils
 import math
 
 

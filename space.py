@@ -118,6 +118,37 @@ class Space(track_object_state.Trackable):
                 conn.close()
 
 
+    def load_space_by_id(self, id_space: int):
+        query = """
+                SELECT space_name, space_description
+                FROM spaces.spaces
+                WHERE id_space = %s
+            """
+        conn = None
+        try:
+            config = connection.load_config()
+            conn = connection.db_connect(config)
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (id_space,))
+                    result = cur.fetchone()
+                    if result:
+                        self.id_space = id_space
+                        self.name = result[0]
+                        self.description = result[1] or ""
+                        self.reset_state()  # устанавливаем оригинальные значения
+                        print(f"Загружено пространство: {self.name}")
+                    else:
+                        self.show_message("Не найдено", f"Пространство с ID {id_space} не найдено",
+                                          icon=QMessageBox.Icon.Warning)
+        except psycopg2.Error as e:
+            if conn:
+                conn.rollback()
+            self.show_message("Ошибка при загрузке", str(e), icon=QMessageBox.Icon.Critical)
+        finally:
+            if conn:
+                conn.close()
+
 
     def save_space(self):
 
