@@ -14,11 +14,25 @@ CREATE TABLE IF NOT EXISTS spaces.spaces (
         ON DELETE SET NULL
 );
 
+-- Table: things
+CREATE TABLE spaces.things (
+    id_thing SERIAL PRIMARY KEY,
+    thing_name TEXT NOT NULL,
+    thing_description TEXT,
+    thing_image BYTEA,
+    id_parent_space INTEGER NOT NULL,
+    CONSTRAINT fk_parent_space
+        FOREIGN KEY (id_parent_space)
+        REFERENCES spaces.spaces(id_space)
+        ON DELETE CASCADE
+);
+
 -- Table: projections
 CREATE TABLE IF NOT EXISTS spaces.projections (
     id_projection SERIAL PRIMARY KEY,
     id_parent_projection INTEGER,        -- Optional reference to another projection
-    id_parent_space INTEGER NOT NULL,    -- Reference to the parent space
+    id_parent_space INTEGER,             -- Reference to the parent space
+    id_parent_thing INTEGER,             -- Reference to the parent thing
     projection_name TEXT NOT NULL,
     projection_description TEXT,
     x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
@@ -33,7 +47,16 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
     CONSTRAINT fk_space_projection
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_parent_thing
+        FOREIGN KEY (id_parent_thing)
+        REFERENCES spaces.things(id_thing)
+        ON DELETE CASCADE,
+    CONSTRAINT parent_space_or_thing_check CHECK (
+        (id_parent_space IS NOT NULL AND id_parent_thing IS NULL)
+        OR
+        (id_parent_space IS NULL AND id_parent_thing IS NOT NULL)
+    )
 );
 
 -- Table: images
@@ -46,17 +69,4 @@ CREATE TABLE IF NOT EXISTS spaces.images (
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)
         ON DELETE CASCADE
-);
-
--- Table: things
-CREATE TABLE spaces.things (
-    id_thing SERIAL PRIMARY KEY,
-    thing_name TEXT NOT NULL,
-    thing_description TEXT,
-    thing_image BYTEA,
-    id_parent_space INTEGER NOT NULL,
-    CONSTRAINT fk_parent_space
-        FOREIGN KEY (id_parent_space)
-        REFERENCES spaces.spaces(id_space)
-        ON DELETE CASCADE,
 );

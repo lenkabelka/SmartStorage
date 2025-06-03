@@ -124,6 +124,13 @@ def pixmap_to_bytes(pixmap: QPixmap) -> bytes:
     pixmap.save(buffer, "PNG")
     return bytes(buffer.data())
 
+def qimage_to_bytes(image: QImage) -> bytes:
+    buffer = QBuffer()
+    buffer.open(QBuffer.OpenModeFlag.ReadWrite)
+    # TODO: поддержка других форматов по необходимости
+    image.save(buffer, "PNG")
+    return bytes(buffer.data())
+
 
 def get_contours(pixmap: QPixmap):
 

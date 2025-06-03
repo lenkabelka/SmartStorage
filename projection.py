@@ -5,12 +5,13 @@ from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtWidgets import QMessageBox
 import psycopg2
 
-import draggable_pixmap_item
+from draggable_pixmap_item import DraggablePixmapItem
 import space
 import track_object_state
 import connect_DB as connection
 import utils as utils
 from track_object_state import ObjectState
+import thing
 
 
 @dataclass
@@ -24,7 +25,7 @@ class Projection(track_object_state.Trackable):
     reference_to_parent_space: Optional["space.Space"] = None
     reference_to_parent_thing: Optional["thing.Thing"] = None  # !!!!!!!!!
 
-    scaled_projection_pixmap: Optional[draggable_pixmap_item.DraggablePixmapItem | QPixmap] = None
+    scaled_projection_pixmap: Optional[DraggablePixmapItem | QPixmap] = None
     reference_to_parent_projection: Optional["Projection"] = None
     projection_description: Optional[str] = None  # DB
     x_pos: Optional[float] = None  # DB
@@ -55,7 +56,8 @@ class Projection(track_object_state.Trackable):
             'y_pos',
             'id_projection',
             'id_parent_projection',
-            'id_parent_space'
+            'id_parent_space',
+            'id_parent_thing'
         }
         super().__post_init__()
 
@@ -80,7 +82,8 @@ class Projection(track_object_state.Trackable):
         query = """
             INSERT INTO spaces.projections (
                 id_parent_projection, 
-                id_parent_space, 
+                id_parent_space,
+                id_parent_thing,
                 projection_name, 
                 projection_description, 
                 x_pos_in_parent_projection, 
@@ -89,13 +92,14 @@ class Projection(track_object_state.Trackable):
                 projection_width, 
                 projection_height
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_projection;
         """
         image_bytes = utils.pixmap_to_bytes(QPixmap(self.projection_image))
         values = (
             self.id_parent_projection,
             self.id_parent_space,
+            self.id_parent_thing,
             self.projection_name,
             self.projection_description,
             self.x_pos,

@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt
 import sys
 import add_projection as add_projection
 import add_space as add_space
+import add_thing_projection
 import draggable_pixmap_item as draggable_item
 import utils as utils
 import image_container
@@ -348,7 +349,7 @@ class MainWidget(QWidget):
                                                        temp_dict_new_space_projection["x_sm"],
                                                        temp_dict_new_space_projection["y_sm"],
                                                        self.parent_space,
-                                                       scaled_cropped_pixmap)
+                                                       scaled_projection_pixmap=scaled_cropped_pixmap)
                             new_projection.mark_new()
 
                             if temp_dict_new_space_projection["description"]:
@@ -524,14 +525,14 @@ class MainWidget(QWidget):
                             temp_dict_new_subspace_projection["name"],
                             original_image,temp_dict_new_subspace_projection["x_sm"],
                             temp_dict_new_subspace_projection["y_sm"],
-                            subspace
+                            reference_to_parent_space=subspace
                         )
                         new_sub_projection.mark_new()
 
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
                         new_sub_projection.reference_to_parent_projection = self.parent_space.current_projection
 
-                        item = draggable_item.DraggablePixmapItem(pixmap, self.scene, self, self.background)
+                        item = draggable_item.DraggablePixmapItem(pixmap, self.scene, self, self.background, parent=subspace)
 
                         new_sub_projection.scaled_projection_pixmap = item
 
@@ -575,6 +576,8 @@ class MainWidget(QWidget):
                     self.parent_space.things.append(new_thing)
                     print(f"self.parent_space.things: {self.parent_space.things}")
 
+                    self.add_thing_projection(new_thing)
+
                     #self.update_tree_view()
 
                     break  # успех — выходим из цикла
@@ -582,8 +585,76 @@ class MainWidget(QWidget):
             else:
                 break  # пользователь нажал "Отмена" — выходим
 
-    def add_thing_projection(self):
-        pass
+
+    def add_thing_projection(self, new_thing: thing.Thing):
+        if not self.parent_space.current_projection:
+            QMessageBox.warning(self, "Добавьте проекцию пространства",
+                                "Если хотите также добавить проекцию вещи, то "
+                                "необходимо вначале добавить проекцию пространства!")
+            return
+
+        add_thing_projection_dialog = add_thing_projection.AddThingProjection()
+
+        while True:
+            if add_thing_projection_dialog.exec():
+                temp_dict_new_thing_projection = add_thing_projection_dialog.get_data()
+
+                if not temp_dict_new_thing_projection["name"]:
+                    QMessageBox.warning(self, "Заполните обязательные поля",
+                                        "Пожалуйста укажите название вещи!")
+                elif not temp_dict_new_thing_projection["image"]:
+                    QMessageBox.warning(self, "Заполните обязательные поля",
+                                        "Пожалуйста загрузите изображение проекции!")
+                else:
+                    original_image = temp_dict_new_thing_projection["image"]
+
+                    scaled_pixmap = utils.get_scaled_pixmap(
+                        temp_dict_new_thing_projection["image"],
+                        int(round(self.x_scale * temp_dict_new_thing_projection["x_sm"])),
+                        int(round(self.y_scale * temp_dict_new_thing_projection["y_sm"]))
+                    )
+
+                        # class Projection:
+                        #     projection_name: str
+                        #     projection_image: QImage
+                        #     x_sm: float
+                        #     y_sm: float
+                        #     reference_to_parent_space: Optional["space.Space"]
+                        #     scaled_projection_pixmap: draggable_pixmap_item.DraggablePixmapItem | QPixmap | None = None
+                        #     reference_to_parent_projection: Optional["Projection"] | None = None
+                        #     projection_description: str | None = None
+                        #     x_pos: float | None = None
+                        #     y_pos: float | None = None
+
+
+                    new_thing_projection = pr.Projection(
+                        temp_dict_new_thing_projection["name"],
+                        original_image,
+                        temp_dict_new_thing_projection["x_sm"],
+                        temp_dict_new_thing_projection["y_sm"],
+                        # родитель подразвертки это развертка, которая на данный момент отображается как background
+                        reference_to_parent_projection=self.parent_space.current_projection,
+                        reference_to_parent_thing=new_thing
+                    )
+                    new_thing_projection.mark_new()
+
+                    item = draggable_item.DraggablePixmapItem(scaled_pixmap, self.scene, self, self.background, parent=new_thing)
+
+                    new_thing_projection.scaled_projection_pixmap = item
+
+                    if temp_dict_new_thing_projection["description"]:
+                        new_thing_projection.projection_description = temp_dict_new_thing_projection["description"]
+
+                    new_thing.projections.append(new_thing_projection)
+
+                    item.setPos(0, 0)
+                    item.old_pos = item.pos()
+                    self.scene.addItem(item)
+
+                    break  # успех — выходим из цикла
+
+            else:
+                break  # пользователь нажал "Отмена" — выходим
 
 
     def add_image_of_space(self):
@@ -739,6 +810,11 @@ class MainWidget(QWidget):
 
         self.mini_projections_list.remove(mini_projection_to_remove)
         self.update_mini_projections_layout()
+
+        # Удаляем вещь из self.things
+        # Удаляем все проекции со всех сцен (главная сцена, сцены мини разверток)
+    def delete_thing(self):
+        pass
 
 
         # При удалении подпространства необходимо удалить

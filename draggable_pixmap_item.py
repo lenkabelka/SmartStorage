@@ -3,22 +3,21 @@ from PyQt6.QtWidgets import (QGraphicsPixmapItem,
                              QGraphicsColorizeEffect,
                              QMenu
                              )
-from PyQt6.QtGui import QColor, QPen, QPainterPath, QPixmap
-from PyQt6.QtCore import Qt, QPointF, pyqtSlot
-from PyQt6.QtGui import QWheelEvent
+from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QPointF
 import utils as utils
 import math
 
 
 class DraggablePixmapItem(QGraphicsPixmapItem):
-    def __init__(self, pixmap, scene, app, background_pixmap):
+    def __init__(self, pixmap, scene, app, background_pixmap, parent):
         super().__init__(pixmap)
         self.app_ref = app
         self.scene_ref = scene
         self.drag_offset = QPointF()
         self.binary_search = "version_1"
         self.original_pixmap = pixmap
-        #self.parent_background_item = QGraphicsPixmapItem(background_pixmap)
+        self.parent = parent
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
 
@@ -82,37 +81,41 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
-
     def mousePressEvent(self, event):
+        from space import Space
+        from thing import Thing
         self.drag_offset = event.pos()
-
-        print(f"Клик по картинке + {self.item_id}")
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
             freeze_action = menu.addAction("Зафиксировать")
             move_action = menu.addAction("Подвинуть")
-            delete_action = menu.addAction("Удалить")
-            # Используем screenPos, чтобы меню открылось в нужном месте
+
+            # Переменная delete_action может быть None, если ни один тип не подходит
+            delete_action = None
+
+            if isinstance(self.parent, Space):
+                delete_action = menu.addAction("Удалить пространство")
+            elif isinstance(self.parent, Thing):
+                delete_action = menu.addAction("Удалить вещь")
+
             selected_action = menu.exec(event.screenPos())
+
             if selected_action == delete_action:
-                print("Выбрана опция: Удалить")
                 self.scene_ref.removeItem(self)
-                print("Выбрана опция: Удалить_1")
-                self.app_ref.delete_subspace(self)
-                print("Выбрана опция: Удалить_2")
+                if isinstance(self.parent, Space):
+                    self.app_ref.delete_subspace(self)
+                elif isinstance(self.parent, Thing):
+                    self.app_ref.delete_thing(self)
                 self.app_ref.update_tree_view()
-                print("Выбрана опция: Удалить_3")
 
             elif selected_action == freeze_action:
                 self.freeze()
 
             elif selected_action == move_action:
                 self.unfreeze()
-                print("Выбрана опция: Подвинуть")
+
         else:
             super().mousePressEvent(event)
-        super().mousePressEvent(event)
-
 
     def mouseMoveEvent(self, event):
         new_scene_pos = event.scenePos() - self.drag_offset

@@ -6,7 +6,7 @@ import track_object_state
 import image as im
 import connect_DB as connection
 import psycopg2
-import thing
+import thing as th
 
 from track_object_state import ObjectState
 
@@ -15,14 +15,14 @@ from track_object_state import ObjectState
 class Space(track_object_state.Trackable):
     name: str  # DB
     description: str = None  # DB
-    projections: list[projection.Projection] = field(default_factory=list)
-    current_projection: Optional[projection.Projection] = None
+    projections: list[Optional["projection.Projection"]] = field(default_factory=list)
+    current_projection: Optional["projection.Projection"] = None
     subspaces: list["Space"] = field(default_factory=list)
     space_images: list[Optional[im.SpaceImage]] = field(default_factory=list)
     id_space: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
 
-    things: list[Optional[thing.Thing]] = field(default_factory=list)
+    things: list[Optional["th.Thing"]] = field(default_factory=list)
 
     def __post_init__(self):
         self._db_fields = {'id_space', 'name', 'description'}
@@ -168,6 +168,7 @@ class Space(track_object_state.Trackable):
                 else:
                     subspace.save()
 
+
         projections_to_delete = []
 
         if self.projections:
@@ -178,11 +179,27 @@ class Space(track_object_state.Trackable):
                 else:
                     if not project.id_parent_space:
                         project.id_parent_space = self.id_space
-
                     if self.subspaces:
                         project.save_projection(self.subspaces)
                     else:
                         project.save_projection()
+
+
+        things_to_delete = []
+
+        if self.things:
+            for thing in self.things:
+                if not thing.id_parent_space:
+                    thing.id_parent_space = self.id_space
+                if thing.state == ObjectState.DELETED:
+                    things_to_delete.append(thing)
+                    thing.save()  # TODO проверить удаление всех разверток вещей в базе данных
+                else:
+                    if self.projections: # подразвертки вещей (проекции вещей) могут быть добавлены только на развертку пространства.
+                                         # Если у пространства нет разверток, то и у вещей не может быть подразвёрток
+                        thing.save_thing(self.projections) # здесь развёртки уже сохранены в БД, и поэтому у них есть их id_projection
+                    else:
+                        thing.save()
 
 
         images_to_delete = []
@@ -210,3 +227,7 @@ class Space(track_object_state.Trackable):
         if subspaces_to_delete:
             for subspace in subspaces_to_delete:
                 self.subspaces.remove(subspace)
+
+        if things_to_delete:
+            for thing in things_to_delete:
+                self.things.remove(thing)
