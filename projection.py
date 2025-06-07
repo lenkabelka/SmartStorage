@@ -37,6 +37,7 @@ class Projection(track_object_state.Trackable):
     id_parent_thing: Optional[int] = None  # DB  !!!!!!
 
     sub_projections: list["Projection"] = field(default_factory=list)
+    #thing_projections: list["Projection"] = field(default_factory=list)
 
     # def get_parent(self):
     #     return self.reference_to_parent_space or self.reference_to_parent_thing
@@ -199,24 +200,34 @@ class Projection(track_object_state.Trackable):
                 conn.close()
 
 
-    def save_projection(self, subspaces=None):
+    def save_projection(self, subspaces=None, things=None):
         self.save()
 
         subprojections_to_remove = []
 
         if self.sub_projections:
             for sub_projection in self.sub_projections:
-                if subspaces:
-
-                    if sub_projection.state == ObjectState.DELETED:
-                        subprojections_to_remove.append(sub_projection)
-                        sub_projection.save()
-
-                    else:
+                if sub_projection.state == ObjectState.DELETED:
+                    subprojections_to_remove.append(sub_projection)
+                    sub_projection.save()
+                else:
+                    if subspaces:
                         if not sub_projection.id_parent_space:
                             parent_subspace = next((subspace for subspace in subspaces if sub_projection.reference_to_parent_space == subspace), None)
                             if parent_subspace:
                                 sub_projection.id_parent_space = parent_subspace.id_space
+
+                        if not sub_projection.id_parent_projection:
+                            sub_projection.id_parent_projection = self.id_projection
+
+                        sub_projection.save()
+
+                    elif things:
+                        if not sub_projection.id_parent_thing:
+                            parent_thing = next((th for th in things if
+                                                    sub_projection.reference_to_parent_thing == th), None)
+                            if parent_thing:
+                                sub_projection.id_parent_thing = parent_thing.id_thing
 
                         if not sub_projection.id_parent_projection:
                             sub_projection.id_parent_projection = self.id_projection

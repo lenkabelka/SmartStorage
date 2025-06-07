@@ -1,28 +1,140 @@
-from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel, QPoint
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QTreeView, QMenu,
-    QVBoxLayout, QWidget
+    QApplication, QWidget, QVBoxLayout, QTreeView, QMenu
 )
-from typing import Any
-from PyQt6.QtCore import Qt, QModelIndex
-
+from PyQt6.QtCore import (
+    Qt, QAbstractItemModel, QModelIndex, QPoint
+)
+from PyQt6.QtGui import QIcon
+from track_object_state import ObjectState
+import sys
 
 NODE_TYPE_SPACE = "space"
-NODE_TYPE_ITEM = "item"
+NODE_TYPE_ITEM = "thing"
 
-class TreeItem:
-    def __init__(self, name, node_type, parent=None):
+
+class TreeNode:
+    def __init__(self, ref, name, node_type, parent=None):
+        self.ref = ref
         self.name = name
         self.node_type = node_type
         self.parent = parent
         self.children = []
 
+    def add_child(self, child):
+        self.children.append(child)
+        child.parent = self
+
+    def child_count(self):
+        return len(self.children)
+
+    def child(self, row):
+        return self.children[row]
+
+    def row(self):
+        if self.parent:
+            return self.parent.children.index(self)
+        return 0
+
+
+class TreeModel(QAbstractItemModel):
+    def __init__(self, root_item, app_widget):
+        super().__init__()
+        self.root_item = root_item
+        self.app_ref = app_widget
+
+    def get_item(self, index: QModelIndex):
+        if index.isValid():
+            return index.internalPointer()
+        return self.root_item
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return self.get_item(parent).child_count()
+
+    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        return 1
+
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+        parent_item = self.get_item(parent)
+        if row < 0 or row >= parent_item.child_count():
+            return QModelIndex()
+        child_item = parent_item.child(row)
+        return self.createIndex(row, column, child_item)
+
+    def parent(self, index: QModelIndex) -> QModelIndex:
+        if not index.isValid():
+            return QModelIndex()
+        item = index.internalPointer()
+        parent_item = item.parent
+        if parent_item is None or parent_item == self.root_item:
+            return QModelIndex()
+        return self.createIndex(parent_item.row(), 0, parent_item)
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+
+        item = index.internalPointer()
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            return item.name
+
+        elif role == Qt.ItemDataRole.DecorationRole:
+            if item.node_type == NODE_TYPE_SPACE:
+                return QIcon("icons/space.png")  # путь к иконке пространства
+            elif item.node_type == NODE_TYPE_ITEM:
+                return QIcon("icons/thing.png")   # путь к иконке вещи
+
+        return None
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+            return "Структура пространства"
+        return None
+
+
+class TreeWidget(QTreeView):
+    def __init__(self, app, parent=None):
+        super().__init__(parent)
+        self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)
+        self.model = TreeModel(self.root_item, self)
+        self.setModel(self.model)
+
+        self.app_ref = app
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
 
+    def build_tree_nodes(self, space):
+        """Создаёт узел пространства и рекурсивно добавляет потомков"""
+        current_node = TreeNode(space, space.name, NODE_TYPE_SPACE)
+
+        # Подпространства
+        for subspace in getattr(space, "subspaces", []):
+            if getattr(subspace, "state", None) != ObjectState.DELETED:
+                child_node = self.build_tree_nodes(subspace)
+                current_node.add_child(child_node)
+
+        # Вещи
+        for thing in getattr(space, "things", []):
+            if getattr(thing, "state", None) != ObjectState.DELETED:
+                thing_node = TreeNode(thing, thing.name, NODE_TYPE_ITEM)
+                current_node.add_child(thing_node)
+
+        return current_node
+
+    def update_tree(self, parent_space):
+        """Обновляет модель, начиная с нового пространства"""
+        # Новый root (невидимый) и один видимый child (parent_space)
+        self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)
+        root_child = self.build_tree_nodes(parent_space)
+        self.root_item.add_child(root_child)
+
+        self.model = TreeModel(self.root_item, self)
+        self.setModel(self.model)
+        self.expandAll()
+
     def open_context_menu(self, position: QPoint):
-        index: QModelIndex = self.indexAt(position)
+        index = self.indexAt(position)
         if not index.isValid():
             return
 
@@ -35,189 +147,40 @@ class TreeItem:
             menu.addAction("Добавить подпространство", lambda: self.add_space(index))
             menu.addAction("Добавить вещь", lambda: self.add_item(index))
             menu.addSeparator()
-            menu.addAction("Удалить пространство", lambda: self.delete_item(index))
-
+            menu.addAction("Удалить пространство", lambda: self.delete_thing_from_space(index))
         elif node_type == NODE_TYPE_ITEM:
-            menu.addAction("Переименовать вещь", lambda: self.rename_item(index))
-            menu.addAction("Удалить вещь", lambda: self.delete_item(index))
+            menu.addAction("Добавить развертку для вещи", lambda: self.add_item_projection(index))
+            menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
 
-    def child_count(self):
-        return len(self.children)
+    # Заглушки
+    def add_space(self, index: QModelIndex):
+        print("Добавить подпространство")
 
-    def child(self, row):
-        return self.children[row]
+    def add_item(self, index: QModelIndex):
+        print("Добавить вещь")
 
-    def add_child(self, item):
-        self.children.append(item)
-        item.parent = self
+    def delete_thing_from_space(self, index: QModelIndex):
+        print("Удалить элемент")
+        node = index.internalPointer()
+        print(f"node: {node}")
+        if node and node.node_type == NODE_TYPE_ITEM:
+            print(node.node_type)
+            print(node.ref)
+            self.app_ref.delete_thing(node.ref)
 
-    def remove_child(self, row):
-        del self.children[row]
-
-    def row(self):
-        if self.parent:
-            return self.parent.children.index(self)
-        return 0
-
-class TreeModel(QAbstractItemModel):
-    def __init__(self, root_item):
-        super().__init__()
-        self.root_item = root_item
-
-    # rowCount
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        parent_item = self.get_item(parent)
-        return parent_item.child_count()
-
-    # columnCount
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return 1
-
-    # index
-    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
-        parent_item = self.get_item(parent)
-        if 0 <= row < parent_item.child_count():
-            child_item = parent_item.child(row)
-            return self.createIndex(row, column, child_item)
-        return QModelIndex()
-
-    # parent
-    def parent(self, index: QModelIndex) -> QModelIndex:
-        if not index.isValid():
-            return QModelIndex()
-        child_item = self.get_item(index)
-        parent_item = child_item.parent
-        if not parent_item or parent_item == self.root_item:
-            return QModelIndex()
-        return self.createIndex(parent_item.row(), 0, parent_item)
-
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if not index.isValid():
-            return None
-        item = self.get_item(index)
-        if role == Qt.ItemDataRole.DisplayRole:
-            return item.name
-        if role == Qt.ItemDataRole.UserRole:
-            return item.node_type
-        return None
-
-    def flags(self, index):
-        if not index.isValid():
-            return Qt.ItemFlag.NoItemFlags
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable
-
-    def setData(self, index: QModelIndex, value: Any, role: int = Qt.ItemDataRole.EditRole) -> bool:
-        if role == Qt.ItemDataRole.EditRole and index.isValid():
-            item = self.get_item(index)
-            item.name = value
-            self.dataChanged.emit(index, index, [role])
-            return True
-        return False
-
-    def insertItem(self, parent_index: QModelIndex, item: "TreeItem") -> bool:
-        parent_item = self.get_item(parent_index)
-        row = parent_item.child_count()
-        self.beginInsertRows(parent_index, row, row)
-        parent_item.add_child(item)
-        self.endInsertRows()
-        return True
-
-    def removeRow(self, row, parent=QModelIndex()):
-        parent_item = self.get_item(parent)
-        self.beginRemoveRows(parent, row, row)
-        parent_item.remove_child(row)
-        self.endRemoveRows()
-        return True
-
-    def get_item(self, index):
-        if index.isValid():
-            return index.internalPointer()
-        return self.root_item
-
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
-        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return "Структура пространства"
-        return None
+    def add_item_projection(self, index: QModelIndex):
+        node = index.internalPointer()
+        self.app_ref.add_thing_projection(node.ref)
 
 
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("QAbstractItemModel: Пространства и вещи")
 
-        self.tree = QTreeView()
-        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.tree.customContextMenuRequested.connect(self.open_context_menu)
 
-        # Корень модели
-        root = TreeItem("Квартира", NODE_TYPE_SPACE)
-        kitchen = TreeItem("Кухня", NODE_TYPE_SPACE)
-        fridge = TreeItem("Холодильник", NODE_TYPE_SPACE)
-        spoon = TreeItem("Ложка", NODE_TYPE_ITEM)
-        milk = TreeItem("Молоко", NODE_TYPE_ITEM)
 
-        root.add_child(kitchen)
-        kitchen.add_child(fridge)
-        kitchen.add_child(spoon)
-        fridge.add_child(milk)
-
-        self.model = TreeModel(root)
-        self.tree.setModel(self.model)
-        self.tree.expandAll()
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.tree)
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
-
-    # def open_context_menu(self, position):
-    #     index = self.tree.indexAt(position)
-    #     if not index.isValid():
-    #         return
-    #
-    #     item = index.internalPointer()
-    #     node_type = item.node_type
-    #
-    #     menu = QMenu()
-    #
-    #     if node_type == NODE_TYPE_SPACE:
-    #         menu.addAction("Добавить подпространство", lambda: self.add_space(index))
-    #         menu.addAction("Добавить вещь", lambda: self.add_item(index))
-    #         menu.addSeparator()
-    #         menu.addAction("Удалить пространство", lambda: self.delete_item(index))
-    #
-    #     elif node_type == NODE_TYPE_ITEM:
-    #         menu.addAction("Переименовать вещь", lambda: self.rename_item(index))
-    #         menu.addAction("Удалить вещь", lambda: self.delete_item(index))
-    #
-    #     menu.exec(self.tree.viewport().mapToGlobal(position))
-
-    def add_space(self, parent_index):
-        new_item = TreeItem("Новое пространство", NODE_TYPE_SPACE)
-        self.model.insertRow(0, parent_index, new_item)
-        self.tree.expand(parent_index)
-
-    def add_item(self, parent_index):
-        new_item = TreeItem("Новая вещь", NODE_TYPE_ITEM)
-        self.model.insertRow(0, parent_index, new_item)
-        self.tree.expand(parent_index)
-
-    def delete_item(self, index):
-        parent_index = self.model.parent(index)
-        self.model.removeRow(index.row(), parent_index)
-
-    def rename_item(self, index):
-        self.tree.edit(index)
-
-# Запуск
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.resize(400, 300)
-    window.show()
-    sys.exit(app.exec())
+# if __name__ == "__main__":
+#     app = QApplication(sys.argv)
+#     widget = TreeWidget()
+#     widget.show()
+#     sys.exit(app.exec())

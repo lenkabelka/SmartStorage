@@ -19,7 +19,7 @@ class Thing(track_object_state.Trackable):
     description: str = None  # DB
     image: QImage = None # DB
 
-    projections: list[Optional["Projection"]] = field(default_factory=list) # DB
+    #projections: list[Optional["Projection"]] = field(default_factory=list) # DB
 
     id_thing: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
@@ -116,20 +116,20 @@ class Thing(track_object_state.Trackable):
                 conn.close()
 
 
-    def save_thing(self, space_projections):
-        self.save()
-        print(f"id_thing: {self.id_thing}")
-
-        if self.projections:
-            for projection in self.projections:
-                if not projection.id_parent_thing:
-                    projection.id_parent_thing = self.id_thing
-
-                parent_projection = next(
-                    (pr for pr in space_projections if projection.reference_to_parent_projection == pr), None)
-                print(f"parent_projection: {parent_projection}")
-                if parent_projection:
-                    projection.id_parent_projection = parent_projection.id_projection
-                    print(f"projection.id_projection: {projection.id_parent_projection}")
-
-                projection.save()
+    # def save_thing(self, space_projections):
+    #     self.save()
+    #     print(f"id_thing: {self.id_thing}")
+    #
+    #     if self.projections:
+    #         for projection in self.projections:
+    #             if not projection.id_parent_thing:
+    #                 projection.id_parent_thing = self.id_thing
+    #
+    #             parent_projection = next(
+    #                 (pr for pr in space_projections if projection.reference_to_parent_projection == pr), None)
+    #             print(f"parent_projection: {parent_projection}")
+    #             if parent_projection:
+    #                 projection.id_parent_projection = parent_projection.id_projection
+    #                 print(f"projection.id_projection: {projection.id_parent_projection}")
+    #
+    #             projection.save()

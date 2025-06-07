@@ -169,6 +169,19 @@ class Space(track_object_state.Trackable):
                     subspace.save()
 
 
+        things_to_delete = []
+
+        if self.things:
+            for thg in self.things:
+                if not thg.id_parent_space:
+                    thg.id_parent_space = self.id_space
+                if thg.state == ObjectState.DELETED:
+                    things_to_delete.append(thg)
+                    thg.save()
+                else:
+                    thg.save()
+
+
         projections_to_delete = []
 
         if self.projections:
@@ -179,27 +192,10 @@ class Space(track_object_state.Trackable):
                 else:
                     if not project.id_parent_space:
                         project.id_parent_space = self.id_space
-                    if self.subspaces:
-                        project.save_projection(self.subspaces)
+                    if self.subspaces or self.things:
+                        project.save_projection(subspaces=self.subspaces, things=self.things)
                     else:
                         project.save_projection()
-
-
-        things_to_delete = []
-
-        if self.things:
-            for thing in self.things:
-                if not thing.id_parent_space:
-                    thing.id_parent_space = self.id_space
-                if thing.state == ObjectState.DELETED:
-                    things_to_delete.append(thing)
-                    thing.save()  # TODO проверить удаление всех разверток вещей в базе данных
-                else:
-                    if self.projections: # подразвертки вещей (проекции вещей) могут быть добавлены только на развертку пространства.
-                                         # Если у пространства нет разверток, то и у вещей не может быть подразвёрток
-                        thing.save_thing(self.projections) # здесь развёртки уже сохранены в БД, и поэтому у них есть их id_projection
-                    else:
-                        thing.save()
 
 
         images_to_delete = []

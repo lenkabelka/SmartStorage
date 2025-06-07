@@ -11,7 +11,6 @@ class ProjectionContainer(QWidget):
 
         self.app_ref = app
         self.saved_projection = projection_to_save
-        print("1")
         self.sub_projections_list = None
         if projection_to_save.sub_projections:
             self.sub_projections_list = projection_to_save.sub_projections
@@ -26,7 +25,10 @@ class ProjectionContainer(QWidget):
         layout.addWidget(label)
         layout.addWidget(self.view)
 
-        self.background_pixmap = QPixmap.fromImage(projection_to_save.projection_image)
+        #self.background_pixmap = QPixmap.fromImage(projection_to_save.projection_image)
+        #self.background_item = QGraphicsPixmapItem(self.background_pixmap)
+        self.background_pixmap = projection_to_save.scaled_projection_pixmap
+
         self.background_item = QGraphicsPixmapItem(self.background_pixmap)
         min_z = min((item.zValue() for item in self.scene.items()), default=0)
         self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
@@ -88,7 +90,10 @@ class ProjectionContainer(QWidget):
         if projection_to_change.sub_projections:
             self.sub_projections_list = projection_to_change.sub_projections
 
-        self.background_pixmap = QPixmap.fromImage(projection_to_change.projection_image)
+        # self.background_pixmap = QPixmap.fromImage(projection_to_change.projection_image)
+        # self.background_item = QGraphicsPixmapItem(self.background_pixmap)
+
+        self.background_pixmap = projection_to_change.scaled_projection_pixmap
         self.background_item = QGraphicsPixmapItem(self.background_pixmap)
         min_z = min((item.zValue() for item in self.scene.items()), default=0)
         self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план

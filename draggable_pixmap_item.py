@@ -91,22 +91,33 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             move_action = menu.addAction("Подвинуть")
 
             # Переменная delete_action может быть None, если ни один тип не подходит
-            delete_action = None
+            delete_item_action = None
+            delete_subprojection_action = None
+            delete_subprojections_action = None
 
             if isinstance(self.parent, Space):
-                delete_action = menu.addAction("Удалить пространство")
+                delete_item_action = menu.addAction("Удалить пространство")
             elif isinstance(self.parent, Thing):
-                delete_action = menu.addAction("Удалить вещь")
+                delete_item_action = menu.addAction("Удалить вещь")
+
+            if isinstance(self.parent, Space):
+                delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
+            elif isinstance(self.parent, Thing):
+                delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
+
+            if isinstance(self.parent, Space):
+                delete_subprojections_action = menu.addAction("Удалить эту проекцию пространства")
+            elif isinstance(self.parent, Thing):
+                delete_subprojections_action = menu.addAction("Удалить эту проекцию вещи")
 
             selected_action = menu.exec(event.screenPos())
 
-            if selected_action == delete_action:
-                self.scene_ref.removeItem(self)
-                if isinstance(self.parent, Space):
-                    self.app_ref.delete_subspace(self)
-                elif isinstance(self.parent, Thing):
-                    self.app_ref.delete_thing(self)
-                self.app_ref.update_tree_view()
+            if selected_action == delete_subprojection_action:
+                self.app_ref.delete_one_subprojection(self)
+                #self.app_ref.update_tree_view()
+
+            elif selected_action == delete_subprojections_action:
+                self.app_ref.delete_all_subprojections(self)
 
             elif selected_action == freeze_action:
                 self.freeze()
