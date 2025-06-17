@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
     projection_description TEXT,
     x_pos_in_parent_projection NUMERIC,  -- X coordinate relative to parent projection
     y_pos_in_parent_projection NUMERIC,  -- Y coordinate relative to parent projection
+    z_pos NUMERIC, -- координата для правильного восстановления сцены
     projection_image BYTEA,
     projection_width NUMERIC,
     projection_height NUMERIC,

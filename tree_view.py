@@ -9,7 +9,7 @@ from track_object_state import ObjectState
 import sys
 
 NODE_TYPE_SPACE = "space"
-NODE_TYPE_ITEM = "thing"
+NODE_TYPE_THING = "thing"
 
 
 class TreeNode:
@@ -81,7 +81,7 @@ class TreeModel(QAbstractItemModel):
         elif role == Qt.ItemDataRole.DecorationRole:
             if item.node_type == NODE_TYPE_SPACE:
                 return QIcon("icons/space.png")  # путь к иконке пространства
-            elif item.node_type == NODE_TYPE_ITEM:
+            elif item.node_type == NODE_TYPE_THING:
                 return QIcon("icons/thing.png")   # путь к иконке вещи
 
         return None
@@ -117,7 +117,7 @@ class TreeWidget(QTreeView):
         # Вещи
         for thing in getattr(space, "things", []):
             if getattr(thing, "state", None) != ObjectState.DELETED:
-                thing_node = TreeNode(thing, thing.name, NODE_TYPE_ITEM)
+                thing_node = TreeNode(thing, thing.name, NODE_TYPE_THING)
                 current_node.add_child(thing_node)
 
         return current_node
@@ -144,35 +144,37 @@ class TreeWidget(QTreeView):
         menu = QMenu(self)
 
         if node_type == NODE_TYPE_SPACE:
-            menu.addAction("Добавить подпространство", lambda: self.add_space(index))
-            menu.addAction("Добавить вещь", lambda: self.add_item(index))
+            menu.addAction("Добавить развертку для подпространства", lambda: self.add_subspace_projection(index))
+            #menu.addAction("Добавить вещь", lambda: self.add_item(index))
             menu.addSeparator()
-            menu.addAction("Удалить пространство", lambda: self.delete_thing_from_space(index))
-        elif node_type == NODE_TYPE_ITEM:
-            menu.addAction("Добавить развертку для вещи", lambda: self.add_item_projection(index))
+            menu.addAction("Удалить подпространство", lambda: self.delete_subspace_from_space(index))
+        elif node_type == NODE_TYPE_THING:
+            menu.addAction("Добавить развертку для вещи", lambda: self.add_thing_projection(index))
+            menu.addSeparator()
             menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
 
-    # Заглушки
-    def add_space(self, index: QModelIndex):
-        print("Добавить подпространство")
-
-    def add_item(self, index: QModelIndex):
-        print("Добавить вещь")
-
-    def delete_thing_from_space(self, index: QModelIndex):
-        print("Удалить элемент")
+    def add_subspace_projection(self, index: QModelIndex):
         node = index.internalPointer()
-        print(f"node: {node}")
-        if node and node.node_type == NODE_TYPE_ITEM:
-            print(node.node_type)
-            print(node.ref)
-            self.app_ref.delete_thing(node.ref)
+        self.app_ref.add_subspace_projection(node.ref)
 
-    def add_item_projection(self, index: QModelIndex):
+    def delete_subspace_from_space(self, index: QModelIndex):
+        node = index.internalPointer()
+        if node and node.node_type == NODE_TYPE_SPACE:
+            self.app_ref.delete_subspace(node.ref)
+
+    def add_thing_projection(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.add_thing_projection(node.ref)
+
+    def delete_thing_from_space(self, index: QModelIndex):
+        node = index.internalPointer()
+        if node and node.node_type == NODE_TYPE_THING:
+            self.app_ref.delete_thing(node.ref)
+
+    # def add_item(self, index: QModelIndex):
+    #     print("Добавить вещь")
 
 
 

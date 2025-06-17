@@ -25,22 +25,29 @@ class ProjectionContainer(QWidget):
         layout.addWidget(label)
         layout.addWidget(self.view)
 
-        #self.background_pixmap = QPixmap.fromImage(projection_to_save.projection_image)
-        #self.background_item = QGraphicsPixmapItem(self.background_pixmap)
-        self.background_pixmap = projection_to_save.scaled_projection_pixmap
+        # Копия current_projection:
+        self.background_item = QGraphicsPixmapItem(self.saved_projection.original_pixmap)
+        print("!!!!!!!!!!!! Я тут!_1")
 
-        self.background_item = QGraphicsPixmapItem(self.background_pixmap)
-        min_z = min((item.zValue() for item in self.scene.items()), default=0)
-        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+        # min_z = min((item.zValue() for item in self.scene.items()), default=0)
+        # self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
         self.scene.addItem(self.background_item)
 
         if self.sub_projections_list:
+            print("!!!!!!!!!!!! Я тут!_2")
             for sub in self.sub_projections_list:
+                print("!!!!!!!!!!!! Я тут!_3")
                 if sub.state != ObjectState.DELETED:
-                    pixmap = sub.scaled_projection_pixmap.pixmap()
-                    item_copy = QGraphicsPixmapItem(pixmap)
+                    item_copy = QGraphicsPixmapItem(sub.original_pixmap)
+                    print("!!!!!!!!!!!! Я тут!_4")
                     item_copy.setPos(sub.x_pos, sub.y_pos)
+                    print("!!!!!!!!!!!! Я тут!_5")
+                    item_copy.setZValue(sub.z_pos)
+                    print("!!!!!!!!!!!! Я тут!_6")
                     self.scene.addItem(item_copy)
+
+        min_z = min((item.zValue() for item in self.scene.items()), default=0)
+        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -77,8 +84,10 @@ class ProjectionContainer(QWidget):
         # максимально доступная ширина
         width = self.width()
 
-        if not self.background_pixmap.isNull():
-            aspect_ratio = self.background_pixmap.height() / self.background_pixmap.width()
+        if self.background_item:
+            background_pixmap = self.background_item.pixmap()
+            aspect_ratio = background_pixmap.height() / background_pixmap.width()
+            print(f"aspect_ratio: {aspect_ratio}")                                     #TODO почему печатается 3 раза?
             height = int(width * aspect_ratio)
             self.view.setFixedHeight(height)
             self.view.fitInView(self.background_item, Qt.AspectRatioMode.KeepAspectRatio)
@@ -90,22 +99,19 @@ class ProjectionContainer(QWidget):
         if projection_to_change.sub_projections:
             self.sub_projections_list = projection_to_change.sub_projections
 
-        # self.background_pixmap = QPixmap.fromImage(projection_to_change.projection_image)
-        # self.background_item = QGraphicsPixmapItem(self.background_pixmap)
-
-        self.background_pixmap = projection_to_change.scaled_projection_pixmap
-        self.background_item = QGraphicsPixmapItem(self.background_pixmap)
-        min_z = min((item.zValue() for item in self.scene.items()), default=0)
-        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+        self.background_item = QGraphicsPixmapItem(projection_to_change.original_pixmap)
         self.scene.addItem(self.background_item)
 
         if self.sub_projections_list:
             for sub in self.sub_projections_list:
                 if sub.state != ObjectState.DELETED:
-                    pixmap = sub.scaled_projection_pixmap.pixmap()
-                    item_copy = QGraphicsPixmapItem(pixmap)
+                    item_copy = QGraphicsPixmapItem(sub.original_pixmap)
                     item_copy.setPos(sub.x_pos, sub.y_pos)
+                    item_copy.setZValue(sub.z_pos)
                     self.scene.addItem(item_copy)
+
+        min_z = min((item.zValue() for item in self.scene.items()), default=0)
+        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)

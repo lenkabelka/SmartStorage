@@ -10,10 +10,9 @@ import math
 
 
 class DraggablePixmapItem(QGraphicsPixmapItem):
-    def __init__(self, pixmap, scene, app, background_pixmap, parent):
+    def __init__(self, pixmap, app, background_pixmap_item, parent):
         super().__init__(pixmap)
         self.app_ref = app
-        self.scene_ref = scene
         self.drag_offset = QPointF()
         self.binary_search = "version_1"
         self.original_pixmap = pixmap
@@ -38,7 +37,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
         self.item_id = id(self)
 
-        self.background_pixmap = background_pixmap
+        self.background_pixmap = background_pixmap_item.pixmap()
         #self.path_1 = background_path
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
@@ -73,13 +72,15 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
     #                                  utils.get_contours(self.background_pixmap)[1])
 
 
-    def update_path(self, new_background_pixmap):
+    def update_path(self, new_background_pixmap_item):
         print(f"old_background: {self.background_pixmap}")
-        self.background_pixmap = new_background_pixmap
+        self.background_pixmap = new_background_pixmap_item.pixmap()
         print(f"new_background: {self.background_pixmap}")
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+
+        print("klappt!")
 
     def mousePressEvent(self, event):
         from space import Space
@@ -106,9 +107,9 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
 
             if isinstance(self.parent, Space):
-                delete_subprojections_action = menu.addAction("Удалить эту проекцию пространства")
+                delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
             elif isinstance(self.parent, Thing):
-                delete_subprojections_action = menu.addAction("Удалить эту проекцию вещи")
+                delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
 
             selected_action = menu.exec(event.screenPos())
 

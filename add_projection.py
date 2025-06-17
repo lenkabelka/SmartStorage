@@ -38,9 +38,6 @@ class AddProjection(QDialog):
 
         self.image_label = QLabel("Нет изображения")
 
-        self.x_scale = None
-        self.y_scale = None
-
         screen_size = QGuiApplication.primaryScreen().size()
         screen_width = screen_size.width()
         screen_height = screen_size.height()

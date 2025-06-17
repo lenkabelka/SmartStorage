@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox, QGraphicsPixmapItem
 import psycopg2
 
 from draggable_pixmap_item import DraggablePixmapItem
@@ -18,6 +18,7 @@ import thing
 class Projection(track_object_state.Trackable):
     projection_name: str  # DB
     projection_image: QImage  # DB
+    original_pixmap: QPixmap # pixmap для создания элементов на QGraphicsScene
     projection_width: Optional[float] = None  # DB
     projection_height: Optional[float] = None  # DB
 
@@ -25,11 +26,12 @@ class Projection(track_object_state.Trackable):
     reference_to_parent_space: Optional["space.Space"] = None
     reference_to_parent_thing: Optional["thing.Thing"] = None  # !!!!!!!!!
 
-    scaled_projection_pixmap: Optional[DraggablePixmapItem | QPixmap] = None
+    scaled_projection_pixmap: Optional[DraggablePixmapItem | QGraphicsPixmapItem] = None
     reference_to_parent_projection: Optional["Projection"] = None
     projection_description: Optional[str] = None  # DB
     x_pos: Optional[float] = None  # DB
     y_pos: Optional[float] = None  # DB
+    z_pos: Optional[float] = None
 
     id_projection: Optional[int] = None  # DB
     id_parent_projection: Optional[int] = None  # DB
