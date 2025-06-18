@@ -37,6 +37,14 @@ class MainWindow(QMainWindow):
         action_exit = QAction("Exit", self)
         action_exit.triggered.connect(self.close)
         menu = self.menuBar()
+
+        menu.setStyleSheet("""
+            QMenuBar {
+                background-color: #f0f0f0;
+                border-bottom: 1px solid #888;
+            }
+        """)
+
         file_menu = menu.addMenu("&File")
         about_menu = menu.addMenu("&About")
         file_menu.addAction(action_exit)
@@ -59,8 +67,6 @@ class MainWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        #self.background = None
-        #self.background_item = None
         self.parent_space = None
 
         self.x_scale = None
@@ -222,7 +228,7 @@ class MainWidget(QWidget):
         #self.left_view_frame = QFrame()
         #self.left_view_layout
 
-        self.tree = test.TreeWidget(self)
+        self.tree = tree_view.TreeWidget(self)
 
         #self.tree = QTreeView()
         #self.model = QStandardItemModel()
@@ -366,8 +372,8 @@ class MainWidget(QWidget):
                             if temp_dict_new_space_projection["description"]:
                                 new_projection.projection_description = temp_dict_new_space_projection["description"]
 
-                            #self.parent_space.projections.append(new_projection)
-
+                            #self.parent_space = space_to_add_projection
+                            #if self.parent_space == space_to_add_projection:
                             self.parent_space.current_projection = new_projection
 
                             self.update_main_scene()
@@ -407,6 +413,8 @@ class MainWidget(QWidget):
                             print(f"self.x_scale: {self.x_scale}")
                             print(f"self.y_scale: {self.y_scale}")
 
+                            #if self.parent_space == space_to_add_projection:
+
                             self.parent_space.current_projection.projection_image \
                                 = original_image
                             self.parent_space.current_projection.original_pixmap \
@@ -426,8 +434,6 @@ class MainWidget(QWidget):
                             self.parent_space.current_projection.reset_state()
 
                             self.update_main_scene()
-
-                            print(f"self.parent_space.current_projection.scaled_projection_pixmap: {self.parent_space.current_projection.scaled_projection_pixmap}")
 
                             if self.parent_space.current_projection.sub_projections:
                                 for subproj in self.parent_space.current_projection.sub_projections:
