@@ -557,7 +557,7 @@ class MainWidget(QWidget):
                 break  # пользователь нажал "Отмена" — выходим
 
 
-    def update_main_scene(self):
+    def update_main_scene(self, set_position=None):
         print("1")
         if self.scene.items():
             self.scene.clear()
@@ -579,7 +579,9 @@ class MainWidget(QWidget):
                     parent = None
                     if sub.reference_to_parent_thing:
                         parent = sub.reference_to_parent_thing
+                        print(f"_______________________________________PARENT_THING: {parent}")
                     if sub.reference_to_parent_space:
+                        print(f"_______________________________________PARENT_SPACE: {parent}")
                         parent = sub.reference_to_parent_space
                     # перерасчет размеров подпространства на основании новых размеров пространства,
                     # а также на основании новых размеров картинки:
@@ -589,25 +591,32 @@ class MainWidget(QWidget):
                         int(round(self.y_scale * sub.projection_height))
                     )
                     sub.original_pixmap = pixmap
+                    print(f"_______________________________________PARENT: {parent}")
                     sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
                         pixmap,
                         self,
                         self.parent_space.current_projection.scaled_projection_pixmap,
-                        parent)
+                        parent=parent)
 
                     if sub.z_pos:
                         sub.scaled_projection_pixmap.setZValue(sub.z_pos)
-                    # теперь подпроекции будут появляться в середине сцены
-                    center = self.scene.sceneRect().center()
-                    sub_rect = sub.scaled_projection_pixmap.boundingRect()
-                    offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
-                    sub.scaled_projection_pixmap.setPos(center - offset)
-                    # # Так как это может быть совершенно новое пространство, с другими размерами
-                    # # то не целесообразно использовать sub.x_pos and sub.y_pos.
-                    # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
-                    # # размерами или нет.
-                    # if sub.x_pos and sub.y_pos:
-                    #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
+
+                    # необходимо при открытии мини-развертки на главное сцене
+                    if set_position:
+                        if sub.x_pos and sub.y_pos:
+                            sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
+                    else:
+                        # теперь подпроекции будут появляться в середине сцены
+                        center = self.scene.sceneRect().center()
+                        sub_rect = sub.scaled_projection_pixmap.boundingRect()
+                        offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
+                        sub.scaled_projection_pixmap.setPos(center - offset)
+                        # # Так как это может быть совершенно новое пространство, с другими размерами
+                        # # то не целесообразно использовать sub.x_pos and sub.y_pos.
+                        # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
+                        # # размерами или нет.
+                        # if sub.x_pos and sub.y_pos:
+                        #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
 
                     self.scene.addItem(sub.scaled_projection_pixmap)
 
@@ -721,6 +730,8 @@ class MainWidget(QWidget):
                         offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                         item.setPos(center - offset)
 
+                        print(f"SUBSPACE: {subspace_to_add_projection}")
+
                         self.scene.addItem(item)
 
                         break  # успех — выходим из цикла
@@ -832,6 +843,8 @@ class MainWidget(QWidget):
                     item_rect = item.boundingRect()
                     offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                     item.setPos(center - offset)
+
+                    print(f"THING, new_thing_projection.reference_to_parent_thing: {new_thing_projection.reference_to_parent_thing}")
 
                     self.scene.addItem(item)
 
@@ -1052,6 +1065,18 @@ class MainWidget(QWidget):
 
         self.mini_projections_list.remove(mini_projection_to_remove)
         self.update_mini_projections_layout()
+
+
+    def set_mini_projection_on_main_scene(self, mini_projection):
+        mini_projection_to_set_on_scene = next((mini for mini in self.mini_projections_list if mini == mini_projection),
+                                         None)
+        if mini_projection_to_set_on_scene:
+            projection = next((projection for projection in self.parent_space.projections
+                               if projection == mini_projection_to_set_on_scene.saved_projection), None)
+
+            if projection:
+                self.parent_space.current_projection = projection
+                self.update_main_scene(True)
 
 
     def delete_one_subprojection(self, draggable_item_pointer):

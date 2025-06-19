@@ -192,10 +192,12 @@ class Space(track_object_state.Trackable):
                 else:
                     if not project.id_parent_space:
                         project.id_parent_space = self.id_space
-                    if self.subspaces or self.things:
-                        project.save_projection(subspaces=self.subspaces, things=self.things)
-                    else:
+
+                    if not self.subspaces and not self.things:
                         project.save_projection()
+                    else:
+                        if self.subspaces or self.things:
+                            project.save_projection(subspaces=self.subspaces, things=self.things)
 
 
         images_to_delete = []

@@ -66,13 +66,18 @@ class ProjectionContainer(QWidget):
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         delete_action = QAction("Удалить эту проекцию", self)
+        set_as_main_scene_action = QAction("Открыть, как главную развёртку", self)
         menu.addAction(delete_action)
+        menu.addAction(set_as_main_scene_action)
 
         action = menu.exec(event.globalPos())
         if action == delete_action:
             if self.app_ref:
                 self.app_ref.delete_mini_projection(self)
             self.deleteLater()
+        if action == set_as_main_scene_action:
+            if self.app_ref:
+                self.app_ref.set_mini_projection_on_main_scene(self)
 
 
     def resizeEvent(self, event):

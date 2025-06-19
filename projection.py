@@ -145,6 +145,7 @@ class Projection(track_object_state.Trackable):
                 projection_description = %s,
                 x_pos_in_parent_projection = %s,
                 y_pos_in_parent_projection = %s,
+                z_pos,
                 projection_image = %s,
                 projection_width = %s,
                 projection_height = %s
@@ -157,6 +158,7 @@ class Projection(track_object_state.Trackable):
             self.projection_description,
             self.x_pos,
             self.y_pos,
+            self.z_pos,
             psycopg2.Binary(image_bytes),
             self.projection_width,
             self.projection_height,
@@ -225,9 +227,9 @@ class Projection(track_object_state.Trackable):
                         if not sub_projection.id_parent_projection:
                             sub_projection.id_parent_projection = self.id_projection
 
-                        sub_projection.save()
+                        #sub_projection.save()
 
-                    elif things:
+                    if things:
                         if not sub_projection.id_parent_thing:
                             parent_thing = next((th for th in things if
                                                     sub_projection.reference_to_parent_thing == th), None)
@@ -237,7 +239,8 @@ class Projection(track_object_state.Trackable):
                         if not sub_projection.id_parent_projection:
                             sub_projection.id_parent_projection = self.id_projection
 
-                        sub_projection.save()
+                        #sub_projection.save()
+                    sub_projection.save()
 
 
         if subprojections_to_remove:
