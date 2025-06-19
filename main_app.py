@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
 
         self.action_save_space.triggered.connect(lambda: print("Меню сохранения нажато"))
         self.action_save_space.triggered.connect(self.main_widget.save_space_to_DB)
-        self.action_create_new_space.triggered.connect(self.main_widget.add_space)
+        self.action_create_new_space.triggered.connect(self.main_widget.save_current_space)
         self.action_exit.triggered.connect(self.close_application)
 
         self.main_widget.space_changed.connect(self.update_actions)
@@ -404,7 +404,36 @@ class MainWidget(QWidget):
         self.tree.update_tree(self.parent_space)
 
 
+    def save_current_space(self):
+        if self.parent_space is None:
+            self.add_space()
+        else:
+            if self.parent_space.state == ObjectState.NEW or self.parent_space.state == ObjectState.MODIFIED:
+                reply = QMessageBox.question(
+                    self,
+                    "Сохранить пространство",
+                    "Пространство не сохранено!\nХотите сохранить пространство?",
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel
+                )
+
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.save_space_to_DB()
+                    self.add_space()
+
+                elif reply == QMessageBox.StandardButton.No:
+                    self.add_space()
+
+                elif reply == QMessageBox.StandardButton.Cancel:
+                    return
+            else:
+                self.add_space()
+
+
     def add_space(self):
+
         add_space_dialog = add_space.AddSpace()
 
         while True:
