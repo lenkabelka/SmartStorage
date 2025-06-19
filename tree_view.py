@@ -122,12 +122,14 @@ class TreeWidget(QTreeView):
 
         return current_node
 
-    def update_tree(self, parent_space):
+    def update_tree(self, parent_space=None):
         """Обновляет модель, начиная с нового пространства"""
         # Новый root (невидимый) и один видимый child (parent_space)
-        self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)
-        root_child = self.build_tree_nodes(parent_space)
-        self.root_item.add_child(root_child)
+        self.root_item = TreeNode(None, "root", NODE_TYPE_SPACE)
+
+        if parent_space is not None:
+            root_child = self.build_tree_nodes(parent_space)
+            self.root_item.add_child(root_child)
 
         self.model = TreeModel(self.root_item, self)
         self.setModel(self.model)
@@ -167,7 +169,8 @@ class TreeWidget(QTreeView):
         menu.exec(self.viewport().mapToGlobal(position))
 
     def delete_space(self, index: QModelIndex):
-        pass
+        node = index.internalPointer()
+        self.app_ref.delete_space(node.ref)
 
     def add_space_projection(self):
         self.app_ref.add_space_projection()

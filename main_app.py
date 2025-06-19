@@ -215,42 +215,54 @@ class MainWidget(QWidget):
         self.scene = QGraphicsScene(self)
         self.view = zoomable_graphics_view.ZoomableGraphicsView(self.scene)
 
-        int(min(wellcome_view.width(), wellcome_view.height()) * 0.03)
-        font = QFont("Arial", font_size)
-
         # Первый текст
         self.placeholder_for_projection_1 = QGraphicsTextItem(
             "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
         )
-        self.placeholder_for_projection_1.setFont(font)
-        line1_rect =self.placeholder_for_projection_1.boundingRect()
 
         # Второй текст
         self.placeholder_for_projection_2 = QGraphicsTextItem(
             "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
         )
-        self.placeholder_for_projection_2.setFont(font)
-        line2_rect = self.placeholder_for_projection_2.boundingRect()
 
-        # Общая высота
-        total_height = line1_rect.height() + line2_rect.height()
-        center_y = (self.scene.height() - total_height) / 2
+        self.set_placeholders_on_main_scene()
 
-        # Устанавливаем позиции по центру
-        self.placeholder_for_projection_1.setPos((self.scene.width() - line1_rect.width()) / 2, center_y)
-        self.placeholder_for_projection_2.setPos((self.scene.width() - line2_rect.width()) / 2, center_y
-                                                 + line1_rect.height())
-
-        self.placeholder_for_projection_1.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-        self.placeholder_for_projection_2.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-
-        self.scene.addItem(self.placeholder_for_projection_1)
-        self.scene.addItem(self.placeholder_for_projection_2)
-
-
-
-        #self.scene.addItem(self.placeholder_for_projection)
-        self.view.setScene(self.scene)
+        # int(min(wellcome_view.width(), wellcome_view.height()) * 0.03)
+        # font = QFont("Arial", font_size)
+        #
+        # # Первый текст
+        # self.placeholder_for_projection_1 = QGraphicsTextItem(
+        #     "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
+        # )
+        # self.placeholder_for_projection_1.setFont(font)
+        # line1_rect =self.placeholder_for_projection_1.boundingRect()
+        #
+        # # Второй текст
+        # self.placeholder_for_projection_2 = QGraphicsTextItem(
+        #     "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
+        # )
+        # self.placeholder_for_projection_2.setFont(font)
+        # line2_rect = self.placeholder_for_projection_2.boundingRect()
+        #
+        # # Общая высота
+        # total_height = line1_rect.height() + line2_rect.height()
+        # center_y = (self.scene.height() - total_height) / 2
+        #
+        # # Устанавливаем позиции по центру
+        # self.placeholder_for_projection_1.setPos((self.scene.width() - line1_rect.width()) / 2, center_y)
+        # self.placeholder_for_projection_2.setPos((self.scene.width() - line2_rect.width()) / 2, center_y
+        #                                          + line1_rect.height())
+        #
+        # self.placeholder_for_projection_1.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        # self.placeholder_for_projection_2.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        #
+        # self.scene.addItem(self.placeholder_for_projection_1)
+        # self.scene.addItem(self.placeholder_for_projection_2)
+        #
+        #
+        #
+        # #self.scene.addItem(self.placeholder_for_projection)
+        # self.view.setScene(self.scene)
         #self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
         #self.view.setSceneRect(0, 0, 800, 600)
 
@@ -345,6 +357,49 @@ class MainWidget(QWidget):
         self.add_space_button.clicked.connect(self.add_space)
 
 
+    def set_placeholders_on_main_scene(self):
+        font_size = int(min(self.view.width(), self.view.height()) * 0.03)
+        font = QFont("Arial", font_size)
+
+        # Первый текст
+        self.placeholder_for_projection_1 = QGraphicsTextItem(
+            "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
+        )
+
+        self.placeholder_for_projection_1.setFont(font)
+        line1_rect =self.placeholder_for_projection_1.boundingRect()
+
+        # Второй текст
+        self.placeholder_for_projection_2 = QGraphicsTextItem(
+            "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
+        )
+
+        self.placeholder_for_projection_2.setFont(font)
+        line2_rect = self.placeholder_for_projection_2.boundingRect()
+
+        # Общая высота
+        total_height = line1_rect.height() + line2_rect.height()
+        center_y = (self.scene.height() - total_height) / 2
+
+        # Устанавливаем позиции по центру
+        self.placeholder_for_projection_1.setPos((self.scene.width() - line1_rect.width()) / 2, center_y)
+        self.placeholder_for_projection_2.setPos((self.scene.width() - line2_rect.width()) / 2, center_y
+                                                 + line1_rect.height())
+
+        self.placeholder_for_projection_1.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.placeholder_for_projection_2.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+
+        self.scene.addItem(self.placeholder_for_projection_1)
+        self.scene.addItem(self.placeholder_for_projection_2)
+
+        self.view.setScene(self.scene)
+
+        bounding_rect = self.scene.itemsBoundingRect()
+        self.scene.setSceneRect(bounding_rect)
+
+        self.view.fitInView(bounding_rect, Qt.AspectRatioMode.KeepAspectRatio)
+
+
     def update_tree_view(self):
         self.tree.update_tree(self.parent_space)
 
@@ -369,10 +424,11 @@ class MainWidget(QWidget):
                     self.current_index = 1
                     self.stack_widget.setCurrentIndex(self.current_index)
 
-                    #self.update_tree_view()
-                    self.tree.update_tree(self.parent_space)
+                    self.update_tree_view()
 
                     self.space_changed.emit()
+
+                    self.set_buttons_disabled_or_enabled()
 
                     break  # успех — выходим из цикла
 
@@ -1100,15 +1156,22 @@ class MainWidget(QWidget):
 
 
     def delete_space(self, space_to_delete):
-        if space_to_delete == self.parent_space:
+        if self.parent_space == space_to_delete:
             if self.parent_space.state == ObjectState.NEW:
                 self.parent_space = None
             else:
                 self.parent_space.mark_deleted()
             self.scene.clear()
+            self.placeholder_for_projection_1 = None
+            self.placeholder_for_projection_2 = None
             self.mini_projections_list.clear()
             self.update_mini_projections_layout()
-            self.tree.update_tree(self)
+            self.update_tree_view()
+            #self.current_index = 0
+            #self.stack_widget.setCurrentIndex(self.current_index)
+            self.set_buttons_disabled_or_enabled()
+            #self.set_placeholders_on_main_scene()
+
 
 
 
@@ -1155,6 +1218,15 @@ class MainWidget(QWidget):
     def load_space_from_DB(self):
         pass
 
+    def set_buttons_disabled_or_enabled(self):
+        if self.parent_space is None:
+            self.add_image_of_space_button.setEnabled(False)
+            self.add_new_space_projection_button.setEnabled(False)
+            self.save_current_projection_button.setEnabled(False)
+        else:
+            self.add_image_of_space_button.setEnabled(True)
+            self.add_new_space_projection_button.setEnabled(True)
+            self.save_current_projection_button.setEnabled(True)
 
 
 if __name__ == '__main__':
