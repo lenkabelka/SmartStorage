@@ -31,7 +31,7 @@ class Projection(track_object_state.Trackable):
     projection_description: Optional[str] = None  # DB
     x_pos: Optional[float] = None  # DB
     y_pos: Optional[float] = None  # DB
-    z_pos: Optional[float] = None
+    z_pos: Optional[float] = None  # DB
 
     id_projection: Optional[int] = None  # DB
     id_parent_projection: Optional[int] = None  # DB
@@ -57,6 +57,7 @@ class Projection(track_object_state.Trackable):
             'projection_description',
             'x_pos',
             'y_pos',
+            'z_pos',
             'id_projection',
             'id_parent_projection',
             'id_parent_space',
@@ -90,12 +91,13 @@ class Projection(track_object_state.Trackable):
                 projection_name, 
                 projection_description, 
                 x_pos_in_parent_projection, 
-                y_pos_in_parent_projection, 
+                y_pos_in_parent_projection,
+                z_pos,
                 projection_image, 
                 projection_width, 
                 projection_height
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id_projection;
         """
         image_bytes = utils.pixmap_to_bytes(QPixmap(self.projection_image))
@@ -107,6 +109,7 @@ class Projection(track_object_state.Trackable):
             self.projection_description,
             self.x_pos,
             self.y_pos,
+            self.z_pos,
             psycopg2.Binary(image_bytes),
             self.projection_width,
             self.projection_height
