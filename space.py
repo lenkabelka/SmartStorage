@@ -7,7 +7,6 @@ import image as im
 import connect_DB as connection
 import psycopg2
 import thing as th
-
 from track_object_state import ObjectState
 
 
@@ -37,195 +36,128 @@ class Space(track_object_state.Trackable):
         msg.exec()
 
 
-    # id_space
-    # id_parent_space
-    # space_name
-    # space_description
-    def insert(self):
+    def insert(self, cursor):
         query = """
             INSERT INTO spaces.spaces (id_parent_space, space_name, space_description)
             VALUES (%s, %s, %s)
             RETURNING id_space;
         """
         values = (self.id_parent_space, self.name, self.description)
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.id_space = cur.fetchone()[0]
-                    self.show_message("Успешно", f"Объект добавлен с ID: {self.id_space}")
-                    self.reset_state()  # обновляем состояние и оригинальные значения
-                    print(f"{self.name} space inserted")
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при вставке", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
+        cursor.execute(query, values)
+        self.id_space = cursor.fetchone()[0]
+        self.reset_state()
+        print(f"{self.name} space inserted")
 
 
-    def update(self):
+    def update(self, cursor):
         if self.id_space is None:
-            self.show_message("Ошибка", "Невозможно обновить: id_space отсутствует", icon=QMessageBox.Icon.Warning)
-            return
+            raise ValueError("Невозможно обновить: id_space отсутствует")
+
         query = """
             UPDATE spaces.spaces
             SET space_name = %s, space_description = %s
             WHERE id_space = %s
         """
         values = (self.name, self.description, self.id_space)
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.show_message("Успешно", f"Объект с ID {self.id_space} обновлён")
-                    self.reset_state()  # обновляем состояние и оригинальные значения
-                    print(f"{self.name} space updated")
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при обновлении", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
+        cursor.execute(query, values)
+        self.reset_state()
+        print(f"{self.name} space updated")
 
 
-    def delete(self):
+    def delete(self, cursor):
         if self.id_space is None:
-            self.show_message("Ошибка", "Невозможно удалить: id_space отсутствует", icon=QMessageBox.Icon.Warning)
-            return
+            raise ValueError("Невозможно удалить: id_space отсутствует")
+
         query = "DELETE FROM spaces.spaces WHERE id_space = %s"
         values = (self.id_space,)
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.show_message("Успешно", f"Объект с ID {self.id_space} удалён")
-                    print(f"{self.name} space deleted")
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при удалении", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
+        cursor.execute(query, values)
+        print(f"{self.name} space deleted")
 
 
-    def load_space_by_id(self, id_space: int):
+    def load_space_by_id(self, id_space: int, cursor):
         query = """
-                SELECT space_name, space_description
-                FROM spaces.spaces
-                WHERE id_space = %s
-            """
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, (id_space,))
-                    result = cur.fetchone()
-                    if result:
-                        self.id_space = id_space
-                        self.name = result[0]
-                        self.description = result[1] or ""
-                        self.reset_state()  # устанавливаем оригинальные значения
-                        print(f"Загружено пространство: {self.name}")
-                    else:
-                        self.show_message("Не найдено", f"Пространство с ID {id_space} не найдено",
-                                          icon=QMessageBox.Icon.Warning)
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при загрузке", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
+            SELECT space_name, space_description
+            FROM spaces.spaces
+            WHERE id_space = %s
+        """
+        cursor.execute(query, (id_space,))
+        result = cursor.fetchone()
+        if result:
+            self.id_space = id_space
+            self.name = result[0]
+            self.description = result[1] or ""
+            self.reset_state()
+            print(f"Загружено пространство: {self.name}")
+        else:
+            raise LookupError(f"Пространство с ID {id_space} не найдено")
 
 
     def save_space(self):
+        config = connection.load_config()
+        conn = connection.db_connect(config)
 
-        subspaces_to_delete = []
+        try:
+            with conn:
+                with conn.cursor() as cursor:
 
-        self.save()
-        if self.subspaces:
-            for subspace in self.subspaces:
-                if not subspace.id_parent_space:
-                    subspace.id_parent_space = self.id_space
-                if subspace.state == ObjectState.DELETED:
-                    subspaces_to_delete.append(subspace)
-                    subspace.save()
-                else:
-                    subspace.save()
+                    subspaces_to_delete = []
+                    things_to_delete = []
+                    projections_to_delete = []
+                    images_to_delete = []
 
+                    # save current space
+                    self.save(cursor=cursor)
 
-        things_to_delete = []
+                    # subspaces
+                    if self.subspaces:
+                        for subspace in self.subspaces:
+                            if not subspace.id_parent_space:
+                                subspace.id_parent_space = self.id_space
+                            if subspace.state == ObjectState.DELETED:
+                                subspaces_to_delete.append(subspace)
+                            subspace.save(cursor=cursor)
 
-        if self.things:
-            for thg in self.things:
-                if not thg.id_parent_space:
-                    thg.id_parent_space = self.id_space
-                if thg.state == ObjectState.DELETED:
-                    things_to_delete.append(thg)
-                    thg.save()
-                else:
-                    thg.save()
+                    # things
+                    if self.things:
+                        for thg in self.things:
+                            if not thg.id_parent_space:
+                                thg.id_parent_space = self.id_space
+                            if thg.state == ObjectState.DELETED:
+                                things_to_delete.append(thg)
+                            thg.save(cursor=cursor)
 
+                    # projections
+                    if self.projections:
+                        for project in self.projections:
+                            if not project.id_parent_space:
+                                project.id_parent_space = self.id_space
+                            if project.state == ObjectState.DELETED:
+                                projections_to_delete.append(project)
+                            if self.subspaces or self.things:
+                                project.save_projection(cursor=cursor, subspaces=self.subspaces, things=self.things)
+                            else:
+                                project.save_projection(cursor=cursor)
 
-        projections_to_delete = []
+                    # images
+                    if self.space_images:
+                        for image in self.space_images:
+                            if not image.id_parent_space:
+                                image.id_parent_space = self.id_space
+                            if image.state == ObjectState.DELETED:
+                                images_to_delete.append(image)
+                            image.save(cursor=cursor)
 
-        if self.projections:
-            for project in self.projections:
-                if project.state == ObjectState.DELETED:
-                    projections_to_delete.append(project)
-                    project.save()
-                else:
-                    if not project.id_parent_space:
-                        project.id_parent_space = self.id_space
+                    # remove deleted
+                    for lst, deleted in [
+                        (self.space_images, images_to_delete),
+                        (self.projections, projections_to_delete),
+                        (self.subspaces, subspaces_to_delete),
+                        (self.things, things_to_delete)
+                    ]:
+                        for obj in deleted:
+                            lst.remove(obj)
 
-                    if not self.subspaces and not self.things:
-                        project.save_projection()
-                    else:
-                        if self.subspaces or self.things:
-                            project.save_projection(subspaces=self.subspaces, things=self.things)
+                self.show_message("Успешно", "Пространство сохранено.")
 
-
-        images_to_delete = []
-
-        if self.space_images:
-            for image in self.space_images:
-                if not image.id_parent_space:
-                    image.id_parent_space = self.id_space
-                print(f"image state: {image.state}")
-                if image.state == ObjectState.DELETED:
-                    images_to_delete.append(image)
-                    image.save()
-                else:
-                    image.save()
-
-
-        if images_to_delete:
-            for image in images_to_delete:
-                self.space_images.remove(image)
-
-        if projections_to_delete:
-            for project in projections_to_delete:
-                self.projections.remove(project)
-
-        if subspaces_to_delete:
-            for subspace in subspaces_to_delete:
-                self.subspaces.remove(subspace)
-
-        if things_to_delete:
-            for thing in things_to_delete:
-                self.things.remove(thing)
+        except Exception as e:
+            self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}", icon=QMessageBox.Icon.Critical)

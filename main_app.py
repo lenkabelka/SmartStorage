@@ -587,12 +587,10 @@ class MainWidget(QWidget):
 
 
     def update_main_scene(self, set_position=None):
-        print("1")
         if self.scene.items():
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
-            print("2")
 
         if self.parent_space.current_projection is not None:
             self.parent_space.current_projection.scaled_projection_pixmap \
@@ -603,16 +601,14 @@ class MainWidget(QWidget):
             self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
 
             if self.parent_space.current_projection.sub_projections:
-                print("3")
                 for sub in self.parent_space.current_projection.sub_projections:
                     parent = None
                     if sub.reference_to_parent_thing:
                         parent = sub.reference_to_parent_thing
-                        print(f"_______________________________________PARENT_THING: {parent}")
-                    if sub.reference_to_parent_space:
-                        print(f"_______________________________________PARENT_SPACE: {parent}")
+                    elif sub.reference_to_parent_space:
                         parent = sub.reference_to_parent_space
-                    # перерасчет размеров подпространства на основании новых размеров пространства,
+
+                    # перерасчет размеров подразверток на основании новых размеров пространства,
                     # а также на основании новых размеров картинки:
                     pixmap = utils.get_scaled_pixmap(
                         sub.projection_image,
@@ -620,7 +616,6 @@ class MainWidget(QWidget):
                         int(round(self.y_scale * sub.projection_height))
                     )
                     sub.original_pixmap = pixmap
-                    print(f"_______________________________________PARENT: {parent}")
                     sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
                         pixmap,
                         self,
@@ -1105,7 +1100,14 @@ class MainWidget(QWidget):
 
             if projection:
                 self.parent_space.current_projection = projection
-                self.update_main_scene(True)
+
+                self.x_scale = (self.parent_space.current_projection.original_pixmap.width() /
+                                self.parent_space.current_projection.projection_width)
+                self.y_scale = (self.parent_space.current_projection.original_pixmap.height() /
+                                self.parent_space.current_projection.projection_height)
+
+                set_position = True
+                self.update_main_scene(set_position)
 
 
     def delete_one_subprojection(self, draggable_item_pointer):
@@ -1227,8 +1229,6 @@ class MainWidget(QWidget):
             #self.set_placeholders_on_main_scene()
 
 
-
-
     def save_space_to_DB(self):
         if self.mini_projections_list:
             is_current_projection_saved = self.is_current_projection_saved()
@@ -1254,6 +1254,8 @@ class MainWidget(QWidget):
 
 
     def open_space(self, space_to_open: space.Space):
+        # TODO проверять, сохранено ли текущее пространство self.parent_space
+
         # открываю подпространство как пространство
             # этого пространства ещё нет в базе
         self.parent_space = space_to_open

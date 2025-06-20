@@ -39,14 +39,7 @@ class Projection(track_object_state.Trackable):
     id_parent_thing: Optional[int] = None  # DB  !!!!!!
 
     sub_projections: list["Projection"] = field(default_factory=list)
-    #thing_projections: list["Projection"] = field(default_factory=list)
 
-    # def get_parent(self):
-    #     return self.reference_to_parent_space or self.reference_to_parent_thing
-
-    # def validate_parent(self):
-    #     if (self.reference_to_parent_space is not None) and (self.reference_to_parent_thing is not None):
-    #         raise ValueError("Projection cannot have both space and thing as parent.")
 
     def __post_init__(self):
         self._db_fields = {
@@ -82,7 +75,7 @@ class Projection(track_object_state.Trackable):
         msg.setIcon(icon)
         msg.exec()
 
-    def insert(self):
+    def insert(self, cursor):
         query = """
             INSERT INTO spaces.projections (
                 id_parent_projection, 
@@ -114,29 +107,14 @@ class Projection(track_object_state.Trackable):
             self.projection_width,
             self.projection_height
         )
+        cursor.execute(query, values)
+        self.id_projection = cursor.fetchone()[0]
+        self.reset_state()
+        print(f"Проекция добавлена с ID: {self.id_projection}")
 
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.id_projection = cur.fetchone()[0]
-                    self.show_message("Успешно", f"Проекция добавлена с ID: {self.id_projection}")
-                    self.reset_state()
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при вставке", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
-
-    def update(self):
+    def update(self, cursor):
         if self.id_projection is None:
-            self.show_message("Ошибка", "Невозможно обновить: id_projection отсутствует", icon=QMessageBox.Icon.Warning)
-            return
+            raise ValueError("Невозможно обновить: id_projection отсутствует")
 
         query = """
             UPDATE spaces.projections
@@ -145,13 +123,12 @@ class Projection(track_object_state.Trackable):
                 projection_description = %s,
                 x_pos_in_parent_projection = %s,
                 y_pos_in_parent_projection = %s,
-                z_pos,
+                z_pos = %s,
                 projection_image = %s,
                 projection_width = %s,
                 projection_height = %s
             WHERE id_projection = %s
         """
-
         image_bytes = utils.pixmap_to_bytes(QPixmap(self.projection_image))
         values = (
             self.projection_name,
@@ -164,51 +141,22 @@ class Projection(track_object_state.Trackable):
             self.projection_height,
             self.id_projection
         )
+        cursor.execute(query, values)
+        self.reset_state()
+        print(f"Проекция с ID {self.id_projection} обновлена")
 
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.show_message("Успешно", f"Проекция с ID {self.id_projection} обновлена")
-                    self.reset_state()
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при обновлении", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
-
-    def delete(self):
+    def delete(self, cursor):
         if self.id_projection is None:
-            self.show_message("Ошибка", "Невозможно удалить: id_projection отсутствует", icon=QMessageBox.Icon.Warning)
-            return
+            raise ValueError("Невозможно удалить: id_projection отсутствует")
 
         query = "DELETE FROM spaces.projections WHERE id_projection = %s"
         values = (self.id_projection,)
-
-        conn = None
-        try:
-            config = connection.load_config()
-            conn = connection.db_connect(config)
-            with conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, values)
-                    self.show_message("Успешно", f"Проекция с ID {self.id_projection} удалена")
-        except psycopg2.Error as e:
-            if conn:
-                conn.rollback()
-            self.show_message("Ошибка при удалении", str(e), icon=QMessageBox.Icon.Critical)
-        finally:
-            if conn:
-                conn.close()
+        cursor.execute(query, values)
+        print(f"Проекция с ID {self.id_projection} удалена")
 
 
-    def save_projection(self, subspaces=None, things=None):
-        self.save()
+    def save_projection(self, cursor, subspaces=None, things=None):
+        self.save(cursor)
 
         subprojections_to_remove = []
 
@@ -216,33 +164,31 @@ class Projection(track_object_state.Trackable):
             for sub_projection in self.sub_projections:
                 if sub_projection.state == ObjectState.DELETED:
                     subprojections_to_remove.append(sub_projection)
-                    sub_projection.save()
                 else:
-                    if subspaces:
-                        if not sub_projection.id_parent_space:
-                            parent_subspace = next((subspace for subspace in subspaces if sub_projection.reference_to_parent_space == subspace), None)
-                            if parent_subspace:
-                                sub_projection.id_parent_space = parent_subspace.id_space
+                    # привязка к пространству
+                    if subspaces and not sub_projection.id_parent_space:
+                        parent_subspace = next(
+                            (subspace for subspace in subspaces if
+                             sub_projection.reference_to_parent_space == subspace),
+                            None
+                        )
+                        if parent_subspace:
+                            sub_projection.id_parent_space = parent_subspace.id_space
 
-                        if not sub_projection.id_parent_projection:
-                            sub_projection.id_parent_projection = self.id_projection
+                    # привязка к вещи
+                    if things and not sub_projection.id_parent_thing:
+                        parent_thing = next(
+                            (th for th in things if sub_projection.reference_to_parent_thing == th),
+                            None
+                        )
+                        if parent_thing:
+                            sub_projection.id_parent_thing = parent_thing.id_thing
 
-                        #sub_projection.save()
+                    # привязка к родительской проекции
+                    if not sub_projection.id_parent_projection:
+                        sub_projection.id_parent_projection = self.id_projection
 
-                    if things:
-                        if not sub_projection.id_parent_thing:
-                            parent_thing = next((th for th in things if
-                                                    sub_projection.reference_to_parent_thing == th), None)
-                            if parent_thing:
-                                sub_projection.id_parent_thing = parent_thing.id_thing
+                    sub_projection.save(cursor)
 
-                        if not sub_projection.id_parent_projection:
-                            sub_projection.id_parent_projection = self.id_projection
-
-                        #sub_projection.save()
-                    sub_projection.save()
-
-
-        if subprojections_to_remove:
-            for sub_projection in self.sub_projections:
+            for sub_projection in subprojections_to_remove:
                 self.sub_projections.remove(sub_projection)

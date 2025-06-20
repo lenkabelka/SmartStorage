@@ -168,51 +168,46 @@ class TreeWidget(QTreeView):
 
         menu.exec(self.viewport().mapToGlobal(position))
 
+
     def delete_space(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.delete_space(node.ref)
 
+
     def add_space_projection(self):
         self.app_ref.add_space_projection()
 
+
     def add_subspace(self):
         self.app_ref.add_subspace()
+
 
     def add_subspace_projection(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.add_subspace_projection(node.ref)
 
+
     def open_subspace_as_space(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.open_space(node.ref)
+
 
     def delete_subspace_from_space(self, index: QModelIndex):
         node = index.internalPointer()
         if node and node.node_type == NODE_TYPE_SPACE:
             self.app_ref.delete_subspace(node.ref)
 
+
     def add_thing(self):
         self.app_ref.add_thing()
+
 
     def add_thing_projection(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.add_thing_projection(node.ref)
 
+
     def delete_thing_from_space(self, index: QModelIndex):
         node = index.internalPointer()
         if node and node.node_type == NODE_TYPE_THING:
             self.app_ref.delete_thing(node.ref)
-
-    # def add_item(self, index: QModelIndex):
-    #     print("Добавить вещь")
-
-
-
-
-
-
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#     widget = TreeWidget()
-#     widget.show()
-#     sys.exit(app.exec())

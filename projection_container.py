@@ -27,23 +27,14 @@ class ProjectionContainer(QWidget):
 
         # Копия current_projection:
         self.background_item = QGraphicsPixmapItem(self.saved_projection.original_pixmap)
-        print("!!!!!!!!!!!! Я тут!_1")
-
-        # min_z = min((item.zValue() for item in self.scene.items()), default=0)
-        # self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
         self.scene.addItem(self.background_item)
 
         if self.sub_projections_list:
-            print("!!!!!!!!!!!! Я тут!_2")
             for sub in self.sub_projections_list:
-                print("!!!!!!!!!!!! Я тут!_3")
                 if sub.state != ObjectState.DELETED:
                     item_copy = QGraphicsPixmapItem(sub.original_pixmap)
-                    print("!!!!!!!!!!!! Я тут!_4")
                     item_copy.setPos(sub.x_pos, sub.y_pos)
-                    print("!!!!!!!!!!!! Я тут!_5")
                     item_copy.setZValue(sub.z_pos)
-                    print("!!!!!!!!!!!! Я тут!_6")
                     self.scene.addItem(item_copy)
 
         min_z = min((item.zValue() for item in self.scene.items()), default=0)

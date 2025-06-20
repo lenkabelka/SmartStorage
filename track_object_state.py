@@ -54,28 +54,27 @@ class Trackable(ABC):
         self._original_values = {f: getattr(self, f) for f in self._db_fields}
 
 
-    def save(self):
+    def save(self, cursor):
         match self._state:
             case ObjectState.NEW:
-                self.insert()
+                self.insert(cursor)
             case ObjectState.MODIFIED:
-                self.update()
+                self.update(cursor)
             case ObjectState.DELETED:
-                self.delete()
+                self.delete(cursor)
             case ObjectState.UNMODIFIED | None:
-                pass
-
+                pass  # ничего не делать
 
     @abstractmethod
-    def insert(self):
+    def insert(self, cursor):
         pass
 
     @abstractmethod
-    def update(self):
+    def update(self, cursor):
         pass
 
     @abstractmethod
-    def delete(self):
+    def delete(self, cursor):
         pass
 
 
