@@ -66,3 +66,43 @@ class SpaceImage(track_object_state.Trackable):
         values = (self.id_image,)
         cursor.execute(query, values)
         print(f"Изображение с ID {self.id_image} удалено")
+
+
+def load_space_images(id_space: int, cursor) -> list[SpaceImage]:
+    query = """
+        SELECT id_image, id_parent_space, image, image_name
+        FROM spaces.images
+        WHERE id_parent_space = %s
+    """
+    cursor.execute(query, (id_space,))
+    rows = cursor.fetchall()
+
+    images = []
+    for id_image_DB, id_parent_space_DB, image_bytes_DB, image_name_DB in rows:
+        pixmap = QPixmap()
+        if image_bytes_DB is not None:
+            if image_bytes_DB is not None:
+                print("image_bytes длина:", len(image_bytes_DB))
+                try:
+                    success = pixmap.loadFromData(image_bytes_DB)
+                    print("QPixmap загрузка:", "успешно" if success else "не удалось")
+                except Exception as e:
+                    print(f"Исключение при загрузке изображения: {e}")
+            else:
+                print("image_bytes = None")
+            pixmap.loadFromData(image_bytes_DB)
+
+        try:
+            image_from_DB = SpaceImage(
+                id_image=id_image_DB,
+                id_parent_space=id_parent_space_DB,
+                image=pixmap,
+                name=image_name_DB
+            )
+        except Exception as e:
+            print(f"Ошибка при создании SpaceImage: {e}")
+            raise
+
+        images.append(image_from_DB)
+
+    return images

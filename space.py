@@ -74,24 +74,6 @@ class Space(track_object_state.Trackable):
         print(f"{self.name} space deleted")
 
 
-    def load_space_by_id(self, id_space: int, cursor):
-        query = """
-            SELECT space_name, space_description
-            FROM spaces.spaces
-            WHERE id_space = %s
-        """
-        cursor.execute(query, (id_space,))
-        result = cursor.fetchone()
-        if result:
-            self.id_space = id_space
-            self.name = result[0]
-            self.description = result[1] or ""
-            self.reset_state()
-            print(f"Загружено пространство: {self.name}")
-        else:
-            raise LookupError(f"Пространство с ID {id_space} не найдено")
-
-
     def save_space(self):
         config = connection.load_config()
         conn = connection.db_connect(config)
@@ -161,3 +143,54 @@ class Space(track_object_state.Trackable):
 
         except Exception as e:
             self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}", icon=QMessageBox.Icon.Critical)
+
+
+def load_space_by_id(id_space: int) -> Space:
+    config = connection.load_config()
+    conn = connection.db_connect(config)
+
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                query = """
+                    SELECT id_space, id_parent_space, space_name, space_description
+                    FROM spaces.spaces
+                    WHERE id_space = %s
+                """
+                cursor.execute(query, (id_space,))
+                row = cursor.fetchone()
+                if row is None:
+                    raise LookupError(f"Пространство с id={id_space} не найдено")
+
+                id_space_db, id_parent_space, name, description = row
+
+                space_from_DB = Space(
+                    id_space=id_space_db,
+                    id_parent_space=id_parent_space,  # может быть None или int
+                    name=name,
+                    description=description
+                )
+
+                space_from_DB.space_images = im.load_space_images(id_space_db, cursor)
+
+                load_space_projections(space_from_DB, cursor)
+                load_space_things(space_from_DB, cursor)
+                load_space_subspaces(space_from_DB, cursor)
+                choose_current_projection(space_from_DB)
+
+                return space_from_DB
+    finally:
+        conn.close()
+
+#TODO эти функции поместить в соответствующие классы и реализовать
+def load_space_projections(space: Space, cursor):
+    pass
+
+def load_space_things(space: Space, cursor):
+    pass
+
+def load_space_subspaces(space: Space, cursor):
+    pass
+
+def choose_current_projection(space: Space):
+    pass

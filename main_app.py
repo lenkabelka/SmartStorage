@@ -25,6 +25,7 @@ import add_image
 import add_thing
 import thing
 import tree_view
+import all_spaces_in_DB
 
 
 class MainWindow(QMainWindow):
@@ -76,6 +77,9 @@ class MainWindow(QMainWindow):
 
         self.action_save_space.triggered.connect(lambda: print("Меню сохранения нажато"))
         self.action_save_space.triggered.connect(self.main_widget.save_space_to_DB)
+
+        self.action_open_space.triggered.connect(self.main_widget.load_space_from_DB)
+
         self.action_create_new_space.triggered.connect(self.main_widget.save_current_space)
         self.action_exit.triggered.connect(self.close_application)
 
@@ -897,31 +901,35 @@ class MainWidget(QWidget):
                     new_image.mark_new()
 
                     self.parent_space.space_images.append(new_image)
+                    self.update_images_layout()
 
-                    def clear_layout(layout):
-                        for i in reversed(range(layout.count())):
-                            item = layout.itemAt(i)
-                            if item is not None:
-                                widget = item.widget()
-                                if widget:
-                                    widget.deleteLater()
-                                else:
-                                    sublayout = item.layout()
-                                    clear_layout(sublayout)
-
-                    clear_layout(self.layout_images_of_space)
-
-                    for item in self.parent_space.space_images:
-
-                        image_widget = image_container.ImageContainer(item, self.container_images_of_space.contentsRect().height())
-                        image_widget.delete_image.connect(self.delete_image)
-
-                        if not image_widget.space_image.state == ObjectState.DELETED:
-                            self.layout_images_of_space.addWidget(image_widget)
-                        self.layout_images_of_space.setAlignment(Qt.AlignmentFlag.AlignLeft)
                     break
             else:
                 break
+
+
+    def update_images_layout(self):
+        def clear_layout(layout):
+            for i in reversed(range(layout.count())):
+                item = layout.itemAt(i)
+                if item is not None:
+                    widget = item.widget()
+                    if widget:
+                        widget.deleteLater()
+                    else:
+                        sublayout = item.layout()
+                        clear_layout(sublayout)
+
+        clear_layout(self.layout_images_of_space)
+
+        for item in self.parent_space.space_images:
+
+            image_widget = image_container.ImageContainer(item, self.container_images_of_space.contentsRect().height())
+            image_widget.delete_image.connect(self.delete_image)
+
+            if not image_widget.space_image.state == ObjectState.DELETED:
+                self.layout_images_of_space.addWidget(image_widget)
+            self.layout_images_of_space.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
 
     def delete_image(self, image):
@@ -1272,7 +1280,34 @@ class MainWidget(QWidget):
 
 
     def load_space_from_DB(self):
-        pass
+        spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB()
+        spaces_list = all_spaces_in_DB.SpacesList(spaces_in_DB)
+
+        def on_selected(row):
+            print(f"Выбранная строка: {row}")
+            # получаю id_space выбранного пространства
+            id_space = spaces_in_DB[row][0]
+
+            loaded_space = space.load_space_by_id(id_space)
+
+            self.parent_space = loaded_space
+
+            self.current_index = 1
+            self.stack_widget.setCurrentIndex(self.current_index)
+
+            self.update_tree_view()
+            self.update_images_layout()
+
+            self.space_changed.emit()
+            self.set_buttons_disabled_or_enabled()
+
+        spaces_list.spaceDoubleClicked.connect(on_selected)
+
+        if spaces_list.exec():
+            print("Диалог закрыт с accept")
+        else:
+            print("Диалог закрыт без выбора")
+
 
     def set_buttons_disabled_or_enabled(self):
         if self.parent_space is None:

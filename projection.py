@@ -192,3 +192,7 @@ class Projection(track_object_state.Trackable):
 
             for sub_projection in subprojections_to_remove:
                 self.sub_projections.remove(sub_projection)
+
+
+    def load_projections_of_space(self):
+        pass
