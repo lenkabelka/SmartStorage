@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem, QVBoxLayout, QSizePolicy, \
     QMenu, QLabel
-from PyQt6.QtGui import QAction, QPixmap
+from PyQt6.QtGui import QAction, QPixmap, QMouseEvent
 from PyQt6.QtCore import Qt
 from track_object_state import ObjectState
 
@@ -67,6 +67,12 @@ class ProjectionContainer(QWidget):
                 self.app_ref.delete_mini_projection(self)
             self.deleteLater()
         if action == set_as_main_scene_action:
+            if self.app_ref:
+                self.app_ref.set_mini_projection_on_main_scene(self)
+
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
             if self.app_ref:
                 self.app_ref.set_mini_projection_on_main_scene(self)
 
