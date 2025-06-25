@@ -72,3 +72,33 @@ class Thing(track_object_state.Trackable):
         values = (self.id_thing,)
         cursor.execute(query, values)
         print(f"Вещь с ID {self.id_thing} удалена")
+
+
+def load_space_things(space, cursor) -> list[Thing]:
+    query = """
+        SELECT id_thing, thing_name, thing_description, thing_image, id_parent_space
+        FROM spaces.things
+        WHERE id_parent_space = %s
+    """
+    cursor.execute(query, (space.id_space,))
+    rows = cursor.fetchall()
+
+    things = []
+
+    for id_thing_DB, thing_name_DB, thing_description_DB, thing_image_DB, id_parent_space_DB in rows:
+        try:
+            thing = Thing(
+                name=thing_name_DB,
+                description=thing_description_DB,
+                image=thing_image_DB,
+                id_thing=id_thing_DB,
+                id_parent_space=id_parent_space_DB,
+                reference_to_parent_space=space
+            )
+        except Exception as e:
+            print(f"Ошибка при создании вещи Thing: {e}")
+            raise
+
+        things.append(thing)
+
+    return things

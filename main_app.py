@@ -1192,12 +1192,13 @@ class MainWidget(QWidget):
             else:
                 thing_to_remove.mark_deleted()
 
-            if self.parent_space.current_projection.sub_projections:
-                sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                               if sub.reference_to_parent_thing == thing_to_remove), None)
+            if self.parent_space.current_projection:
+                if self.parent_space.current_projection.sub_projections:
+                    sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
+                                   if sub.reference_to_parent_thing == thing_to_remove), None)
 
-                if sub_projection:
-                    self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+                    if sub_projection:
+                        self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
 
             self.update_tree_view()
 
@@ -1210,12 +1211,14 @@ class MainWidget(QWidget):
             else:
                 subspace_to_remove.mark_deleted()
 
-            if self.parent_space.current_projection.sub_projections:
-                sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                               if sub.reference_to_parent_space == subspace_to_remove), None)
+            if self.parent_space.current_projection:
+                if self.parent_space.current_projection.sub_projections:
+                    sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
+                                   if sub.reference_to_parent_space == subspace_to_remove), None)
 
-                if sub_projection:
-                    self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+                    if sub_projection:
+                        self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+
             self.update_tree_view()
 
 

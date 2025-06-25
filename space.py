@@ -172,10 +172,10 @@ def load_space_by_id(id_space: int) -> Space:
                 )
 
                 space_from_DB.space_images = im.load_space_images(id_space_db, cursor)
+                space_from_DB.subspaces = load_space_subspaces(id_space_db, cursor)
+                space_from_DB.things = th.load_space_things(space_from_DB, cursor)
 
                 load_space_projections(space_from_DB, cursor)
-                load_space_things(space_from_DB, cursor)
-                load_space_subspaces(space_from_DB, cursor)
                 choose_current_projection(space_from_DB)
 
                 return space_from_DB
@@ -186,11 +186,33 @@ def load_space_by_id(id_space: int) -> Space:
 def load_space_projections(space: Space, cursor):
     pass
 
-def load_space_things(space: Space, cursor):
-    pass
+def load_space_subspaces(id_space: int, cursor) -> list[Space]:
+    query = """
+        SELECT id_space, id_parent_space, space_name, space_description
+        FROM spaces.spaces
+        WHERE id_parent_space = %s
+    """
+    cursor.execute(query, (id_space,))
+    rows = cursor.fetchall()
 
-def load_space_subspaces(space: Space, cursor):
-    pass
+    subspaces = []
+
+    for id_space_DB, id_parent_space_DB, space_name_DB, space_description_DB in rows:
+        try:
+            subspace = Space(
+                id_space=id_space_DB,
+                id_parent_space=id_parent_space_DB,
+                name=space_name_DB,
+                description=space_description_DB
+            )
+        except Exception as e:
+            print(f"Ошибка при создании подпространства Space: {e}")
+            raise
+
+        subspaces.append(subspace)
+
+    return subspaces
+
 
 def choose_current_projection(space: Space):
     pass
