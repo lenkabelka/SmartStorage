@@ -1011,6 +1011,15 @@ class MainWidget(QWidget):
 
     def update_mini_projections_layout(self):
         utils.clear_layout(self.layout_projections_of_space)
+
+        current_projection = next((mini_projection for mini_projection in self.mini_projections_list
+                                   if mini_projection.saved_projection == self.parent_space.current_projection), None)
+
+        # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
+        if current_projection:
+            self.mini_projections_list.remove(current_projection)
+            self.mini_projections_list.insert(0, current_projection)
+
         for widget in self.mini_projections_list:
             if widget.saved_projection.state != ObjectState.DELETED:
                 self.layout_projections_of_space.addWidget(widget)
@@ -1117,6 +1126,7 @@ class MainWidget(QWidget):
                 )
 
                 self.update_main_scene(set_position=True)
+                self.update_mini_projections_layout()
 
 
     def delete_one_subprojection(self, draggable_item_pointer):
@@ -1337,14 +1347,14 @@ class MainWidget(QWidget):
                 for proj in self.parent_space.projections:
                     self.save_or_update_mini_projection(proj)
 
-                current_projection = next((mini_projection for mini_projection in self.mini_projections_list
-                                           if mini_projection.saved_projection == self.parent_space.current_projection), None)
-
-                # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
-                if current_projection:
-                    self.mini_projections_list.remove(current_projection)
-                    self.mini_projections_list.insert(0, current_projection)
-                self.update_mini_projections_layout()
+                # current_projection = next((mini_projection for mini_projection in self.mini_projections_list
+                #                            if mini_projection.saved_projection == self.parent_space.current_projection), None)
+                #
+                # # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
+                # if current_projection:
+                #     self.mini_projections_list.remove(current_projection)
+                #     self.mini_projections_list.insert(0, current_projection)
+                # self.update_mini_projections_layout()
 
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
