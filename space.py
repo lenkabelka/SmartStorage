@@ -1,3 +1,4 @@
+import random
 from dataclasses import dataclass, field
 from typing import Optional
 from PyQt6.QtWidgets import QMessageBox
@@ -174,17 +175,14 @@ def load_space_by_id(id_space: int) -> Space:
                 space_from_DB.space_images = im.load_space_images(id_space_db, cursor)
                 space_from_DB.subspaces = load_space_subspaces(id_space_db, cursor)
                 space_from_DB.things = th.load_space_things(space_from_DB, cursor)
+                space_from_DB.projections = projection.load_space_projections(space_from_DB, cursor)
 
-                load_space_projections(space_from_DB, cursor)
-                choose_current_projection(space_from_DB)
+                #choose_current_projection(space_from_DB)
 
                 return space_from_DB
     finally:
         conn.close()
 
-#TODO эти функции поместить в соответствующие классы и реализовать
-def load_space_projections(space: Space, cursor):
-    pass
 
 def load_space_subspaces(id_space: int, cursor) -> list[Space]:
     query = """
@@ -212,7 +210,3 @@ def load_space_subspaces(id_space: int, cursor) -> list[Space]:
         subspaces.append(subspace)
 
     return subspaces
-
-
-def choose_current_projection(space: Space):
-    pass

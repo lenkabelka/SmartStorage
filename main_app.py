@@ -1,4 +1,5 @@
 import random
+import decimal
 
 from PyQt6.QtWidgets import (
     QApplication, QGraphicsScene, QGraphicsPixmapItem,
@@ -18,7 +19,7 @@ import image_container
 import space
 import zoomable_graphics_view
 import projection as pr
-import projection_container as container
+import mini_projection_container as container
 from track_object_state import ObjectState
 import image as im
 import add_image
@@ -497,20 +498,17 @@ class MainWidget(QWidget):
 
                             original_image = temp_dict_new_space_projection["image"]
 
-                            scaled_image = utils.calculate_new_image_size(
-                                original_image,
+                            scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
+                                temp_dict_new_space_projection["image"],
                                 temp_dict_new_space_projection["x_sm"],
                                 temp_dict_new_space_projection["y_sm"]
                             )
 
-                            scaled_cropped_pixmap = utils.get_scaled_pixmap(
-                                original_image,
-                                scaled_image.width(),
-                                scaled_image.height()
+                            self.set_x_and_y_scales(
+                                scaled_cropped_pixmap,
+                                temp_dict_new_space_projection["x_sm"],
+                                temp_dict_new_space_projection["y_sm"]
                             )
-
-                            self.x_scale = scaled_cropped_pixmap.width() / temp_dict_new_space_projection["x_sm"]
-                            self.y_scale = scaled_cropped_pixmap.height() / temp_dict_new_space_projection["y_sm"]
 
                             new_projection = pr.Projection(temp_dict_new_space_projection["name"],
                                                        original_image,
@@ -533,27 +531,18 @@ class MainWidget(QWidget):
                         # Замена существующей фоновой картинки и других данных о развертке
                         else:
                             temp_dict_new_space_projection = add_projection_dialog.get_data()
-
                             original_image = temp_dict_new_space_projection["image"]
-                            scaled_image = utils.calculate_new_image_size(
-                                original_image,
+
+                            scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
+                                temp_dict_new_space_projection["image"],
                                 temp_dict_new_space_projection["x_sm"],
                                 temp_dict_new_space_projection["y_sm"]
                             )
-
-                            scaled_cropped_pixmap = utils.get_scaled_pixmap(
-                                original_image,
-                                scaled_image.width(),
-                                scaled_image.height()
+                            self.set_x_and_y_scales(
+                                scaled_cropped_pixmap,
+                                temp_dict_new_space_projection["x_sm"],
+                                temp_dict_new_space_projection["y_sm"]
                             )
-
-                            self.x_scale = scaled_cropped_pixmap.width() / temp_dict_new_space_projection["x_sm"]
-                            self.y_scale = scaled_cropped_pixmap.height() / temp_dict_new_space_projection["y_sm"]
-
-                            print(f"self.x_scale: {self.x_scale}")
-                            print(f"self.y_scale: {self.y_scale}")
-
-                            #if self.parent_space == space_to_add_projection:
 
                             self.parent_space.current_projection.projection_image \
                                 = original_image
@@ -573,7 +562,7 @@ class MainWidget(QWidget):
 
                             self.parent_space.current_projection.reset_state()
 
-                            self.update_main_scene()
+                            self.update_main_scene(set_position=False)
 
                             if self.parent_space.current_projection.sub_projections:
                                 for subproj in self.parent_space.current_projection.sub_projections:
@@ -590,63 +579,64 @@ class MainWidget(QWidget):
                 break  # пользователь нажал "Отмена" — выходим
 
 
+    def set_x_and_y_scales(self, scaled_cropped_pixmap, real_projection_width, real_projection_height):
+        self.x_scale = scaled_cropped_pixmap.width() / real_projection_width
+        self.y_scale = scaled_cropped_pixmap.height() / real_projection_height
+
+
     def update_main_scene(self, set_position=None):
         if self.scene.items():
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
-
         if self.parent_space.current_projection is not None:
             self.parent_space.current_projection.scaled_projection_pixmap \
                 = QGraphicsPixmapItem(self.parent_space.current_projection.original_pixmap)
-
             min_z = min((item.zValue() for item in self.scene.items()), default=0)
             self.parent_space.current_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
             self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
-
             if self.parent_space.current_projection.sub_projections:
                 for sub in self.parent_space.current_projection.sub_projections:
-                    parent = None
-                    if sub.reference_to_parent_thing:
-                        parent = sub.reference_to_parent_thing
-                    elif sub.reference_to_parent_space:
-                        parent = sub.reference_to_parent_space
+                    if sub.state is not ObjectState.DELETED:
+                        parent = None
+                        if sub.reference_to_parent_thing:
+                            parent = sub.reference_to_parent_thing
+                        elif sub.reference_to_parent_space:
+                            parent = sub.reference_to_parent_space
+                        # перерасчет размеров подразверток на основании новых размеров пространства,
+                        # а также на основании новых размеров картинки:
+                        pixmap = utils.get_scaled_pixmap(
+                            sub.projection_image,
+                            int(round(self.x_scale * sub.projection_width)),
+                            int(round(self.y_scale * sub.projection_height))
+                        )
+                        sub.original_pixmap = pixmap
+                        sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
+                            pixmap,
+                            self,
+                            self.parent_space.current_projection.scaled_projection_pixmap,
+                            parent=parent)
+                        if sub.z_pos:
+                            sub.scaled_projection_pixmap.setZValue(sub.z_pos)
 
-                    # перерасчет размеров подразверток на основании новых размеров пространства,
-                    # а также на основании новых размеров картинки:
-                    pixmap = utils.get_scaled_pixmap(
-                        sub.projection_image,
-                        int(round(self.x_scale * sub.projection_width)),
-                        int(round(self.y_scale * sub.projection_height))
-                    )
-                    sub.original_pixmap = pixmap
-                    sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
-                        pixmap,
-                        self,
-                        self.parent_space.current_projection.scaled_projection_pixmap,
-                        parent=parent)
-
-                    if sub.z_pos:
-                        sub.scaled_projection_pixmap.setZValue(sub.z_pos)
-
-                    # необходимо при открытии мини-развертки на главное сцене
-                    if set_position:
-                        if sub.x_pos and sub.y_pos:
-                            sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
-                    else:
-                        # теперь подпроекции будут появляться в середине сцены
-                        center = self.scene.sceneRect().center()
-                        sub_rect = sub.scaled_projection_pixmap.boundingRect()
-                        offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
-                        sub.scaled_projection_pixmap.setPos(center - offset)
-                        # # Так как это может быть совершенно новое пространство, с другими размерами
-                        # # то не целесообразно использовать sub.x_pos and sub.y_pos.
-                        # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
-                        # # размерами или нет.
-                        # if sub.x_pos and sub.y_pos:
-                        #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
-
-                    self.scene.addItem(sub.scaled_projection_pixmap)
+                        # необходимо при открытии мини-развертки на главное сцене
+                        if set_position:
+                            if sub.x_pos and sub.y_pos:
+                                sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
+                        else:
+                            # теперь подпроекции будут появляться в середине сцены
+                            #center = self.scene.sceneRect().center()
+                            center = self.parent_space.current_projection.scaled_projection_pixmap.boundingRect().center()
+                            sub_rect = sub.scaled_projection_pixmap.boundingRect()
+                            offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
+                            sub.scaled_projection_pixmap.setPos(center - offset)
+                            # # Так как это может быть совершенно новое пространство, с другими размерами
+                            # # то не целесообразно использовать sub.x_pos and sub.y_pos.
+                            # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
+                            # # размерами или нет.
+                            # if sub.x_pos and sub.y_pos:
+                            #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
+                        self.scene.addItem(sub.scaled_projection_pixmap)
 
             bounding_rect = self.scene.itemsBoundingRect()
             self.scene.setSceneRect(bounding_rect)
@@ -872,8 +862,6 @@ class MainWidget(QWidget):
                     offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                     item.setPos(center - offset)
 
-                    print(f"THING, new_thing_projection.reference_to_parent_thing: {new_thing_projection.reference_to_parent_thing}")
-
                     self.scene.addItem(item)
 
                     break  # успех — выходим из цикла
@@ -1039,17 +1027,17 @@ class MainWidget(QWidget):
                 QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
                 return
             else:
-
-                if self.parent_space.current_projection.sub_projections:
-                    for sub_projection in self.parent_space.current_projection.sub_projections:
-                        if sub_projection.state != ObjectState.DELETED:
-                            item = sub_projection.scaled_projection_pixmap
-                            if item is None or self.parent_space.current_projection.scaled_projection_pixmap is None:
-                                continue
-                            relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item, 0, 0)
-                            sub_projection.x_pos = relative_pos.x()
-                            sub_projection.y_pos = relative_pos.y()
-                            sub_projection.z_pos = item.zValue()
+                self.get_subprojection_position()
+                # if self.parent_space.current_projection.sub_projections:
+                #     for sub_projection in self.parent_space.current_projection.sub_projections:
+                #         if sub_projection.state != ObjectState.DELETED:
+                #             item = sub_projection.scaled_projection_pixmap
+                #             if item is None or self.parent_space.current_projection.scaled_projection_pixmap is None:
+                #                 continue
+                #             relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item, 0, 0)
+                #             sub_projection.x_pos = relative_pos.x()
+                #             sub_projection.y_pos = relative_pos.y()
+                #             sub_projection.z_pos = item.zValue()
 
                 # Если мини проекция уже сохранена, то, если нужно, обновляем её вид
                 mini_projection_to_change = next((mini for mini in self.mini_projections_list if
@@ -1075,6 +1063,19 @@ class MainWidget(QWidget):
                     self.mini_projections_list.insert(0, new_mini_projection)
                     print(self.mini_projections_list)
                     self.update_mini_projections_layout()
+
+
+    def get_subprojection_position(self):
+        if self.parent_space.current_projection.sub_projections:
+            for sub_projection in self.parent_space.current_projection.sub_projections:
+                if sub_projection.state != ObjectState.DELETED:
+                    item = sub_projection.scaled_projection_pixmap
+                    if item is None or self.parent_space.current_projection.scaled_projection_pixmap is None:
+                        continue
+                    relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item, 0, 0)
+                    sub_projection.x_pos = relative_pos.x()
+                    sub_projection.y_pos = relative_pos.y()
+                    sub_projection.z_pos = item.zValue()
 
 
     def delete_mini_projection(self, mini_projection):
@@ -1109,13 +1110,13 @@ class MainWidget(QWidget):
             if projection:
                 self.parent_space.current_projection = projection
 
-                self.x_scale = (self.parent_space.current_projection.original_pixmap.width() /
-                                self.parent_space.current_projection.projection_width)
-                self.y_scale = (self.parent_space.current_projection.original_pixmap.height() /
-                                self.parent_space.current_projection.projection_height)
+                self.set_x_and_y_scales(
+                    self.parent_space.current_projection.original_pixmap,
+                    self.parent_space.current_projection.projection_width,
+                    self.parent_space.current_projection.projection_height
+                )
 
-                set_position = True
-                self.update_main_scene(set_position)
+                self.update_main_scene(set_position=True)
 
 
     def delete_one_subprojection(self, draggable_item_pointer):
@@ -1130,7 +1131,10 @@ class MainWidget(QWidget):
                         self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
                     else:
                         subprojection_to_remove.mark_deleted()
-                    self.scene.removeItem(draggable_item_pointer)
+
+                    self.get_subprojection_position() # чтобы другие подразвертки не сдвигались,
+                                                      # изначально у них сохраненнвя позиция та, что в БД
+                    self.update_main_scene(set_position=True)
 
 
     def delete_all_subprojections(self, draggable_item_pointer):
@@ -1179,7 +1183,9 @@ class MainWidget(QWidget):
                     if subprojection_to_remove_in_current_projection:
                         self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove_in_current_projection)
 
-            self.update_main_scene()
+            self.get_subprojection_position()  # чтобы другие подразвертки не сдвигались,
+            # изначально у них сохраненнвя позиция та, что в БД
+            self.update_main_scene(set_position=True)
             for proj in self.parent_space.projections:
                 self.save_or_update_mini_projection(proj)
 
@@ -1288,6 +1294,10 @@ class MainWidget(QWidget):
 
         def on_selected(row):
             print(f"Выбранная строка: {row}")
+
+            if self.mini_projections_list:
+                self.mini_projections_list.clear()
+
             # получаю id_space выбранного пространства
             id_space = spaces_in_DB[row][0]
 
@@ -1295,11 +1305,46 @@ class MainWidget(QWidget):
 
             self.parent_space = loaded_space
 
-            self.current_index = 1
-            self.stack_widget.setCurrentIndex(self.current_index)
+            if self.current_index == 0:
+                self.current_index = 1
+                self.stack_widget.setCurrentIndex(self.current_index)
 
             self.update_tree_view()
             self.update_images_layout()
+
+            if self.parent_space.projections:
+                self.parent_space.current_projection = max(self.parent_space.projections, key=lambda p: len(p.sub_projections))
+                self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
+                                / self.parent_space.current_projection.projection_width)
+                self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
+                                / self.parent_space.current_projection.projection_height)
+
+                print(type(self.x_scale))
+
+                for proj in self.parent_space.projections:
+                    for subproj in proj.sub_projections:
+
+                        if subproj.id_parent_thing:
+                            subproj.reference_to_parent_thing = next((thing_item for thing_item in self.parent_space.things
+                                                                   if thing_item.id_thing == subproj.id_parent_thing),None)
+                        elif subproj.id_parent_space:
+                            subproj.reference_to_parent_space = next((space_item for space_item in self.parent_space.subspaces
+                                                                   if space_item.id_space == subproj.id_parent_space), None)
+
+
+                self.update_main_scene(True)
+
+                for proj in self.parent_space.projections:
+                    self.save_or_update_mini_projection(proj)
+
+                current_projection = next((mini_projection for mini_projection in self.mini_projections_list
+                                           if mini_projection.saved_projection == self.parent_space.current_projection), None)
+
+                # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
+                if current_projection:
+                    self.mini_projections_list.remove(current_projection)
+                    self.mini_projections_list.insert(0, current_projection)
+                self.update_mini_projections_layout()
 
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()

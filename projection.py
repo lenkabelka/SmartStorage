@@ -194,5 +194,200 @@ class Projection(track_object_state.Trackable):
                 self.sub_projections.remove(sub_projection)
 
 
-    def load_projections_of_space(self):
-        pass
+def load_space_projections(space_in_DB, cursor) -> list[Projection]:
+
+    print("Я тут_________1")
+
+    query = """
+        SELECT 
+            id_projection, 
+            id_parent_projection, 
+            id_parent_space, 
+            id_parent_thing, 
+            projection_name, 
+            projection_description, 
+            x_pos_in_parent_projection, 
+            y_pos_in_parent_projection, 
+            z_pos, 
+            projection_image, 
+            projection_width, 
+            projection_height
+        FROM spaces.projections
+        WHERE id_parent_space = %s
+    """
+    cursor.execute(query, (space_in_DB.id_space,))
+    rows = cursor.fetchall()
+
+    projections = []
+    print("Я тут_________2")
+
+    for row in rows:
+        (
+            id_projection_DB,
+            id_parent_projection_DB,
+            id_parent_space_DB,
+            id_parent_thing_DB,
+            projection_name_DB,
+            projection_description_DB,
+            x_pos_DB,
+            y_pos_DB,
+            z_pos_DB,
+            image_bytes,
+            width_DB,
+            height_DB
+        ) = row
+        # из БД приходит Decimal вместо float
+        width_DB = float(width_DB)
+        height_DB = float(height_DB)
+
+        print("Я тут_________3")
+
+        # Преобразуем байты в QImage
+        image = QImage()
+        print("Я тут_________4")
+        if image_bytes:
+            image = image.fromData(image_bytes)
+            print(type(image))
+            if not image:
+                print("Не удалось загрузить QImage из байтов")
+        else:
+            print("Нет изображения в базе")
+            continue  # пропускаем пустую проекцию
+
+        # Получаем масштабированный и обрезанный pixmap
+        scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(image, width_DB, height_DB)
+        print("Я тут_________5")
+
+        try:
+            projection_from_DB = Projection(
+                projection_name=projection_name_DB,
+                projection_image=image,
+                projection_width=width_DB,
+                projection_height=height_DB,
+                projection_description=projection_description_DB,
+                x_pos=x_pos_DB,
+                y_pos=y_pos_DB,
+                z_pos=z_pos_DB,
+                id_projection=id_projection_DB,
+                id_parent_projection=id_parent_projection_DB,
+                id_parent_space=id_parent_space_DB,
+                id_parent_thing=id_parent_thing_DB,
+                original_pixmap=scaled_cropped_pixmap,
+                scaled_projection_pixmap=QGraphicsPixmapItem(scaled_cropped_pixmap)
+            )
+
+            projection_from_DB.sub_projections = load_projection_subprojections(projection_from_DB, cursor)
+
+        except Exception as e:
+            print(f"Ошибка при создании Projection: {e}")
+            continue
+
+        print("Я тут_________6")
+
+        projections.append(projection_from_DB)
+
+    return projections
+
+
+def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]:
+    print("_________Я тут_________1")
+
+    query = """
+        SELECT 
+            id_projection, 
+            id_parent_projection, 
+            id_parent_space, 
+            id_parent_thing, 
+            projection_name, 
+            projection_description, 
+            x_pos_in_parent_projection, 
+            y_pos_in_parent_projection, 
+            z_pos, 
+            projection_image, 
+            projection_width, 
+            projection_height
+        FROM spaces.projections
+        WHERE id_parent_projection = %s
+    """
+    cursor.execute(query, (proj.id_projection,))
+    rows = cursor.fetchall()
+
+    subprojections = []
+    print("_________Я тут_________2")
+
+    for row in rows:
+        (
+            id_projection_DB,
+            id_parent_projection_DB,
+            id_parent_space_DB,
+            id_parent_thing_DB,
+            projection_name_DB,
+            projection_description_DB,
+            x_pos_DB,
+            y_pos_DB,
+            z_pos_DB,
+            image_bytes,
+            width_DB,
+            height_DB
+        ) = row
+        # из БД приходит Decimal вместо float
+        width_DB = float(width_DB)
+        height_DB = float(height_DB)
+
+        print("____________Я тут_________3")
+
+        # Преобразуем байты в QImage
+        #image = QImage()
+        print("______________Я тут_________4")
+        if image_bytes:
+            image = QImage.fromData(image_bytes)
+            print(type(image))
+            if image.isNull():
+                print("Не удалось загрузить QImage из байтов")
+        else:
+            print("Нет изображения в базе")
+            continue  # пропускаем пустую проекцию
+
+        # Получаем масштабированный и обрезанный pixmap
+        #scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(image, width_DB, height_DB)
+        print("__________Я тут_________5")
+
+        x_scale = proj.original_pixmap.width() / proj.projection_width
+        y_scale = proj.original_pixmap.height() / proj.projection_height
+
+        original_pixmap = utils.get_scaled_pixmap(
+            image,
+            int(round(x_scale * width_DB)),
+            int(round(y_scale * height_DB))
+        )
+
+        try:
+            subprojection = Projection(
+                projection_name=projection_name_DB,
+                projection_image=image,
+                projection_width=width_DB,
+                projection_height=height_DB,
+                projection_description=projection_description_DB,
+                x_pos=x_pos_DB,
+                y_pos=y_pos_DB,
+                z_pos=z_pos_DB,
+                id_projection=id_projection_DB,
+                id_parent_projection=id_parent_projection_DB,
+                id_parent_space=id_parent_space_DB,
+                id_parent_thing=id_parent_thing_DB,
+                original_pixmap=original_pixmap
+                # при обновлении сцены, они создадутся в draggable
+                #scaled_projection_pixmap=QGraphicsPixmapItem(scaled_cropped_pixmap)
+            )
+
+            subprojection.reference_to_parent_projection = proj
+
+        except Exception as e:
+            print(f"Ошибка при создании Projection: {e}")
+            continue
+
+        print("___________Я тут_________6")
+
+        subprojections.append(subprojection)
+
+    return subprojections
