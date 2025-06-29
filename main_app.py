@@ -560,8 +560,6 @@ class MainWidget(QWidget):
                                 self.parent_space.current_projection.projection_description \
                                     = temp_dict_new_space_projection["description"]
 
-                            self.parent_space.current_projection.reset_state()
-
                             self.update_main_scene(set_position=False)
 
                             if self.parent_space.current_projection.sub_projections:
@@ -1346,15 +1344,6 @@ class MainWidget(QWidget):
 
                 for proj in self.parent_space.projections:
                     self.save_or_update_mini_projection(proj)
-
-                # current_projection = next((mini_projection for mini_projection in self.mini_projections_list
-                #                            if mini_projection.saved_projection == self.parent_space.current_projection), None)
-                #
-                # # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
-                # if current_projection:
-                #     self.mini_projections_list.remove(current_projection)
-                #     self.mini_projections_list.insert(0, current_projection)
-                # self.update_mini_projections_layout()
 
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
