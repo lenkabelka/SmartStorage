@@ -1329,10 +1329,21 @@ class MainWidget(QWidget):
 
 
     def open_space(self, space_to_open: space.Space):
-        # TODO проверять, сохранено ли текущее пространство self.parent_space
 
-        # открываю подпространство как пространство
-            # этого пространства ещё нет в базе
+        if self.parent_space.state == ObjectState.NEW:
+            reply = QMessageBox.question(
+                self,
+                "Сохранить текущее пространство",
+                "Текущее пространство не сохранено!\nХотите сохранить его сохранить?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_space_to_DB()
+            elif reply == QMessageBox.StandardButton.No:
+                pass
+
         self.parent_space = space_to_open
 
         if self.parent_space.projections:
