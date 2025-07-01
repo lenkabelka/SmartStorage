@@ -104,17 +104,43 @@ class TreeWidget(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
 
+    # def build_tree_nodes(self, space):
+    #     """Создаёт узел пространства и рекурсивно добавляет потомков"""
+    #     if getattr(space, "state", None) == ObjectState.DELETED:
+    #         print("Я туточки")
+    #         return None  # Не создавать узел для удалённого пространства
+    #     current_node = TreeNode(space, space.name, NODE_TYPE_SPACE)
+    #     #if getattr(space, "state", None) != ObjectState.DELETED:
+    #     # Подпространства
+    #     for subspace in getattr(space, "subspaces", []):
+    #         if getattr(subspace, "state", None) != ObjectState.DELETED:
+    #             child_node = self.build_tree_nodes(subspace)
+    #             current_node.add_child(child_node)
+    #
+    #     # Вещи
+    #     for thing in getattr(space, "things", []):
+    #         if getattr(thing, "state", None) != ObjectState.DELETED:
+    #             thing_node = TreeNode(thing, thing.name, NODE_TYPE_THING)
+    #             current_node.add_child(thing_node)
+    #
+    #     return current_node
+
     def build_tree_nodes(self, space):
-        """Создаёт узел пространства и рекурсивно добавляет потомков"""
+        """Создаёт узел пространства и добавляет только подпространства первого уровня и вещи"""
+
+        if getattr(space, "state", None) == ObjectState.DELETED:
+            print("Пространство удалено — узел не создаём")
+            return None  # Не создавать узел для удалённого пространства
+
         current_node = TreeNode(space, space.name, NODE_TYPE_SPACE)
 
-        # Подпространства
+        # Добавляем подпространства первого уровня — без рекурсии
         for subspace in getattr(space, "subspaces", []):
             if getattr(subspace, "state", None) != ObjectState.DELETED:
-                child_node = self.build_tree_nodes(subspace)
+                child_node = TreeNode(subspace, subspace.name, NODE_TYPE_SPACE)
                 current_node.add_child(child_node)
 
-        # Вещи
+        # Добавляем вещи
         for thing in getattr(space, "things", []):
             if getattr(thing, "state", None) != ObjectState.DELETED:
                 thing_node = TreeNode(thing, thing.name, NODE_TYPE_THING)
@@ -122,18 +148,23 @@ class TreeWidget(QTreeView):
 
         return current_node
 
+
     def update_tree(self, parent_space=None):
         """Обновляет модель, начиная с нового пространства"""
-        # Новый root (невидимый) и один видимый child (parent_space)
+        # Новый root (невидимый)
         self.root_item = TreeNode(None, "root", NODE_TYPE_SPACE)
 
         if parent_space is not None:
             root_child = self.build_tree_nodes(parent_space)
-            self.root_item.add_child(root_child)
+            if root_child is not None:
+                self.root_item.add_child(root_child)
+            else:
+                print("Корневое пространство удалено. Показывается только скрытый root.")
 
         self.model = TreeModel(self.root_item, self)
         self.setModel(self.model)
         self.expandAll()
+
 
     def open_context_menu(self, position: QPoint):
         index = self.indexAt(position)
@@ -152,6 +183,7 @@ class TreeWidget(QTreeView):
                 menu.addAction("Добавить проекцию пространства", lambda: self.add_space_projection())
             else:
                 menu.addAction("Изменить проекцию пространства", lambda: self.add_space_projection())
+            menu.addAction("Открыть родительское пространство", lambda: self.open_parent_space())
             menu.addAction("Добавить подпространство", lambda: self.add_subspace())
             menu.addAction("Добавить вещь", lambda: self.add_thing())
             menu.addSeparator()
@@ -167,6 +199,10 @@ class TreeWidget(QTreeView):
             menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
+
+
+    def open_parent_space(self):
+        self.app_ref.load_parent_space_from_DB()
 
 
     def delete_space(self, index: QModelIndex):

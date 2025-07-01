@@ -17,7 +17,8 @@ def load_all_spaces_from_DB():
                 cursor.execute(query)
                 results = cursor.fetchall()
                 if not results:
-                    raise LookupError("В базе данных нет ни одного пространства")
+                    return None
+                    #raise LookupError("В базе данных нет ни одного пространства")
                 return results
     except Exception as e:
         raise RuntimeError(f"Ошибка загрузки пространств: {e}")

@@ -126,6 +126,11 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             elif selected_action == move_action:
                 self.unfreeze()
 
+            elif selected_action == delete_item_action:
+                if isinstance(self.parent, Space):
+                    self.app_ref.delete_subspace(self.parent)
+                elif isinstance(self.parent, Thing):
+                    self.app_ref.delete_thing(self.parent)
         else:
             super().mousePressEvent(event)
 

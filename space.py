@@ -140,7 +140,11 @@ class Space(track_object_state.Trackable):
                         for obj in deleted:
                             lst.remove(obj)
 
-                self.show_message("Успешно", "Пространство сохранено.")
+                # Сообщение смотрим только по состоянию самого пространства
+                if getattr(self, "state", None) == ObjectState.DELETED:
+                    self.show_message("Внимание", "Пространство удалено.")
+                else:
+                    self.show_message("Успешно", "Пространство сохранено.")
 
         except Exception as e:
             self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}", icon=QMessageBox.Icon.Critical)
@@ -203,6 +207,13 @@ def load_space_subspaces(id_space: int, cursor) -> list[Space]:
                 name=space_name_DB,
                 description=space_description_DB
             )
+            # Рекурсивно загружаем подпространства для этого подпространства
+            subspace.subspaces = load_space_subspaces(subspace.id_space, cursor)
+
+            # Загружаем вещи для этого подпространства
+            subspace.things = th.load_space_things(subspace, cursor)
+
+
         except Exception as e:
             print(f"Ошибка при создании подпространства Space: {e}")
             raise
@@ -210,3 +221,69 @@ def load_space_subspaces(id_space: int, cursor) -> list[Space]:
         subspaces.append(subspace)
 
     return subspaces
+
+
+def get_top_space_id(starting_parent_id):
+    """
+    Итеративно находит самый верхний ancestor space, у которого id_parent_space IS NULL.
+
+    :param starting_parent_id: id пространства, от которого начинается поиск
+    :return: id самого верхнего пространства (root)
+    """
+    config = connection.load_config()
+    conn = connection.db_connect(config)
+
+    try:
+        with conn:
+            with conn.cursor() as cursor:
+                current_id = starting_parent_id
+
+                while current_id is not None:
+                    cursor.execute(
+                        "SELECT id_space, id_parent_space FROM spaces.spaces WHERE id_space = %s",
+                        (current_id,)
+                    )
+                    result = cursor.fetchone()
+
+                    if result is None:
+                        raise ValueError(f"Пространство с id={current_id} не найдено в базе данных")
+
+                    id_space, parent_id = result
+
+                    if parent_id is None:
+                        return id_space  # нашли корень
+                    else:
+                        current_id = parent_id
+    except Exception as e:
+        print(f"Ошибка при поиске верхнего пространства: {e}")
+        raise
+
+
+
+
+# def load_space_subspaces(id_space: int, cursor) -> list[Space]:
+#     query = """
+#         SELECT id_space, id_parent_space, space_name, space_description
+#         FROM spaces.spaces
+#         WHERE id_parent_space = %s
+#     """
+#     cursor.execute(query, (id_space,))
+#     rows = cursor.fetchall()
+#
+#     subspaces = []
+#
+#     for id_space_DB, id_parent_space_DB, space_name_DB, space_description_DB in rows:
+#         try:
+#             subspace = Space(
+#                 id_space=id_space_DB,
+#                 id_parent_space=id_parent_space_DB,
+#                 name=space_name_DB,
+#                 description=space_description_DB
+#             )
+#         except Exception as e:
+#             print(f"Ошибка при создании подпространства Space: {e}")
+#             raise
+#
+#         subspaces.append(subspace)
+#
+#     return subspaces

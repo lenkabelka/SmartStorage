@@ -27,6 +27,7 @@ import add_thing
 import thing
 import tree_view
 import all_spaces_in_DB
+import tree_view_for_search
 
 
 class MainWindow(QMainWindow):
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         self.action_create_new_space = QAction("Создать новое пространство", self)
         self.action_open_space = QAction("Открыть пространство ...", self)
         self.action_save_space = QAction("Сохранить пространство ...", self)
-        self.action_show_whole_structure_of_space = QAction("Показать всё дерево пространства", self)
+        self.action_show_full_structure_of_space = QAction("Показать всё дерево пространства", self)
         self.action_exit = QAction("Закрыть программу", self)
         self.action_delete_space = QAction("Удалить пространство", self)
 
@@ -56,7 +57,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_create_new_space)
         file_menu.addAction(self.action_open_space)
         file_menu.addAction(self.action_save_space)
-        file_menu.addAction(self.action_show_whole_structure_of_space)
+        file_menu.addAction(self.action_show_full_structure_of_space)
         file_menu.addAction(self.action_exit)
         file_menu.addSeparator()
         file_menu.addAction(self.action_delete_space)
@@ -79,9 +80,11 @@ class MainWindow(QMainWindow):
         self.action_save_space.triggered.connect(lambda: print("Меню сохранения нажато"))
         self.action_save_space.triggered.connect(self.main_widget.save_space_to_DB)
 
-        self.action_open_space.triggered.connect(self.main_widget.load_space_from_DB)
+        self.action_open_space.triggered.connect(self.main_widget.load_space_from_db_by_selection_from_spaces_list)
 
-        self.action_create_new_space.triggered.connect(self.main_widget.save_current_space)
+        self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
+
+        self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
         self.action_exit.triggered.connect(self.close_application)
 
         self.main_widget.space_changed.connect(self.update_actions)
@@ -89,9 +92,16 @@ class MainWindow(QMainWindow):
         self.update_actions()
 
     def update_actions(self):
-        self.action_save_space.setEnabled(self.main_widget.parent_space is not None)
-        self.action_delete_space.setEnabled(self.main_widget.parent_space is not None)
-        self.action_show_whole_structure_of_space.setEnabled(self.main_widget.parent_space is not None)
+        parent_space = self.main_widget.parent_space
+        self.action_save_space.setEnabled(
+            parent_space is not None and getattr(parent_space, "state", None) != ObjectState.DELETED
+        )
+        self.action_delete_space.setEnabled(
+            parent_space is not None and getattr(parent_space, "state", None) != ObjectState.DELETED
+        )
+        self.action_show_full_structure_of_space.setEnabled(
+            parent_space is not None and getattr(parent_space, "state", None) != ObjectState.DELETED
+        )
 
     def close_application(self):
         QApplication.quit()
@@ -326,6 +336,8 @@ class MainWidget(QWidget):
 
         self.tree = tree_view.TreeWidget(self)
 
+        self.tree_view_of_full_space_structure = tree_view_for_search.TreeWidget(self)
+
         #self.tree = QTreeView()
         #self.model = QStandardItemModel()
         #model.setHorizontalHeaderLabels(["Название", "Описание"])
@@ -409,7 +421,15 @@ class MainWidget(QWidget):
         self.tree.update_tree(self.parent_space)
 
 
-    def save_current_space(self):
+    def update_app_state(self):
+        self.update_main_scene()
+        self.update_mini_projections_layout()
+        self.update_tree_view()
+        if self.parent_space.space_images:
+            self.clear_layout(self.parent_space.space_images)
+
+
+    def create_new_space(self):
         if self.parent_space is None:
             self.add_space()
         else:
@@ -426,14 +446,17 @@ class MainWidget(QWidget):
 
                 if reply == QMessageBox.StandardButton.Yes:
                     self.save_space_to_DB()
+                    self.update_app_state()
                     self.add_space()
 
                 elif reply == QMessageBox.StandardButton.No:
+                    self.update_app_state()
                     self.add_space()
 
                 elif reply == QMessageBox.StandardButton.Cancel:
                     return
             else:
+                self.update_app_state()
                 self.add_space()
 
 
@@ -587,12 +610,14 @@ class MainWidget(QWidget):
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
+
         if self.parent_space.current_projection is not None:
             self.parent_space.current_projection.scaled_projection_pixmap \
                 = QGraphicsPixmapItem(self.parent_space.current_projection.original_pixmap)
             min_z = min((item.zValue() for item in self.scene.items()), default=0)
             self.parent_space.current_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
             self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
+
             if self.parent_space.current_projection.sub_projections:
                 for sub in self.parent_space.current_projection.sub_projections:
                     if sub.state is not ObjectState.DELETED:
@@ -640,6 +665,9 @@ class MainWidget(QWidget):
             self.scene.setSceneRect(bounding_rect)
 
             self.view.fitInView(bounding_rect, Qt.AspectRatioMode.KeepAspectRatio)
+
+        else:
+            self.set_placeholders_on_main_scene()
 
 
     def add_subspace(self):
@@ -745,8 +773,6 @@ class MainWidget(QWidget):
                         item_rect = item.boundingRect()
                         offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                         item.setPos(center - offset)
-
-                        print(f"SUBSPACE: {subspace_to_add_projection}")
 
                         self.scene.addItem(item)
 
@@ -893,20 +919,22 @@ class MainWidget(QWidget):
             else:
                 break
 
+    def clear_layout(self, layout):
+        for i in reversed(range(layout.count())):
+            item = layout.takeAt(i)  # <-- обязательно удалить из layout
+            if item is not None:
+                widget = item.widget()
+                if widget:
+                    widget.setParent(None)  # <-- отключить от layout
+                    widget.deleteLater()  # <-- пометить на удаление
+                else:
+                    sublayout = item.layout()
+                    if sublayout:
+                        self.clear_layout(sublayout)
+
 
     def update_images_layout(self):
-        def clear_layout(layout):
-            for i in reversed(range(layout.count())):
-                item = layout.itemAt(i)
-                if item is not None:
-                    widget = item.widget()
-                    if widget:
-                        widget.deleteLater()
-                    else:
-                        sublayout = item.layout()
-                        clear_layout(sublayout)
-
-        clear_layout(self.layout_images_of_space)
+        self.clear_layout(self.layout_images_of_space)
 
         for item in self.parent_space.space_images:
 
@@ -1238,20 +1266,40 @@ class MainWidget(QWidget):
 
     def delete_space(self, space_to_delete):
         if self.parent_space == space_to_delete:
+
             if self.parent_space.state == ObjectState.NEW:
                 self.parent_space = None
             else:
                 self.parent_space.mark_deleted()
+                if self.parent_space.projections:
+                    for proj in self.parent_space.projections:
+                        proj.mark_deleted()
+                        if proj.sub_projections:
+                            for subproj in proj.sub_projections:
+                                subproj.mark_deleted()
+                if self.parent_space.subspaces:
+                    for sub in self.parent_space.subspaces:
+                        sub.mark_deleted()
+                if self.parent_space.things:
+                    for item in self.parent_space.things:
+                        item.mark_deleted()
+                if self.parent_space.space_images:
+                    for image in self.parent_space.space_images:
+                        image.mark_deleted()
+
+            self.clear_layout(self.layout_images_of_space)
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
             self.mini_projections_list.clear()
             self.update_mini_projections_layout()
             self.update_tree_view()
-            #self.current_index = 0
-            #self.stack_widget.setCurrentIndex(self.current_index)
+            self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
-            #self.set_placeholders_on_main_scene()
+            self.set_placeholders_on_main_scene()
+
+            if self.parent_space is not None:
+                self.parent_space.save_space()
 
 
     def save_space_to_DB(self):
@@ -1277,6 +1325,8 @@ class MainWidget(QWidget):
         else:
             self.parent_space.save_space()
 
+        self.show_full_structure_of_space()
+
 
     def open_space(self, space_to_open: space.Space):
         # TODO проверять, сохранено ли текущее пространство self.parent_space
@@ -1284,6 +1334,7 @@ class MainWidget(QWidget):
         # открываю подпространство как пространство
             # этого пространства ещё нет в базе
         self.parent_space = space_to_open
+
         if self.parent_space.projections:
             self.parent_space.current_projection = random.choice(self.parent_space.projections)
 
@@ -1295,9 +1346,72 @@ class MainWidget(QWidget):
                 self.save_or_update_mini_projection(proj)
             self.update_mini_projections_layout()
 
+        self.update_tree_view()
+        self.update_main_scene()
+        self.mini_projections_list = []
+        self.update_mini_projections_layout()
 
-    def load_space_from_DB(self):
+
+    def load_space_from_DB(self, id_space):
+        loaded_space = space.load_space_by_id(id_space)
+
+        self.parent_space = loaded_space
+
+        if self.current_index == 0:
+            self.current_index = 1
+            self.stack_widget.setCurrentIndex(self.current_index)
+
+        self.update_tree_view()
+        self.update_images_layout()
+
+        if self.parent_space.projections:
+            # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
+            # если подразвёрток ни у одной развертки нет, то первую в списке projections
+            self.parent_space.current_projection = max(self.parent_space.projections,
+                                                       key=lambda p: len(p.sub_projections))
+            self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
+                            / self.parent_space.current_projection.projection_width)
+            self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
+                            / self.parent_space.current_projection.projection_height)
+
+            print(type(self.x_scale))
+
+            for proj in self.parent_space.projections:
+                for subproj in proj.sub_projections:
+
+                    if subproj.id_parent_thing:
+                        subproj.reference_to_parent_thing = next((thing_item for thing_item in self.parent_space.things
+                                                                  if thing_item.id_thing == subproj.id_parent_thing),
+                                                                 None)
+                    elif subproj.id_parent_space:
+                        subproj.reference_to_parent_space = next(
+                            (space_item for space_item in self.parent_space.subspaces
+                             if space_item.id_space == subproj.id_parent_space), None)
+
+            self.update_main_scene(True)
+
+            for proj in self.parent_space.projections:
+                self.save_or_update_mini_projection(proj)
+
+        self.space_changed.emit()
+        self.set_buttons_disabled_or_enabled()
+
+
+    def load_parent_space_from_DB(self):
+        if self.parent_space.id_parent_space is not None:
+            self.load_space_from_DB(self.parent_space.id_parent_space)
+        else:
+            QMessageBox.warning(self, "Родительское пространство отсутствует", "Для этого пространства "
+                                                                               "нет родительского пространства!")
+
+
+    def load_space_from_db_by_selection_from_spaces_list(self):
         spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB()
+
+        if spaces_in_DB is None:
+            QMessageBox.warning(self, "Нет пространств", "В базе данных пока нет ни одного пространства!")
+            return
+
         spaces_list = all_spaces_in_DB.SpacesList(spaces_in_DB)
 
         def on_selected(row):
@@ -1309,44 +1423,7 @@ class MainWidget(QWidget):
             # получаю id_space выбранного пространства
             id_space = spaces_in_DB[row][0]
 
-            loaded_space = space.load_space_by_id(id_space)
-
-            self.parent_space = loaded_space
-
-            if self.current_index == 0:
-                self.current_index = 1
-                self.stack_widget.setCurrentIndex(self.current_index)
-
-            self.update_tree_view()
-            self.update_images_layout()
-
-            if self.parent_space.projections:
-                self.parent_space.current_projection = max(self.parent_space.projections, key=lambda p: len(p.sub_projections))
-                self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
-                                / self.parent_space.current_projection.projection_width)
-                self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
-                                / self.parent_space.current_projection.projection_height)
-
-                print(type(self.x_scale))
-
-                for proj in self.parent_space.projections:
-                    for subproj in proj.sub_projections:
-
-                        if subproj.id_parent_thing:
-                            subproj.reference_to_parent_thing = next((thing_item for thing_item in self.parent_space.things
-                                                                   if thing_item.id_thing == subproj.id_parent_thing),None)
-                        elif subproj.id_parent_space:
-                            subproj.reference_to_parent_space = next((space_item for space_item in self.parent_space.subspaces
-                                                                   if space_item.id_space == subproj.id_parent_space), None)
-
-
-                self.update_main_scene(True)
-
-                for proj in self.parent_space.projections:
-                    self.save_or_update_mini_projection(proj)
-
-            self.space_changed.emit()
-            self.set_buttons_disabled_or_enabled()
+            self.load_space_from_DB(id_space)
 
         spaces_list.spaceDoubleClicked.connect(on_selected)
 
@@ -1356,8 +1433,27 @@ class MainWidget(QWidget):
             print("Диалог закрыт без выбора")
 
 
+    def show_full_structure_of_space(self):
+        if self.parent_space.state != ObjectState.NEW:
+
+            if self.parent_space.id_parent_space:
+                id_top_space = space.get_top_space_id(self.parent_space.id_parent_space)
+            else:
+                id_top_space = self.parent_space.id_space
+
+            top_space = space.load_space_by_id(id_top_space)
+
+            #tree_view_of_full_space_structure = tree_view_for_search.TreeWidget(self)
+            self.tree_view_of_full_space_structure.update_tree(top_space)
+            self.tree_view_of_full_space_structure.show()
+
+        else:
+            QMessageBox.warning(self, "Новое пространство", "Это пространство новое, его структура "
+                                                            "уже показана полностью в дереве справа!")
+
+
     def set_buttons_disabled_or_enabled(self):
-        if self.parent_space is None:
+        if self.parent_space is None or self.parent_space.state == ObjectState.DELETED:
             self.add_image_of_space_button.setEnabled(False)
             self.add_new_space_projection_button.setEnabled(False)
             self.save_current_projection_button.setEnabled(False)

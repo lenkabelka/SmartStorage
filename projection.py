@@ -8,7 +8,6 @@ import psycopg2
 from draggable_pixmap_item import DraggablePixmapItem
 import space
 import track_object_state
-import connect_DB as connection
 import utils as utils
 from track_object_state import ObjectState
 import thing
@@ -196,8 +195,6 @@ class Projection(track_object_state.Trackable):
 
 def load_space_projections(space_in_DB, cursor) -> list[Projection]:
 
-    print("Я тут_________1")
-
     query = """
         SELECT 
             id_projection, 
@@ -219,7 +216,6 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
     rows = cursor.fetchall()
 
     projections = []
-    print("Я тут_________2")
 
     for row in rows:
         (
@@ -240,23 +236,18 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
         width_DB = float(width_DB)
         height_DB = float(height_DB)
 
-        print("Я тут_________3")
-
         # Преобразуем байты в QImage
         image = QImage()
-        print("Я тут_________4")
         if image_bytes:
             image = image.fromData(image_bytes)
             print(type(image))
             if not image:
                 print("Не удалось загрузить QImage из байтов")
         else:
-            print("Нет изображения в базе")
             continue  # пропускаем пустую проекцию
 
         # Получаем масштабированный и обрезанный pixmap
         scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(image, width_DB, height_DB)
-        print("Я тут_________5")
 
         try:
             projection_from_DB = Projection(
@@ -282,15 +273,12 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
             print(f"Ошибка при создании Projection: {e}")
             continue
 
-        print("Я тут_________6")
-
         projections.append(projection_from_DB)
 
     return projections
 
 
 def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]:
-    print("_________Я тут_________1")
 
     query = """
         SELECT 
@@ -313,7 +301,6 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
     rows = cursor.fetchall()
 
     subprojections = []
-    print("_________Я тут_________2")
 
     for row in rows:
         (
@@ -334,11 +321,8 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
         width_DB = float(width_DB)
         height_DB = float(height_DB)
 
-        print("____________Я тут_________3")
-
         # Преобразуем байты в QImage
         #image = QImage()
-        print("______________Я тут_________4")
         if image_bytes:
             image = QImage.fromData(image_bytes)
             print(type(image))
@@ -347,10 +331,6 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
         else:
             print("Нет изображения в базе")
             continue  # пропускаем пустую проекцию
-
-        # Получаем масштабированный и обрезанный pixmap
-        #scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(image, width_DB, height_DB)
-        print("__________Я тут_________5")
 
         x_scale = proj.original_pixmap.width() / proj.projection_width
         y_scale = proj.original_pixmap.height() / proj.projection_height
@@ -376,8 +356,6 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
                 id_parent_space=id_parent_space_DB,
                 id_parent_thing=id_parent_thing_DB,
                 original_pixmap=original_pixmap
-                # при обновлении сцены, они создадутся в draggable
-                #scaled_projection_pixmap=QGraphicsPixmapItem(scaled_cropped_pixmap)
             )
 
             subprojection.reference_to_parent_projection = proj
@@ -385,8 +363,6 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
         except Exception as e:
             print(f"Ошибка при создании Projection: {e}")
             continue
-
-        print("___________Я тут_________6")
 
         subprojections.append(subprojection)
 
