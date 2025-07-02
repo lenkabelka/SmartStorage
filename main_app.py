@@ -7,8 +7,8 @@ from PyQt6.QtWidgets import (
     QScrollArea, QSizePolicy, QMessageBox, QFrame, QStackedWidget,
     QMainWindow, QGraphicsTextItem, QGraphicsView
 )
-from PyQt6.QtGui import QFont, QAction
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtGui import QFont, QAction, QFontDatabase
+from PyQt6.QtCore import Qt, QPointF, pyqtSignal, QTimer
 import sys
 import add_projection as add_projection
 import add_space as add_space
@@ -91,6 +91,8 @@ class MainWindow(QMainWindow):
 
         self.update_actions()
 
+        #QTimer.singleShot(50, self.call_placeholder_update)
+
     def update_actions(self):
         parent_space = self.main_widget.parent_space
         self.action_save_space.setEnabled(
@@ -105,6 +107,14 @@ class MainWindow(QMainWindow):
 
     def close_application(self):
         QApplication.quit()
+
+    # def call_placeholder_update(self):
+    #     # Проверим, готов ли viewport
+    #     if self.main_widget.view.viewport().width() > 0 and self.main_widget.view.viewport().height() > 0:
+    #         self.main_widget.update_placeholders_font_and_position()
+    #     else:
+    #         # Попробуем ещё раз через 50 мс, если размеры ещё не готовы
+    #         QTimer.singleShot(50, self.call_placeholder_update)
 
 
 class MainWidget(QWidget):
@@ -125,29 +135,33 @@ class MainWidget(QWidget):
         self.wellcome_page = QFrame()
         self.wellcome_layout = QVBoxLayout()
 
-        wellcome_scene = QGraphicsScene()
-        wellcome_view = QGraphicsView(wellcome_scene)
-        font_size = int(min(wellcome_view.width(), wellcome_view.height()) * 0.03)
-        font = QFont("Arial", font_size)
+        self.wellcome_scene = QGraphicsScene()
+        self.wellcome_view = zoomable_graphics_view.ZoomableGraphicsView(self.wellcome_scene) #QGraphicsView(wellcome_scene)
+        # font_size = int(min(wellcome_view.width(), wellcome_view.height()) * 0.03)
+        # font = QFont("Arial", font_size)
 
         # Первый текст
-        wellcome_placeholder = QGraphicsTextItem(
+        self.wellcome_placeholder = QGraphicsTextItem(
             "Добро пожаловать в программу умного хранения вещей!"
         )
-        wellcome_placeholder.setFont(font)
-        wellcome_placeholder_rect = wellcome_placeholder.boundingRect()
-        wellcome_placeholder.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        #wellcome_placeholder.setFont(font)
+        #wellcome_placeholder_rect = wellcome_placeholder.boundingRect()
+        self.update_placeholder_of_wellcome_view()
 
-        wellcome_scene.addItem(wellcome_placeholder)
+        self.wellcome_placeholder.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+
+        self.wellcome_scene.addItem(self.wellcome_placeholder)
 
         self.add_space_button = QPushButton("Создать новое пространство")
         self.open_saved_space_button = QPushButton("Открыть пространство ...")
 
-        self.wellcome_layout.addWidget(wellcome_view)
+        self.wellcome_layout.addWidget(self.wellcome_view)
         self.wellcome_layout.addWidget(self.add_space_button)
         self.wellcome_layout.addWidget(self.open_saved_space_button)
 
         self.wellcome_page.setLayout(self.wellcome_layout)
+
+        self.wellcome_view.resized.connect(self.update_placeholder_of_wellcome_view)
 
 ############## opened space page ###########################################################################################
 
@@ -182,7 +196,7 @@ class MainWidget(QWidget):
 
         self.scroll_for_projections_of_space = QScrollArea()
         self.scroll_for_projections_of_space.setWidgetResizable(True)
-        self.scroll_for_projections_of_space.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.scroll_for_projections_of_space.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
         self.container_projections_of_space.setLayout(self.layout_projections_of_space)
         self.container_projections_of_space.adjustSize()
@@ -227,20 +241,19 @@ class MainWidget(QWidget):
         # self.placeholder_for_projection = QGraphicsPixmapItem(self.pixmap_placeholder)
 
 
-        self.scene = QGraphicsScene(self)
-        self.view = zoomable_graphics_view.ZoomableGraphicsView(self.scene)
+
 
         # Первый текст
-        self.placeholder_for_projection_1 = QGraphicsTextItem(
-            "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
-        )
+        #self.placeholder_for_projection_1 = QGraphicsTextItem()
+        #    "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
+        #)
 
         # Второй текст
-        self.placeholder_for_projection_2 = QGraphicsTextItem(
-            "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
-        )
+        #self.placeholder_for_projection_2 = QGraphicsTextItem()
+        #    "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
+        #)
 
-        self.set_placeholders_on_main_scene()
+        #self.set_placeholders_on_main_scene()
 
         # int(min(wellcome_view.width(), wellcome_view.height()) * 0.03)
         # font = QFont("Arial", font_size)
@@ -311,6 +324,11 @@ class MainWidget(QWidget):
         #self.button_layout.addWidget(self.save_space_button)
         #self.button_layout.addWidget(self.add_thing_button)
 
+
+        self.scene = QGraphicsScene(self)
+        self.view = zoomable_graphics_view.ZoomableGraphicsView(self.scene)
+
+
         self.layout_space_creation.addWidget(self.view)
         #self.layout_space_creation.addWidget(self.add_projection_of_space_button)
         #self.layout_space_creation.addWidget(self.add_subspace_button)
@@ -335,6 +353,7 @@ class MainWidget(QWidget):
         #self.left_view_layout
 
         self.tree = tree_view.TreeWidget(self)
+        self.tree.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
         self.tree_view_of_full_space_structure = tree_view_for_search.TreeWidget(self)
 
@@ -370,38 +389,51 @@ class MainWidget(QWidget):
 
         self.current_index = 0
 
-############## connections #############################################################################################
+
         self.add_space_button.clicked.connect(self.add_space)
+
+        self.placeholder_for_projection_1 = None
+        self.placeholder_for_projection_2 = None
+        self.set_placeholders_on_main_scene()
+
+        self.view.resized.connect(self.update_placeholders_font_and_position)
+
+
+    def update_placeholder_of_wellcome_view(self):
+        if not self.wellcome_placeholder:
+            return
+
+        vw = self.wellcome_view.viewport()
+        w = vw.width()
+        h = vw.height()
+
+        if w <= 0 or h <= 0:
+            return
+
+        font_size = max(int(min(w, h) * 0.035), 5)
+        font = QFont("Arial", font_size)
+
+        self.wellcome_placeholder.setFont(font)
+
+        r = self.wellcome_placeholder.boundingRect()
+
+        total_height = r.height()
+        y1 = (h - total_height) / 2
+        x1 = (w - r.width()) / 2
+
+        self.wellcome_placeholder.setPos(x1, y1)
+
+        self.wellcome_scene.setSceneRect(self.wellcome_scene.itemsBoundingRect())
+        self.wellcome_view.fitInView(self.wellcome_scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
 
     def set_placeholders_on_main_scene(self):
-        font_size = int(min(self.view.width(), self.view.height()) * 0.03)
-        font = QFont("Arial", font_size)
-
-        # Первый текст
         self.placeholder_for_projection_1 = QGraphicsTextItem(
             "Добавьте сюда проекцию пространства, кликнув правой кнопкой мыши на"
         )
-
-        self.placeholder_for_projection_1.setFont(font)
-        line1_rect =self.placeholder_for_projection_1.boundingRect()
-
-        # Второй текст
         self.placeholder_for_projection_2 = QGraphicsTextItem(
             "пространстве в списке справа, или нажав на кнопку \"Добавить новую проекцию пространства\"."
         )
-
-        self.placeholder_for_projection_2.setFont(font)
-        line2_rect = self.placeholder_for_projection_2.boundingRect()
-
-        # Общая высота
-        total_height = line1_rect.height() + line2_rect.height()
-        center_y = (self.scene.height() - total_height) / 2
-
-        # Устанавливаем позиции по центру
-        self.placeholder_for_projection_1.setPos((self.scene.width() - line1_rect.width()) / 2, center_y)
-        self.placeholder_for_projection_2.setPos((self.scene.width() - line2_rect.width()) / 2, center_y
-                                                 + line1_rect.height())
 
         self.placeholder_for_projection_1.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
         self.placeholder_for_projection_2.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
@@ -409,12 +441,38 @@ class MainWidget(QWidget):
         self.scene.addItem(self.placeholder_for_projection_1)
         self.scene.addItem(self.placeholder_for_projection_2)
 
-        self.view.setScene(self.scene)
 
-        bounding_rect = self.scene.itemsBoundingRect()
-        self.scene.setSceneRect(bounding_rect)
+    def update_placeholders_font_and_position(self):
+        if not self.placeholder_for_projection_1 or not self.placeholder_for_projection_2:
+            return
 
-        self.view.fitInView(bounding_rect, Qt.AspectRatioMode.KeepAspectRatio)
+        vw = self.view.viewport()
+        w = vw.width()
+        h = vw.height()
+
+        if w <= 0 or h <= 0:
+            return
+
+        font_size = max(int(min(w, h) * 0.035), 5)
+        font = QFont("Arial", font_size)
+
+        self.placeholder_for_projection_1.setFont(font)
+        self.placeholder_for_projection_2.setFont(font)
+
+        r1 = self.placeholder_for_projection_1.boundingRect()
+        r2 = self.placeholder_for_projection_2.boundingRect()
+
+        total_height = r1.height() + r2.height()
+        y1 = (h - total_height) / 2
+        x1 = (w - r1.width()) / 2
+        x2 = (w - r2.width()) / 2
+        y2 = y1 + r1.height()
+
+        self.placeholder_for_projection_1.setPos(x1, y1)
+        self.placeholder_for_projection_2.setPos(x2, y2)
+
+        self.scene.setSceneRect(self.scene.itemsBoundingRect())
+        self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
 
     def update_tree_view(self):
@@ -1476,6 +1534,14 @@ class MainWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
+    # font_id = QFontDatabase.addApplicationFont(":/fonts/GreatVibes-Regular.ttf")
+    # if font_id == -1:
+    #     print("No font!")
+
     window = MainWindow()
     window.show()
+
+    QTimer.singleShot(0, window.main_widget.update_placeholders_font_and_position)
+
     sys.exit(app.exec())
