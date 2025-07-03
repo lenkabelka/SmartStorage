@@ -12,6 +12,7 @@ class AddImage(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить изображение")
+        self.setWindowIcon(QIcon("icons/mini_logo.png"))
         self.selected_file = ""
 
         # Создание виджетов

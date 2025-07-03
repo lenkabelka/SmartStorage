@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QGraphicsView
 from PyQt6.QtGui import QWheelEvent, QPainter
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QTransform
 
 
 class ZoomableGraphicsView(QGraphicsView):
@@ -8,10 +9,15 @@ class ZoomableGraphicsView(QGraphicsView):
 
     def __init__(self, scene):
         super().__init__(scene)
-        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        self.setRenderHints(
+            QPainter.RenderHint.Antialiasing |
+            QPainter.RenderHint.SmoothPixmapTransform
+        )
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.zoom_factor = 1.15
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.SmartViewportUpdate)
+
+        self.zoom_factor = 1.1  # более плавный зум
         self.current_zoom = 1.0
         self.min_zoom = 0.1
         self.max_zoom = 10.0
@@ -33,6 +39,7 @@ class ZoomableGraphicsView(QGraphicsView):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.resized.emit()
+
 
     def showEvent(self, event):
         super().showEvent(event)

@@ -9,6 +9,7 @@ class AddThing(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить вещь в пространство")
+        self.setWindowIcon(QIcon("icons/mini_logo.png"))
         self.selected_file = ""
 
         # Создание виджетов
@@ -26,7 +27,8 @@ class AddThing(QDialog):
         screen_height = screen_size.height()
         width_coef = 0.3    #coefizient for width of Add Comment window
         height_coef = 0.2   #coefizient for height of Add Comment window
-        self.image_label.setFixedSize(int(screen_width * width_coef), int(screen_height * height_coef))
+        #self.image_label.setFixedSize(int(screen_width * width_coef), int(screen_height * height_coef))
+        self.image_label.setFixedSize(self.width(), int(screen_height * height_coef))
         self.image_label.setStyleSheet("border: 1px solid gray;")
 
         self.load_button = QPushButton("Загрузить фотографию вещи")

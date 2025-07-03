@@ -5,6 +5,7 @@ class EnlargedImageWindow(QWidget):
     def __init__(self, pixmap):
         super().__init__()
         self.setWindowTitle("Увеличенное изображение")
+        self.setWindowIcon(QIcon("icons/mini_logo.png"))
         layout = QVBoxLayout()
         label = QLabel()
         label.setPixmap(pixmap)

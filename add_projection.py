@@ -12,6 +12,7 @@ class AddProjection(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить проекцию пространства")
+        self.setWindowIcon(QIcon("icons/mini_logo.png"))
         self.selected_file = ""
 
         # Создание виджетов
@@ -23,7 +24,7 @@ class AddProjection(QDialog):
         self.y_sm = QLineEdit()
 
         checkbox_layout = QHBoxLayout()
-        checkbox_label = QLabel("Соотношение сторон изображения в px соответствует соотношению сторон пространства в сантиметрах:")
+        checkbox_label = QLabel("Соотношение сторон изображения в px соответствует реальному соотношению сторон пространства:")
         self.checkbox = QCheckBox()
         checkbox_layout.addWidget(checkbox_label)
         checkbox_layout.addWidget(self.checkbox)
@@ -43,7 +44,8 @@ class AddProjection(QDialog):
         screen_height = screen_size.height()
         width_coef = 0.3    #coefizient for width of Add Comment window
         height_coef = 0.2   #coefizient for height of Add Comment window
-        self.image_label.setFixedSize(int(screen_width * width_coef), int(screen_height * height_coef))
+        #self.image_label.setFixedSize(int(screen_width * width_coef), int(screen_height * height_coef))
+        self.image_label.setFixedSize(self.width(), int(screen_height * height_coef))
         self.image_label.setStyleSheet("border: 1px solid gray;")
 
         self.load_button = QPushButton("Загрузить картинку")
@@ -58,12 +60,12 @@ class AddProjection(QDialog):
 
         # Layout
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Имя проекции пространства:"))
+        layout.addWidget(QLabel("Имя проекции пространства*:"))
         layout.addWidget(self.name_edit)
         layout.addWidget(QLabel("Описание проекции пространства:"))
         layout.addWidget(self.description_edit)
 
-        layout.addWidget(QLabel("Картинка:"))
+        layout.addWidget(QLabel("Картинка*:"))
         layout.addWidget(self.image_label)
 
         # Добавление этих полей в layout
@@ -71,9 +73,9 @@ class AddProjection(QDialog):
 
         layout_for_scales = QHBoxLayout()
 
-        layout_for_scales.addWidget(QLabel("Размер пространства по x, в см:"))
+        layout_for_scales.addWidget(QLabel("Размер пространства по x*:"))
         layout_for_scales.addWidget(self.x_sm)
-        layout_for_scales.addWidget(QLabel("Размер пространства по y, в см:"))
+        layout_for_scales.addWidget(QLabel("Размер пространства по y*:"))
         layout_for_scales.addWidget(self.y_sm)
 
         layout.addLayout(layout_for_scales)
