@@ -1,4 +1,5 @@
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QLabel
+from PyQt6.QtGui import QIcon
 
 
 class EnlargedImageWindow(QWidget):

@@ -50,8 +50,8 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        file_menu = menu.addMenu("&File")
-        about_menu = menu.addMenu("&About")
+        file_menu = menu.addMenu("&Файл")
+        about_menu = menu.addMenu("&О программе")
         file_menu.addAction(self.action_create_new_space)
         file_menu.addAction(self.action_open_space)
         file_menu.addAction(self.action_save_space)
@@ -691,8 +691,8 @@ class MainWidget(QWidget):
                     if dict_of_new_space["description"]:
                         new_thing.description = dict_of_new_space["description"]
 
-                    if dict_of_new_space["image"]:
-                        new_thing.image = dict_of_new_space["image"]
+                    if dict_of_new_space["thing_images"]:
+                        new_thing.thing_images = dict_of_new_space["thing_images"]
 
                     self.parent_space.things.append(new_thing)
                     print(f"self.parent_space.things: {self.parent_space.things}")
@@ -808,6 +808,7 @@ class MainWidget(QWidget):
                     break
             else:
                 break
+
 
     def clear_layout(self, layout):
         for i in reversed(range(layout.count())):
@@ -1353,6 +1354,9 @@ class MainWidget(QWidget):
             self.add_new_space_projection_button.setEnabled(True)
             self.save_current_projection_button.setEnabled(True)
 
+
+    def change_thing_information(self):
+        pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

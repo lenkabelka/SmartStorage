@@ -7,6 +7,7 @@ import image as im
 import connect_DB as connection
 import psycopg2
 import utils
+#from space import Space
 
 
 @dataclass
@@ -16,7 +17,8 @@ class Thing(track_object_state.Trackable):
     reference_to_parent_space: Optional["Space"]
 
     description: str = None  # DB
-    image: QImage = None # DB
+    #image: QImage = None # DB
+    thing_images: list[Optional[im.SpaceImage]] = field(default_factory=list)
     id_thing: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
 
@@ -34,14 +36,23 @@ class Thing(track_object_state.Trackable):
         msg.exec()
 
 
+    def save_thing(self, cursor):
+        self.save(cursor)
+
+        if self.thing_images:
+            for image in self.thing_images:
+                if not image.id_parent_thing:
+                    image.id_parent_thing = self.id_thing
+                image.save(cursor)
+
+
     def insert(self, cursor):
         query = """
-            INSERT INTO spaces.things (thing_name, thing_description, thing_image, id_parent_space)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO spaces.things (thing_name, thing_description, id_parent_space)
+            VALUES (%s, %s, %s)
             RETURNING id_thing;
         """
-        image_bytes = utils.qimage_to_bytes(self.image) if self.image else None
-        values = (self.name, self.description, image_bytes, self.id_parent_space)
+        values = (self.name, self.description, self.id_parent_space)
         cursor.execute(query, values)
         self.id_thing = cursor.fetchone()[0]
         self.reset_state()
@@ -54,14 +65,12 @@ class Thing(track_object_state.Trackable):
 
         query = """
             UPDATE spaces.things
-            SET thing_name = %s, thing_description = %s, thing_image = %s
+            SET thing_name = %s, thing_description = %s, id_parent_space = %s
             WHERE id_thing = %s
         """
-        image_bytes = utils.qimage_to_bytes(self.image) if self.image else None
-        values = (self.name, self.description, image_bytes, self.id_thing)
+        values = (self.name, self.description, self.id_parent_space, self.id_thing)
         cursor.execute(query, values)
         self.reset_state()
-        print(f"Вещь с ID {self.id_thing} обновлена")
 
 
     def delete(self, cursor):
@@ -76,7 +85,7 @@ class Thing(track_object_state.Trackable):
 
 def load_space_things(space, cursor) -> list[Thing]:
     query = """
-        SELECT id_thing, thing_name, thing_description, thing_image, id_parent_space
+        SELECT id_thing, thing_name, thing_description, id_parent_space
         FROM spaces.things
         WHERE id_parent_space = %s
     """
@@ -85,16 +94,18 @@ def load_space_things(space, cursor) -> list[Thing]:
 
     things = []
 
-    for id_thing_DB, thing_name_DB, thing_description_DB, thing_image_DB, id_parent_space_DB in rows:
+    for id_thing_DB, thing_name_DB, thing_description_DB, id_parent_space_DB in rows:
         try:
             thing = Thing(
                 name=thing_name_DB,
                 description=thing_description_DB,
-                image=thing_image_DB,
                 id_thing=id_thing_DB,
                 id_parent_space=id_parent_space_DB,
                 reference_to_parent_space=space
             )
+
+            thing.thing_images = im.load_images_for_parent(id_thing_DB, "thing", cursor)
+
         except Exception as e:
             print(f"Ошибка при создании вещи Thing: {e}")
             raise

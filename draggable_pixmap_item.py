@@ -9,6 +9,7 @@ import utils as utils
 import math
 
 
+
 class DraggablePixmapItem(QGraphicsPixmapItem):
     def __init__(self, pixmap, app, background_pixmap_item, parent):
         super().__init__(pixmap)
@@ -25,6 +26,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.click_color = QColor(255, 0, 0, 150)
         self.setAcceptHoverEvents(True)
         self.is_editable = True
+
+        self.thing_info = None
 
         self.setFlags(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
@@ -95,6 +98,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             delete_item_action = None
             delete_subprojection_action = None
             delete_subprojections_action = None
+            show_information_action = None
 
             if isinstance(self.parent, Space):
                 delete_item_action = menu.addAction("Удалить пространство")
@@ -110,6 +114,11 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
             elif isinstance(self.parent, Thing):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
+
+            if isinstance(self.parent, Space):
+                show_information_action = menu.addAction("Показать информацию о подпространстве")
+            elif isinstance(self.parent, Thing):
+                show_information_action = menu.addAction("Показать информацию о вещи")
 
             selected_action = menu.exec(event.screenPos())
 
@@ -131,6 +140,13 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                     self.app_ref.delete_subspace(self.parent)
                 elif isinstance(self.parent, Thing):
                     self.app_ref.delete_thing(self.parent)
+
+            elif selected_action == show_information_action:
+                if isinstance(self.parent, Thing):
+                    from information_about_thing import ThingInformation
+                    self.thing_info = ThingInformation(self.parent)
+                    self.thing_info.show()
+
         else:
             super().mousePressEvent(event)
 

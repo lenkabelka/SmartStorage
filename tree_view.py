@@ -82,7 +82,7 @@ class TreeModel(QAbstractItemModel):
             if item.node_type == NODE_TYPE_SPACE:
                 return QIcon("icons/space.png")  # путь к иконке пространства
             elif item.node_type == NODE_TYPE_THING:
-                return QIcon("icons/thing.png")   # путь к иконке вещи
+                return QIcon("icons/thing_1.jpg")   # путь к иконке вещи
 
         return None
 
@@ -104,26 +104,6 @@ class TreeWidget(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
 
-    # def build_tree_nodes(self, space):
-    #     """Создаёт узел пространства и рекурсивно добавляет потомков"""
-    #     if getattr(space, "state", None) == ObjectState.DELETED:
-    #         print("Я туточки")
-    #         return None  # Не создавать узел для удалённого пространства
-    #     current_node = TreeNode(space, space.name, NODE_TYPE_SPACE)
-    #     #if getattr(space, "state", None) != ObjectState.DELETED:
-    #     # Подпространства
-    #     for subspace in getattr(space, "subspaces", []):
-    #         if getattr(subspace, "state", None) != ObjectState.DELETED:
-    #             child_node = self.build_tree_nodes(subspace)
-    #             current_node.add_child(child_node)
-    #
-    #     # Вещи
-    #     for thing in getattr(space, "things", []):
-    #         if getattr(thing, "state", None) != ObjectState.DELETED:
-    #             thing_node = TreeNode(thing, thing.name, NODE_TYPE_THING)
-    #             current_node.add_child(thing_node)
-    #
-    #     return current_node
 
     def build_tree_nodes(self, space):
         """Создаёт узел пространства и добавляет только подпространства первого уровня и вещи"""

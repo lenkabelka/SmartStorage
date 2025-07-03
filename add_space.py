@@ -18,7 +18,7 @@ class AddSpace(QDialog):
 
         # Layout
         layout = QVBoxLayout()
-        layout.addWidget(QLabel("Имя пространства:"))
+        layout.addWidget(QLabel("Имя пространства*:"))
         layout.addWidget(self.name_edit)
         layout.addWidget(QLabel("Описание:"))
         layout.addWidget(self.description_edit)

@@ -19,7 +19,6 @@ CREATE TABLE spaces.things (
     id_thing SERIAL PRIMARY KEY,
     thing_name TEXT NOT NULL,
     thing_description TEXT,
-    thing_image BYTEA,
     id_parent_space INTEGER NOT NULL,
     CONSTRAINT fk_parent_space
         FOREIGN KEY (id_parent_space)
@@ -63,11 +62,21 @@ CREATE TABLE IF NOT EXISTS spaces.projections (
 -- Table: images
 CREATE TABLE IF NOT EXISTS spaces.images (
     id_image SERIAL PRIMARY KEY,
-    id_parent_space INTEGER NOT NULL,    -- Reference to the parent space
+    id_parent_space INTEGER,    -- Ссылка на пространство (nullable)
+    id_parent_thing INTEGER,    -- Ссылка на вещь (nullable)
     image BYTEA NOT NULL,
     image_name TEXT,
     CONSTRAINT fk_space_image
         FOREIGN KEY (id_parent_space)
         REFERENCES spaces.spaces(id_space)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_thing_image
+        FOREIGN KEY (id_parent_thing)
+        REFERENCES spaces.things(id_thing)
+        ON DELETE CASCADE,
+    CONSTRAINT parent_space_or_thing_check CHECK (
+        (id_parent_space IS NOT NULL AND id_parent_thing IS NULL)
+        OR
+        (id_parent_space IS NULL AND id_parent_thing IS NOT NULL)
+    )
 );

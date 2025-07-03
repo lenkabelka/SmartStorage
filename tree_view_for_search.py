@@ -82,7 +82,7 @@ class TreeModel(QAbstractItemModel):
             if item.node_type == NODE_TYPE_SPACE:
                 return QIcon("icons/space.png")  # путь к иконке пространства
             elif item.node_type == NODE_TYPE_THING:
-                return QIcon("icons/thing.png")   # путь к иконке вещи
+                return QIcon("icons/thing_1.jpg")   # путь к иконке вещи
 
         return None
 

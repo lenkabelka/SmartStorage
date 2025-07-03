@@ -1,7 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
-from PyQt6.QtGui import QIcon, QPixmap, QGuiApplication
+from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QScrollArea, QSizePolicy
+from PyQt6.QtGui import QIcon, QGuiApplication
 from PyQt6.QtCore import Qt
 from thing import Thing
+import image_container
+from track_object_state import ObjectState
 
 
 class ThingInformation(QWidget):
@@ -32,27 +34,28 @@ class ThingInformation(QWidget):
         thing_description.setWordWrap(True)
         layout.addWidget(thing_description)
 
-        # Картинка (если указана и файл существует)
-        image_label = QLabel()
-        image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        if thing.thing_images:
+            # Layout для изображений
+            layout_images = QHBoxLayout()
+            container_images = QWidget()
+            container_images.setLayout(layout_images)
+            container_images.adjustSize()
 
-        if thing.image:
-            pixmap = QPixmap()
-            pixmap.loadFromData(thing.image)
+            scroll_for_images = QScrollArea()
+            scroll_for_images.setWidgetResizable(True)
+            scroll_for_images.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+            scroll_for_images.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            scroll_for_images.setWidget(container_images)
 
-            if not pixmap.isNull():
-                # Масштабируем под размер image_label с сохранением пропорций
-                scaled_pixmap = pixmap.scaled(
-                    image_label.size(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                image_label.setPixmap(scaled_pixmap)
-            else:
-                image_label.setText("Не удалось загрузить изображение.")
-        else:
-            image_label.setText("Изображение не указано.")
+            for item in thing.thing_images:
+                image_widget = image_container.ImageContainer(item, container_images.contentsRect().height())
+                image_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+                #image_widget.setMaximumHeight(scroll_for_images.height() - 40)
+                #image_widget.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+                if not image_widget.space_image.state == ObjectState.DELETED:
+                    layout_images.addWidget(image_widget)
+            layout_images.addStretch()
 
-        layout.addWidget(image_label)
+            layout.addWidget(scroll_for_images)
 
         self.setLayout(layout)

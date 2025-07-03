@@ -1,7 +1,7 @@
 import math
 
 from PyQt6.QtWidgets import (QWidget, QLabel, QTextEdit, QPushButton, QVBoxLayout, QLineEdit,
-                             QMessageBox, QDialog, QFileDialog, QHBoxLayout, QCheckBox, QApplication)
+                             QMessageBox, QDialog, QFileDialog, QHBoxLayout)
 from PyQt6.QtGui import QFontMetrics, QFont, QGuiApplication, QRegularExpressionValidator, QIcon, QPixmap, QImage
 from PyQt6.QtCore import Qt, QRegularExpression, pyqtSignal, QBuffer, QByteArray
 import sys

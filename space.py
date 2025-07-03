@@ -107,7 +107,7 @@ class Space(track_object_state.Trackable):
                                 thg.id_parent_space = self.id_space
                             if thg.state == ObjectState.DELETED:
                                 things_to_delete.append(thg)
-                            thg.save(cursor=cursor)
+                            thg.save_thing(cursor=cursor)
 
                     # projections
                     if self.projections:
@@ -176,7 +176,7 @@ def load_space_by_id(id_space: int) -> Space:
                     description=description
                 )
 
-                space_from_DB.space_images = im.load_space_images(id_space_db, cursor)
+                space_from_DB.space_images = im.load_images_for_parent(id_space_db, "space", cursor)
                 space_from_DB.subspaces = load_space_subspaces(id_space_db, cursor)
                 space_from_DB.things = th.load_space_things(space_from_DB, cursor)
                 space_from_DB.projections = projection.load_space_projections(space_from_DB, cursor)
