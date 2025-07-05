@@ -2,11 +2,11 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QTreeView, QMenu
 )
 from PyQt6.QtCore import (
-    Qt, QAbstractItemModel, QModelIndex, QPoint
+    Qt, QAbstractItemModel, QModelIndex, QPoint, pyqtSignal
 )
 from PyQt6.QtGui import QIcon
 from track_object_state import ObjectState
-import sys
+
 
 NODE_TYPE_SPACE = "space"
 NODE_TYPE_THING = "thing"
@@ -22,7 +22,7 @@ class TreeNode:
 
     def add_child(self, child):
         self.children.append(child)
-        child.parent = self
+        child.thing_or_space_parent = self
 
     def child_count(self):
         return len(self.children)
@@ -64,7 +64,7 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         item = index.internalPointer()
-        parent_item = item.parent
+        parent_item = item.thing_or_space_parent
         if parent_item is None or parent_item == self.root_item:
             return QModelIndex()
         return self.createIndex(parent_item.row(), 0, parent_item)
@@ -93,6 +93,9 @@ class TreeModel(QAbstractItemModel):
 
 
 class TreeWidget(QTreeView):
+
+    node_clicked = pyqtSignal(object)
+
     def __init__(self, app, parent=None):
         super().__init__(parent)
         self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)
@@ -166,19 +169,40 @@ class TreeWidget(QTreeView):
             menu.addAction("Открыть родительское пространство", lambda: self.open_parent_space())
             menu.addAction("Добавить подпространство", lambda: self.add_subspace())
             menu.addAction("Добавить вещь", lambda: self.add_thing())
+            menu.addAction("Посмотреть информацию о пространстве",
+                           lambda: self.app_ref.show_space_information(index.internalPointer().ref))
             menu.addSeparator()
             menu.addAction("Удалить пространство", lambda: self.delete_space(index))
         elif node_type == NODE_TYPE_SPACE:
             menu.addAction("Добавить развертку для подпространства", lambda: self.add_subspace_projection(index))
             menu.addAction("Открыть подпространство как пространство", lambda: self.open_subspace_as_space(index))
+            menu.addAction("Посмотреть информацию о подпространстве",
+                           lambda: self.app_ref.show_space_information(index.internalPointer().ref))
             menu.addSeparator()
             menu.addAction("Удалить подпространство", lambda: self.delete_subspace_from_space(index))
         elif node_type == NODE_TYPE_THING:
             menu.addAction("Добавить развертку для вещи", lambda: self.add_thing_projection(index))
+            menu.addAction("Посмотреть информацию о вещи",
+                           lambda: self.app_ref.show_thing_information(index.internalPointer().ref))
             menu.addSeparator()
             menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
+
+
+    def find_index_by_ref(self, ref, parent_index=QModelIndex()):
+        model = self.model
+        row_count = model.rowCount(parent_index)
+        for row in range(row_count):
+            index = model.index(row, 0, parent_index)
+            node = index.internalPointer()
+            if node and getattr(node, 'ref', None) == ref:
+                return index
+            # Рекурсивный поиск
+            child_index = self.find_index_by_ref(ref, index)
+            if child_index and child_index.isValid():
+                return child_index
+        return QModelIndex()
 
 
     def open_parent_space(self):
@@ -227,3 +251,17 @@ class TreeWidget(QTreeView):
         node = index.internalPointer()
         if node and node.node_type == NODE_TYPE_THING:
             self.app_ref.delete_thing(node.ref)
+
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            index = self.indexAt(pos)
+            if index.isValid():
+                node = index.internalPointer()
+                # Проверяем, что узел не root — у root нет родителя, или он равен root_item
+                parent_index = index.parent()
+                if parent_index.isValid():  # есть родитель (значит не root)
+                    if node.node_type in (NODE_TYPE_SPACE, NODE_TYPE_THING):
+                        self.node_clicked.emit(node.ref)
+        super().mouseDoubleClickEvent(event)

@@ -2,9 +2,9 @@ from PyQt6.QtWidgets import (
     QApplication, QGraphicsScene, QGraphicsPixmapItem,
     QVBoxLayout, QPushButton, QWidget, QGridLayout, QHBoxLayout,
     QScrollArea, QSizePolicy, QMessageBox, QFrame, QStackedWidget,
-    QMainWindow, QGraphicsTextItem
+    QMainWindow, QGraphicsTextItem, QGraphicsDropShadowEffect, QGraphicsRectItem
 )
-from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon
+from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon, QColor, QPen
 from PyQt6.QtCore import Qt, QPointF, pyqtSignal
 import sys
 import random
@@ -26,6 +26,7 @@ import thing
 import tree_view
 import all_spaces_in_DB
 import tree_view_for_search
+import main_scene
 
 
 class MainWindow(QMainWindow):
@@ -116,6 +117,9 @@ class MainWidget(QWidget):
 
         self.stack_widget = QStackedWidget()
 
+        self.thing_info = None
+        self.space_info = None
+
 ############## wellcome page ###########################################################################################
         self.wellcome_page = QFrame()
         self.wellcome_layout = QVBoxLayout()
@@ -194,8 +198,10 @@ class MainWidget(QWidget):
         self.button_layout.addWidget(self.save_current_projection_button)
 
 
-        self.scene = QGraphicsScene(self)
+        #self.scene = QGraphicsScene(self)
+        self.scene = main_scene.MainScene(self)
         self.view = zoomable_graphics_view.ZoomableGraphicsView(self.scene)
+        self.view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
 
         self.layout_space_creation.addWidget(self.view)
@@ -214,9 +220,14 @@ class MainWidget(QWidget):
         self.layout_main.setRowStretch(2, 2)
 
         self.tree = tree_view.TreeWidget(self)
+
+
+        self.tree.node_clicked.connect(self.handle_node_clicked)
+
+
         self.tree.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
-        self.tree_view_of_full_space_structure = tree_view_for_search.TreeWidget(self)
+        self.tree_view_of_full_space_structure = tree_view_for_search.TreeWidgetForSearch(self)
 
         self.right_layout.addLayout(self.layout_projections, 0, 0)
         self.layout_main.setColumnStretch(0, 1)
@@ -246,6 +257,62 @@ class MainWidget(QWidget):
 
         self.view.resized.connect(self.update_placeholders_font_and_position)
         self.view.resized.connect(self.update_scene_size)
+
+
+    def handle_node_clicked(self,
+                            clicked_ref):
+
+        def focus_and_highlight(target_item):
+            # Удаляем эффект у всех остальных
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsPixmapItem):
+                    item.setGraphicsEffect(None)
+
+            # Устанавливаем фокус и подсветку на выбранный
+            #target_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
+            self.view.setFocus()
+            target_item.setFocus()
+
+            effect = QGraphicsDropShadowEffect()
+            effect.setBlurRadius(15)
+            effect.setColor(QColor("red"))
+            effect.setOffset(0, 0)
+            target_item.setGraphicsEffect(effect)
+
+        #draggable_pixmap_item = None
+        if self.parent_space.current_projection:
+            if self.parent_space.current_projection.sub_projections:
+
+                item_on_scene = None
+
+                if isinstance(clicked_ref, thing.Thing):
+                    subprojection = next((subprojection for subprojection
+                                                 in self.parent_space.current_projection.sub_projections
+                                                 if subprojection.reference_to_parent_thing == clicked_ref), None)
+
+
+
+
+                    if subprojection:
+                        item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                                              if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
+                        print(f"ITEM ON SCENE: {item_on_scene}")
+
+                        #focus_and_highlight(item_on_scene)
+
+                else:
+                    subprojection = next((subprojection for subprojection
+                                                 in self.parent_space.current_projection.sub_projections
+                                                 if subprojection.reference_to_parent_space == clicked_ref), None)
+
+
+                    if subprojection:
+                        item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                                              if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
+                        print(f"ITEM ON SCENE: {item_on_scene}")
+
+                if item_on_scene:
+                    focus_and_highlight(item_on_scene)
 
 
     def update_scene_size(self):
@@ -496,68 +563,76 @@ class MainWidget(QWidget):
 
 
     def update_main_scene(self, set_position=None):
-        if self.scene.items():
-            self.scene.clear()
-            self.placeholder_for_projection_1 = None
-            self.placeholder_for_projection_2 = None
+        try:
 
-        if self.parent_space.current_projection is not None:
-            self.parent_space.current_projection.scaled_projection_pixmap \
-                = QGraphicsPixmapItem(self.parent_space.current_projection.original_pixmap)
-            min_z = min((item.zValue() for item in self.scene.items()), default=0)
-            self.parent_space.current_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
-            self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
+            if self.scene.items():
+                self.scene.clear()
+                self.placeholder_for_projection_1 = None
+                self.placeholder_for_projection_2 = None
 
-            if self.parent_space.current_projection.sub_projections:
-                for sub in self.parent_space.current_projection.sub_projections:
-                    if sub.state is not ObjectState.DELETED:
-                        parent = None
-                        if sub.reference_to_parent_thing:
-                            parent = sub.reference_to_parent_thing
-                        elif sub.reference_to_parent_space:
-                            parent = sub.reference_to_parent_space
-                        # перерасчет размеров подразверток на основании новых размеров пространства,
-                        # а также на основании новых размеров картинки:
-                        pixmap = utils.get_scaled_pixmap(
-                            sub.projection_image,
-                            int(round(self.x_scale * sub.projection_width)),
-                            int(round(self.y_scale * sub.projection_height))
-                        )
-                        sub.original_pixmap = pixmap
-                        sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
-                            pixmap,
-                            self,
-                            self.parent_space.current_projection.scaled_projection_pixmap,
-                            parent=parent)
-                        if sub.z_pos:
-                            sub.scaled_projection_pixmap.setZValue(sub.z_pos)
+            if self.parent_space.current_projection is not None:
+                self.parent_space.current_projection.scaled_projection_pixmap \
+                    = QGraphicsPixmapItem(self.parent_space.current_projection.original_pixmap)
+                min_z = min((item.zValue() for item in self.scene.items()), default=0)
+                self.parent_space.current_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+                self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
 
-                        # необходимо при открытии мини-развертки на главное сцене
-                        if set_position:
-                            if sub.x_pos and sub.y_pos:
-                                sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
-                        else:
-                            # теперь подпроекции будут появляться в середине сцены
-                            #center = self.scene.sceneRect().center()
-                            center = self.parent_space.current_projection.scaled_projection_pixmap.boundingRect().center()
-                            sub_rect = sub.scaled_projection_pixmap.boundingRect()
-                            offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
-                            sub.scaled_projection_pixmap.setPos(center - offset)
-                            # # Так как это может быть совершенно новое пространство, с другими размерами
-                            # # то не целесообразно использовать sub.x_pos and sub.y_pos.
-                            # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
-                            # # размерами или нет.
-                            # if sub.x_pos and sub.y_pos:
-                            #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
-                        self.scene.addItem(sub.scaled_projection_pixmap)
+                if self.parent_space.current_projection.sub_projections:
+                    for sub in self.parent_space.current_projection.sub_projections:
+                        if sub.state is not ObjectState.DELETED:
+                            parent = None
+                            if sub.reference_to_parent_thing:
+                                parent = sub.reference_to_parent_thing
+                            elif sub.reference_to_parent_space:
+                                parent = sub.reference_to_parent_space
+                            # перерасчет размеров подразверток на основании новых размеров пространства,
+                            # а также на основании новых размеров картинки:
+                            pixmap = utils.get_scaled_pixmap(
+                                sub.projection_image,
+                                int(round(self.x_scale * sub.projection_width)),
+                                int(round(self.y_scale * sub.projection_height))
+                            )
+                            sub.original_pixmap = pixmap
+                            sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
+                                pixmap,
+                                self,
+                                self.parent_space.current_projection.scaled_projection_pixmap,
+                                parent=parent)
+                            if sub.z_pos:
+                                sub.scaled_projection_pixmap.setZValue(sub.z_pos)
 
-            bounding_rect = self.scene.itemsBoundingRect()
-            self.scene.setSceneRect(bounding_rect)
+                            # необходимо при открытии мини-развертки на главное сцене
+                            if set_position:
+                                if sub.x_pos and sub.y_pos:
+                                    sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
+                            else:
+                                # теперь подпроекции будут появляться в середине сцены
+                                #center = self.scene.sceneRect().center()
+                                center = self.parent_space.current_projection.scaled_projection_pixmap.boundingRect().center()
+                                sub_rect = sub.scaled_projection_pixmap.boundingRect()
+                                offset = QPointF(sub_rect.width() / 2, sub_rect.height() / 2)
+                                sub.scaled_projection_pixmap.setPos(center - offset)
+                                # # Так как это может быть совершенно новое пространство, с другими размерами
+                                # # то не целесообразно использовать sub.x_pos and sub.y_pos.
+                                # # В дальнейшем можно спросить пользователя, остаётся ли пространство с теми же
+                                # # размерами или нет.
+                                # if sub.x_pos and sub.y_pos:
+                                #     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
 
-            self.view.fitInView(bounding_rect, Qt.AspectRatioMode.KeepAspectRatio)
+                            self.scene.addItem(sub.scaled_projection_pixmap)
 
-        else:
-            self.set_placeholders_on_main_scene()
+                bounding_rect = self.scene.itemsBoundingRect()
+                self.scene.setSceneRect(bounding_rect)
+
+                self.view.fitInView(bounding_rect, Qt.AspectRatioMode.KeepAspectRatio)
+
+            else:
+                self.set_placeholders_on_main_scene()
+
+        except Exception as e:
+            print(f"❌ Ошибка в update_main_scene: {e}")
+            import traceback
+            traceback.print_exc()
 
 
     def add_subspace(self):
@@ -648,7 +723,10 @@ class MainWidget(QWidget):
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
                         new_sub_projection.reference_to_parent_projection = self.parent_space.current_projection
 
-                        item = draggable_item.DraggablePixmapItem(pixmap, self, self.parent_space.current_projection.scaled_projection_pixmap, parent=subspace_to_add_projection)
+                        item = draggable_item.DraggablePixmapItem(pixmap,
+                                                                  self,
+                                                                  self.parent_space.current_projection.scaled_projection_pixmap,
+                                                                  parent=subspace_to_add_projection)
 
                         new_sub_projection.scaled_projection_pixmap = item
 
@@ -1355,8 +1433,21 @@ class MainWidget(QWidget):
             self.save_current_projection_button.setEnabled(True)
 
 
+    def show_thing_information(self, parent):
+        from information_about_thing import ThingInformation
+        self.thing_info = ThingInformation(parent)
+        self.thing_info.show()
+
+
+    def show_space_information(self, parent):
+        from information_about_space import SpaceInformation
+        self.space_info = SpaceInformation(parent)
+        self.space_info.show()
+
+
     def change_thing_information(self):
         pass
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

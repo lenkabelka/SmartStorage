@@ -22,7 +22,7 @@ class TreeNode:
 
     def add_child(self, child):
         self.children.append(child)
-        child.parent = self
+        child.thing_or_space_parent = self
 
     def child_count(self):
         return len(self.children)
@@ -64,7 +64,7 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         item = index.internalPointer()
-        parent_item = item.parent
+        parent_item = item.thing_or_space_parent
         if parent_item is None or parent_item == self.root_item:
             return QModelIndex()
         return self.createIndex(parent_item.row(), 0, parent_item)
@@ -92,7 +92,7 @@ class TreeModel(QAbstractItemModel):
         return None
 
 
-class TreeWidget(QTreeView):
+class TreeWidgetForSearch(QTreeView):
     def __init__(self, app, parent=None):
         super().__init__(parent)
         self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)

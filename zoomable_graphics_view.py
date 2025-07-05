@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QGraphicsView
 from PyQt6.QtGui import QWheelEvent, QPainter
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QTransform
+from draggable_pixmap_item import DraggablePixmapItem
 
 
 class ZoomableGraphicsView(QGraphicsView):
@@ -44,3 +45,22 @@ class ZoomableGraphicsView(QGraphicsView):
     def showEvent(self, event):
         super().showEvent(event)
         self.resized.emit()
+
+
+    def keyPressEvent(self, event):
+        focus_item = self.scene().focusItem()
+        if isinstance(focus_item, DraggablePixmapItem):
+            dx, dy = 0, 0
+            if event.key() == Qt.Key.Key_Left:
+                dx = -1
+            elif event.key() == Qt.Key.Key_Right:
+                dx = 1
+            elif event.key() == Qt.Key.Key_Up:
+                dy = -1
+            elif event.key() == Qt.Key.Key_Down:
+                dy = 1
+
+            if dx != 0 or dy != 0:
+                focus_item.moveBy(dx, dy)
+        else:
+            super().keyPressEvent(event)

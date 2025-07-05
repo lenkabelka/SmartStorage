@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (QGraphicsPixmapItem,
                              QGraphicsColorizeEffect,
                              QMenu
                              )
-from PyQt6.QtGui import QColor
-from PyQt6.QtCore import Qt, QPointF
+from PyQt6.QtGui import QColor, QKeyEvent
+from PyQt6.QtCore import Qt, QPointF, QObject, pyqtSignal
 import utils as utils
 import math
 
@@ -27,8 +27,6 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.setAcceptHoverEvents(True)
         self.is_editable = True
 
-        self.thing_info = None
-
         self.setFlags(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
             QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
@@ -46,33 +44,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
-
-    # def paint(self, painter, option, widget=None):
-    #     # Сначала рисуем само изображение
-    #     super().paint(painter, option, widget)
-    #
-    #     # Рисуем контур background (path_1), с трансляцией в локальные координаты self
-    #     if self.path_1:
-    #         pen = QPen(Qt.GlobalColor.red)
-    #         pen.setWidth(2)
-    #         painter.setPen(pen)
-    #         path_translated = self.path_1.translated(self.mapFromItem(self.parent_background_item, 0, 0))
-    #         painter.drawPath(path_translated)
-    #
-    #     # Рисуем контур self (path_1)
-    #     if self.path_2:
-    #         pen_bg = QPen(Qt.GlobalColor.green)
-    #         pen_bg.setWidth(2)
-    #         pen_bg.setStyle(Qt.PenStyle.DashLine)
-    #         painter.setPen(pen_bg)
-    #         painter.drawPath(self.path_2)
-
-
-    # @pyqtSlot(QPixmap)
-    # def change_background_path(self, new_background_pixmap):
-    #     self.background_pixmap = new_background_pixmap
-    #     self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0],
-    #                                  utils.get_contours(self.background_pixmap)[1])
+        self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
 
 
     def update_path(self, new_background_pixmap_item):
@@ -83,12 +55,36 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
-        print("klappt!")
+
+    # def focus_and_highlight(self):
+    #     # Удаляем эффект у всех остальных
+    #     for item in self.app_ref.scene.items():
+    #         if isinstance(item, QGraphicsPixmapItem):
+    #             item.setGraphicsEffect(None)
+    #
+    #     # Устанавливаем фокус и подсветку на выбранный
+    #     self.setFocus()
+    #
+    #     effect = QGraphicsDropShadowEffect()
+    #     effect.setBlurRadius(15)
+    #     effect.setColor(QColor("red"))
+    #     effect.setOffset(0, 0)
+    #     self.setGraphicsEffect(effect)
+
 
     def mousePressEvent(self, event):
         from space import Space
         from thing import Thing
         self.drag_offset = event.pos()
+        # if event.button() == Qt.MouseButton.LeftButton:
+        #
+        #     if type(self) == DraggablePixmapItem:
+        #         self.focus_and_highlight()
+        #     elif type(self) == QGraphicsPixmapItem:
+        #         # Это точно фон
+        #         for item in self.app_ref.scene.items():
+        #             item.setGraphicsEffect(None)
+
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
             freeze_action = menu.addAction("Зафиксировать")
@@ -100,24 +96,24 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             delete_subprojections_action = None
             show_information_action = None
 
-            if isinstance(self.parent, Space):
+            if isinstance(self.thing_or_space_parent, Space):
                 delete_item_action = menu.addAction("Удалить пространство")
-            elif isinstance(self.parent, Thing):
+            elif isinstance(self.thing_or_space_parent, Thing):
                 delete_item_action = menu.addAction("Удалить вещь")
 
-            if isinstance(self.parent, Space):
+            if isinstance(self.thing_or_space_parent, Space):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
-            elif isinstance(self.parent, Thing):
+            elif isinstance(self.thing_or_space_parent, Thing):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
 
-            if isinstance(self.parent, Space):
+            if isinstance(self.thing_or_space_parent, Space):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
-            elif isinstance(self.parent, Thing):
+            elif isinstance(self.thing_or_space_parent, Thing):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
 
-            if isinstance(self.parent, Space):
+            if isinstance(self.thing_or_space_parent, Space):
                 show_information_action = menu.addAction("Показать информацию о подпространстве")
-            elif isinstance(self.parent, Thing):
+            elif isinstance(self.thing_or_space_parent, Thing):
                 show_information_action = menu.addAction("Показать информацию о вещи")
 
             selected_action = menu.exec(event.screenPos())
@@ -136,16 +132,16 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 self.unfreeze()
 
             elif selected_action == delete_item_action:
-                if isinstance(self.parent, Space):
-                    self.app_ref.delete_subspace(self.parent)
-                elif isinstance(self.parent, Thing):
-                    self.app_ref.delete_thing(self.parent)
+                if isinstance(self.thing_or_space_parent, Space):
+                    self.app_ref.delete_subspace(self.thing_or_space_parent)
+                elif isinstance(self.thing_or_space_parent, Thing):
+                    self.app_ref.delete_thing(self.thing_or_space_parent)
 
             elif selected_action == show_information_action:
-                if isinstance(self.parent, Thing):
-                    from information_about_thing import ThingInformation
-                    self.thing_info = ThingInformation(self.parent)
-                    self.thing_info.show()
+                if isinstance(self.thing_or_space_parent, Thing):
+                    self.app_ref.show_thing_information(self.thing_or_space_parent)
+                elif isinstance(self.thing_or_space_parent, Space):
+                    self.app_ref.show_space_information(self.thing_or_space_parent)
 
         else:
             super().mousePressEvent(event)
@@ -181,7 +177,6 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self.scene():
-
             if self.fixed:
                 return self.pos()
             else:
@@ -242,3 +237,17 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 break
 
         return best_pos
+
+    #
+    # def keyPressEvent(self, event: QKeyEvent):
+    #     pos = self.pos()
+    #     if event.key() == Qt.Key.Key_Left:
+    #         self.setPos(pos.x() - 1, pos.y())
+    #     elif event.key() == Qt.Key.Key_Right:
+    #         self.setPos(pos.x() + 1, pos.y())
+    #     elif event.key() == Qt.Key.Key_Up:
+    #         self.setPos(pos.x(), pos.y() - 1)
+    #     elif event.key() == Qt.Key.Key_Down:
+    #         self.setPos(pos.x(), pos.y() + 1)
+    #     else:
+    #         super().keyPressEvent(event)
