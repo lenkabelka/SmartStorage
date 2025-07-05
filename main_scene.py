@@ -1,9 +1,12 @@
 from PyQt6.QtWidgets import QGraphicsScene, QGraphicsDropShadowEffect, QGraphicsPixmapItem
 from PyQt6.QtGui import QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from draggable_pixmap_item import DraggablePixmapItem
 
 class MainScene(QGraphicsScene):
+
+    draggable_item_click = pyqtSignal(object)
+
     def __init__(self, app_ref, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.app_ref = app_ref  # если нужно
@@ -22,6 +25,16 @@ class MainScene(QGraphicsScene):
             self.clear_highlights()
 
         super().mousePressEvent(event)
+
+
+    def mouseDoubleClickEvent(self, event):
+        item = self.itemAt(event.scenePos(), self.views()[0].transform())
+
+        if type(item) == DraggablePixmapItem:
+            self.draggable_item_click.emit(item.parent)
+
+        super().mouseDoubleClickEvent(event)
+
 
     def clear_highlights(self):
         for obj in self.items():

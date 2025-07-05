@@ -224,6 +224,8 @@ class MainWidget(QWidget):
 
         self.tree.node_clicked.connect(self.handle_node_clicked)
 
+        self.scene.draggable_item_click.connect(lambda draggable: self.tree.highlight_node(draggable))
+
 
         self.tree.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 

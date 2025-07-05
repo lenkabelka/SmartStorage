@@ -56,34 +56,10 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
-    # def focus_and_highlight(self):
-    #     # Удаляем эффект у всех остальных
-    #     for item in self.app_ref.scene.items():
-    #         if isinstance(item, QGraphicsPixmapItem):
-    #             item.setGraphicsEffect(None)
-    #
-    #     # Устанавливаем фокус и подсветку на выбранный
-    #     self.setFocus()
-    #
-    #     effect = QGraphicsDropShadowEffect()
-    #     effect.setBlurRadius(15)
-    #     effect.setColor(QColor("red"))
-    #     effect.setOffset(0, 0)
-    #     self.setGraphicsEffect(effect)
-
-
     def mousePressEvent(self, event):
         from space import Space
         from thing import Thing
         self.drag_offset = event.pos()
-        # if event.button() == Qt.MouseButton.LeftButton:
-        #
-        #     if type(self) == DraggablePixmapItem:
-        #         self.focus_and_highlight()
-        #     elif type(self) == QGraphicsPixmapItem:
-        #         # Это точно фон
-        #         for item in self.app_ref.scene.items():
-        #             item.setGraphicsEffect(None)
 
         if event.button() == Qt.MouseButton.RightButton:
             menu = QMenu()
@@ -96,24 +72,24 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             delete_subprojections_action = None
             show_information_action = None
 
-            if isinstance(self.thing_or_space_parent, Space):
+            if isinstance(self.parent, Space):
                 delete_item_action = menu.addAction("Удалить пространство")
-            elif isinstance(self.thing_or_space_parent, Thing):
+            elif isinstance(self.parent, Thing):
                 delete_item_action = menu.addAction("Удалить вещь")
 
-            if isinstance(self.thing_or_space_parent, Space):
+            if isinstance(self.parent, Space):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
-            elif isinstance(self.thing_or_space_parent, Thing):
+            elif isinstance(self.parent, Thing):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
 
-            if isinstance(self.thing_or_space_parent, Space):
+            if isinstance(self.parent, Space):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
-            elif isinstance(self.thing_or_space_parent, Thing):
+            elif isinstance(self.parent, Thing):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
 
-            if isinstance(self.thing_or_space_parent, Space):
+            if isinstance(self.parent, Space):
                 show_information_action = menu.addAction("Показать информацию о подпространстве")
-            elif isinstance(self.thing_or_space_parent, Thing):
+            elif isinstance(self.parent, Thing):
                 show_information_action = menu.addAction("Показать информацию о вещи")
 
             selected_action = menu.exec(event.screenPos())
@@ -132,16 +108,16 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 self.unfreeze()
 
             elif selected_action == delete_item_action:
-                if isinstance(self.thing_or_space_parent, Space):
-                    self.app_ref.delete_subspace(self.thing_or_space_parent)
-                elif isinstance(self.thing_or_space_parent, Thing):
-                    self.app_ref.delete_thing(self.thing_or_space_parent)
+                if isinstance(self.parent, Space):
+                    self.app_ref.delete_subspace(self.parent)
+                elif isinstance(self.parent, Thing):
+                    self.app_ref.delete_thing(self.parent)
 
             elif selected_action == show_information_action:
-                if isinstance(self.thing_or_space_parent, Thing):
-                    self.app_ref.show_thing_information(self.thing_or_space_parent)
-                elif isinstance(self.thing_or_space_parent, Space):
-                    self.app_ref.show_space_information(self.thing_or_space_parent)
+                if isinstance(self.parent, Thing):
+                    self.app_ref.show_thing_information(self.parent)
+                elif isinstance(self.parent, Space):
+                    self.app_ref.show_space_information(self.parent)
 
         else:
             super().mousePressEvent(event)
@@ -237,17 +213,3 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 break
 
         return best_pos
-
-    #
-    # def keyPressEvent(self, event: QKeyEvent):
-    #     pos = self.pos()
-    #     if event.key() == Qt.Key.Key_Left:
-    #         self.setPos(pos.x() - 1, pos.y())
-    #     elif event.key() == Qt.Key.Key_Right:
-    #         self.setPos(pos.x() + 1, pos.y())
-    #     elif event.key() == Qt.Key.Key_Up:
-    #         self.setPos(pos.x(), pos.y() - 1)
-    #     elif event.key() == Qt.Key.Key_Down:
-    #         self.setPos(pos.x(), pos.y() + 1)
-    #     else:
-    #         super().keyPressEvent(event)

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QTreeView, QMenu
+    QApplication, QWidget, QVBoxLayout, QTreeView, QMenu, QAbstractItemView
 )
 from PyQt6.QtCore import (
     Qt, QAbstractItemModel, QModelIndex, QPoint, pyqtSignal
@@ -265,3 +265,13 @@ class TreeWidget(QTreeView):
                     if node.node_type in (NODE_TYPE_SPACE, NODE_TYPE_THING):
                         self.node_clicked.emit(node.ref)
         super().mouseDoubleClickEvent(event)
+
+
+    def highlight_node(self, thing_or_space):
+        index = self.find_index_by_ref(thing_or_space)
+        if index.isValid():
+            self.setCurrentIndex(index)  # выделяет элемент
+            self.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)  # скроллит
+            self.setFocus()
+        else:
+            print(f"Не удалось найти элемент с ref = {thing_or_space}")
