@@ -17,12 +17,20 @@ class MainScene(QGraphicsScene):
 
         if type(item) == DraggablePixmapItem:
             self.focus_and_highlight(item)
+
+            try:
+                self.app_ref.highlight_subprojections_on_mini_projections(item.parent)
+            except Exception as e:
+                print(f"Ошибка при вызове highlight_subprojections: {e}")
+
         elif type(item) == QGraphicsPixmapItem:
             # Это фон — убираем подсветку
             self.clear_highlights()
+            self.app_ref.highlight_subprojections_on_mini_projections(None)
         else:
             # Клик по пустому месту — тоже убираем подсветку
             self.clear_highlights()
+            self.app_ref.highlight_subprojections_on_mini_projections(None)
 
         super().mousePressEvent(event)
 

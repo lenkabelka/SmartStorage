@@ -264,6 +264,9 @@ class TreeWidget(QTreeView):
                 if parent_index.isValid():  # есть родитель (значит не root)
                     if node.node_type in (NODE_TYPE_SPACE, NODE_TYPE_THING):
                         self.node_clicked.emit(node.ref)
+
+                        self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+
         super().mouseDoubleClickEvent(event)
 
 

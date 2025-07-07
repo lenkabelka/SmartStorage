@@ -1023,6 +1023,9 @@ class MainWidget(QWidget):
         self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
+
+
+
     def save_or_update_mini_projection(self, current_projection):
         if self.placeholder_for_projection_1 and self.placeholder_for_projection_2:
             QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
@@ -1132,6 +1135,23 @@ class MainWidget(QWidget):
                     self.get_subprojection_position() # чтобы другие подразвертки не сдвигались,
                                                       # изначально у них сохраненнвя позиция та, что в БД
                     self.update_main_scene(set_position=True)
+
+
+    def highlight_subprojections_on_mini_projections(self, parent=None):
+        for mini_projection in self.mini_projections_list:
+            # Всегда очищаем старые выделения
+            mini_projection.clear_highlights()
+
+            if parent is not None:
+                # Ищем item, чей .parent соответствует переданному parent
+                subprojection_to_highlight = next(
+                    (item for item in mini_projection.scene.items()
+                     if isinstance(item, QGraphicsPixmapItem) and getattr(item, "parent", None) == parent),
+                    None
+                )
+
+                if subprojection_to_highlight:
+                    mini_projection.highlight(subprojection_to_highlight)
 
 
     def delete_all_subprojections(self, draggable_item_pointer):

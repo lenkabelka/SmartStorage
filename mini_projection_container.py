@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem, QVBoxLayout, QSizePolicy, \
-    QMenu, QLabel
-from PyQt6.QtGui import QAction, QPixmap, QMouseEvent
+    QMenu, QLabel, QGraphicsDropShadowEffect
+from PyQt6.QtGui import QAction, QColor, QMouseEvent
 from PyQt6.QtCore import Qt
 from track_object_state import ObjectState
 
@@ -35,6 +35,12 @@ class ProjectionContainer(QWidget):
                     item_copy = QGraphicsPixmapItem(sub.original_pixmap)
                     item_copy.setPos(sub.x_pos, sub.y_pos)
                     item_copy.setZValue(sub.z_pos)
+
+                    if sub.reference_to_parent_space:
+                        item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
+                    else:
+                        item_copy.parent = sub.reference_to_parent_thing
+
                     self.scene.addItem(item_copy)
 
         min_z = min((item.zValue() for item in self.scene.items()), default=0)
@@ -110,6 +116,12 @@ class ProjectionContainer(QWidget):
                     item_copy = QGraphicsPixmapItem(sub.original_pixmap)
                     item_copy.setPos(sub.x_pos, sub.y_pos)
                     item_copy.setZValue(sub.z_pos)
+
+                    if sub.reference_to_parent_space:
+                        item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
+                    else:
+                        item_copy.parent = sub.reference_to_parent_thing
+
                     self.scene.addItem(item_copy)
 
         min_z = min((item.zValue() for item in self.scene.items()), default=0)
@@ -124,3 +136,17 @@ class ProjectionContainer(QWidget):
 
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+
+    def clear_highlights(self):
+        for obj in self.scene.items():
+            obj.setGraphicsEffect(None)
+
+
+    def highlight(self, item):
+        self.clear_highlights()
+        effect = QGraphicsDropShadowEffect()
+        effect.setBlurRadius(15)
+        effect.setColor(QColor("red"))
+        effect.setOffset(0, 0)
+        item.setGraphicsEffect(effect)
