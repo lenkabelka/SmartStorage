@@ -92,6 +92,10 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             elif isinstance(self.parent, Thing):
                 show_information_action = menu.addAction("Показать информацию о вещи")
 
+            if isinstance(self.parent, Space):
+                menu.addAction("Посмотреть все вещи в пространстве",
+                               lambda: self.app_ref.show_all_things_in_space(self.parent))
+
             selected_action = menu.exec(event.screenPos())
 
             if selected_action == delete_subprojection_action:

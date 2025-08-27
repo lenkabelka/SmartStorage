@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.action_open_space.triggered.connect(self.main_widget.load_space_from_db_by_selection_from_spaces_list)
         self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
         self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
-        self.action_exit.triggered.connect(self.close_application)
+        self.action_exit.triggered.connect(QApplication.quit)
         self.main_widget.space_changed.connect(self.update_actions)
 
         self.update_actions()
@@ -99,10 +99,6 @@ class MainWindow(QMainWindow):
         )
 
 
-    def close_application(self):
-        QApplication.quit()
-
-
 class MainWidget(QWidget):
     space_changed = pyqtSignal()
 
@@ -119,6 +115,9 @@ class MainWidget(QWidget):
 
         self.thing_info = None
         self.space_info = None
+
+        self.all_things_in_space_scroll = QScrollArea()
+        self.all_things_in_space_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
 ############## wellcome page ###########################################################################################
         self.wellcome_page = QFrame()
@@ -259,6 +258,8 @@ class MainWidget(QWidget):
 
         self.view.resized.connect(self.update_placeholders_font_and_position)
         self.view.resized.connect(self.update_scene_size)
+
+        self._open_space_windows = []
 
 
     def handle_node_clicked(self,
@@ -1469,6 +1470,42 @@ class MainWidget(QWidget):
 
     def change_thing_information(self):
         pass
+
+    def show_all_things_in_space(self, sp: space.Space):
+        from information_about_thing import ThingInformation
+
+        if not sp.things:
+            QMessageBox.information(
+                self,
+                f"Пространство {sp.name}",
+                "В этом пространстве ещё нет вещей!"
+            )
+            return
+
+        scroll_window = QScrollArea()
+        scroll_window.setWindowTitle(f"Все вещи в пространстве {sp.name}")
+        scroll_window.setWindowIcon(QIcon("icons/mini_logo.png"))
+        scroll_window.setWidgetResizable(True)
+
+        # Контейнер для виджетов информации о вещах
+        things_info = QWidget()
+        layout = QVBoxLayout(things_info)
+
+        for th in sp.things:
+            print(th.name)
+            info = ThingInformation(th)
+            layout.addWidget(info)
+
+        things_info.setLayout(layout)
+        scroll_window.setWidget(things_info)
+        #scroll_window.resize(600, 400)
+
+        # ссылка, чтобы окно не удалилось сборщиком мусора
+        if not hasattr(self, "_open_space_windows"):
+            self._open_space_windows = []
+        self._open_space_windows.append(scroll_window)
+
+        scroll_window.show()
 
 
 if __name__ == '__main__':

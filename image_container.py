@@ -20,7 +20,7 @@ class ImageContainer(QWidget):
         # тут у меня ссылка на тот же объект pixmap! -> могу передать в emit
         self.space_image: Optional[image.SpaceImage] | None = space_image
         #self.pixmap = pixmap
-        label.setPixmap(self.space_image.image.scaledToHeight(int(0.8 * height)))  # масштабируем изображение ???
+        label.setPixmap(self.space_image.image.scaledToHeight(int(0.75 * height)))  # масштабируем изображение ???
         layout.addWidget(label)
         self.setLayout(layout)
 
