@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon("icons/mini_logo.png"))
         menu = self.menuBar()
 
+        self.action_find_thing = QAction("Найти вещь", self)
         self.action_create_new_space = QAction("Создать новое пространство", self)
         self.action_open_space = QAction("Открыть пространство ...", self)
         self.action_save_space = QAction("Сохранить пространство ...", self)
@@ -53,6 +54,7 @@ class MainWindow(QMainWindow):
 
         file_menu = menu.addMenu("&Файл")
         about_menu = menu.addMenu("&О программе")
+        file_menu.addAction(self.action_find_thing)
         file_menu.addAction(self.action_create_new_space)
         file_menu.addAction(self.action_open_space)
         file_menu.addAction(self.action_save_space)
@@ -75,6 +77,7 @@ class MainWindow(QMainWindow):
         self.main_widget = MainWidget()
         self.setCentralWidget(self.main_widget)
 
+        self.action_find_thing.triggered.connect(self.find_thing)
         self.action_save_space.triggered.connect(lambda: print("Меню сохранения нажато"))
         self.action_save_space.triggered.connect(self.main_widget.save_space_to_DB)
         self.action_open_space.triggered.connect(self.main_widget.load_space_from_db_by_selection_from_spaces_list)
@@ -84,6 +87,10 @@ class MainWindow(QMainWindow):
         self.main_widget.space_changed.connect(self.update_actions)
 
         self.update_actions()
+
+
+    def find_thing(self):
+        pass
 
 
     def update_actions(self):
