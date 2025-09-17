@@ -225,7 +225,7 @@ class MainWidget(QWidget):
         self.tree = tree_view.TreeWidget(self)
 
 
-        self.tree.node_clicked.connect(self.handle_node_clicked)
+        #self.tree.node_clicked.connect(self.handle_node_clicked)
 
         self.scene.draggable_item_click.connect(lambda draggable: self.tree.highlight_node(draggable))
 
@@ -332,13 +332,12 @@ class MainWidget(QWidget):
     def handle_node_clicked(self,
                             clicked_ref):
         try:
+            # Удаляем эффект подсветки
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsPixmapItem):
+                    item.setGraphicsEffect(None)
 
             def focus_and_highlight(target_item):
-                # Удаляем эффект у всех остальных
-                for item in self.scene.items():
-                    if isinstance(item, QGraphicsPixmapItem):
-                        item.setGraphicsEffect(None)
-
                 # Устанавливаем фокус и подсветку на выбранный
                 #target_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
                 self.view.setFocus()
@@ -372,9 +371,6 @@ class MainWidget(QWidget):
                             subprojection = next((subprojection for subprojection
                                                          in self.parent_space.current_projection.sub_projections
                                                          if subprojection.reference_to_parent_thing == clicked_ref), None)
-
-
-
 
                         if subprojection:
                             item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
