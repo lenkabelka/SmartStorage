@@ -77,7 +77,7 @@ class FindThing(QDialog):
 
         self.setLayout(self.layout)
 
-        self.find_button.clicked.connect(self.find)
+        self.find_button.clicked.connect(self.find_thing_in_DB)
 
     @staticmethod
     def make_separator():
@@ -119,7 +119,7 @@ class FindThing(QDialog):
             search_mode = "both"
 
         parameters_for_search = [search_text, exact_match, search_mode, checked_spaces_id]
-        print(parameters_for_search)
+        #print(parameters_for_search)
 
         return parameters_for_search
 
@@ -190,7 +190,7 @@ class FindThing(QDialog):
             # -----------------------
             # noinspection SqlNoDataSourceInspection
             query = f"""
-                SELECT t.id_thing, t.thing_name, t.thing_description, s.space_name
+                SELECT t.id_thing, t.thing_name, t.thing_description, s.id_space
                 FROM spaces.things t
                 JOIN spaces.spaces s ON t.id_parent_space = s.id_space
                 WHERE {where_clause}
@@ -206,7 +206,7 @@ class FindThing(QDialog):
             print(e)
 
 
-    def find(self):
+    def find_thing_in_DB(self):
         parameters_for_search = self.get_parameters_for_search()
 
         results = self.find_things(
@@ -215,13 +215,16 @@ class FindThing(QDialog):
             search_mode=parameters_for_search[2],
             space_ids=parameters_for_search[3]
         )
-
+        print(f"results: {results}")
         for r in results:
             print(r)
 
+        self.accept()
+        return results
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = FindThing()
-    window.show()
-    sys.exit(app.exec())
+
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     window = FindThing()
+#     window.show()
+#     sys.exit(app.exec())

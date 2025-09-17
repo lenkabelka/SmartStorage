@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QTreeView, QMenu, QApplication
 from PyQt6.QtCore import (
     Qt, QAbstractItemModel, QModelIndex, QPoint
 )
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPalette, QColor
 from track_object_state import ObjectState
 import sys
 import space
@@ -37,10 +37,11 @@ class TreeNode:
 
 
 class TreeModel(QAbstractItemModel):
-    def __init__(self, root_item, app_widget):
+    def __init__(self, root_item, app_widget, highlight_name=None):
         super().__init__()
         self.root_item = root_item
         self.app_ref = app_widget
+        self.highlight_name = highlight_name
 
     def get_item(self, index: QModelIndex):
         if index.isValid():
@@ -95,6 +96,8 @@ class TreeModel(QAbstractItemModel):
 class TreeWidgetForSearch(QTreeView):
     def __init__(self, app, parent=None):
         super().__init__(parent)
+        self.setWindowTitle("Дерево пространства")
+        self.setWindowIcon(QIcon("icons/mini_logo.png"))
         self.root_item = TreeNode(None,"root", NODE_TYPE_SPACE)
         self.model = TreeModel(self.root_item, self)
         self.setModel(self.model)
@@ -103,6 +106,14 @@ class TreeWidgetForSearch(QTreeView):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.open_context_menu)
+
+        # Настройка выделения через стиль
+        self.setStyleSheet("""
+            QTreeView::item:selected {
+                background-color: rgb(200, 230, 255); /* нежно-зелёный */
+                color: black;                         /* чёрный текст */
+            }
+        """)
 
     def build_tree_nodes(self, space_in_DB):
         current_node = TreeNode(space_in_DB, space_in_DB.name, NODE_TYPE_SPACE)
@@ -120,8 +131,24 @@ class TreeWidgetForSearch(QTreeView):
         return current_node
 
 
-    def update_tree(self, space_in_DB=None):
-        """Обновляет модель, начиная с нового пространства"""
+    # def update_tree(self, space_in_DB=None):
+    #     """Обновляет модель, начиная с нового пространства"""
+    #     # Новый root (невидимый)
+    #     self.root_item = TreeNode(None, "root", NODE_TYPE_SPACE)
+    #
+    #     if space_in_DB is not None:
+    #         root_child = self.build_tree_nodes(space_in_DB)
+    #         if root_child is not None:
+    #             self.root_item.add_child(root_child)
+    #         else:
+    #             print("Корневое пространство удалено. Показывается только скрытый root.")
+    #
+    #     self.model = TreeModel(self.root_item, self)
+    #     self.setModel(self.model)
+    #     self.expandAll()
+
+    def update_tree(self, space_in_DB=None, highlight_name: str = None):
+        """Обновляет модель, начиная с нового пространства, и подсвечивает указанную вещь"""
         # Новый root (невидимый)
         self.root_item = TreeNode(None, "root", NODE_TYPE_SPACE)
 
@@ -136,6 +163,32 @@ class TreeWidgetForSearch(QTreeView):
         self.setModel(self.model)
         self.expandAll()
 
+        # Подсветка (если задано имя)
+        if highlight_name:
+            index = self.find_index_by_name(highlight_name)
+            if index.isValid():
+                self.setCurrentIndex(index)
+                self.scrollTo(index)  # прокрутить к элементу
+
+    def find_index_by_name(self, name: str):
+        """Ищет индекс по имени вещи"""
+
+        def recursive_search(parent_index):
+            rows = self.model.rowCount(parent_index)
+            for row in range(rows):
+                index = self.model.index(row, 0, parent_index)
+                if index.isValid():
+                    item_name = index.data()  # предполагаю, что data() возвращает имя
+                    if item_name == name:
+                        return index
+                    # рекурсивно спускаемся вниз
+                    result = recursive_search(index)
+                    if result.isValid():
+                        return result
+            return QModelIndex()
+
+        return recursive_search(QModelIndex())
+
 
     def open_context_menu(self, position: QPoint):
         index = self.indexAt(position)
@@ -148,27 +201,37 @@ class TreeWidgetForSearch(QTreeView):
         menu = QMenu(self)
 
         if node_type == NODE_TYPE_SPACE:
-            menu.addAction("Открыть пространство для редактирования", lambda: self.open_space_in_main_window(index))
-            menu.addAction("Посмотреть описание пространства", lambda: self.show_space_description(index))
+            menu.addAction("Открыть пространство для редактирования",
+                           lambda: self.app_ref.load_space_from_DB(index.internalPointer().ref.id_space))
+
+            menu.addAction("Посмотреть информацию о пространстве",
+                           lambda: self.app_ref.show_space_information(index.internalPointer().ref))
 
         elif node_type == NODE_TYPE_THING:
-            menu.addAction("Посмотреть описание вещи", lambda: self.show_thing_description(index))
+            menu.addAction("Посмотреть информацию о вещи",
+                           lambda: self.app_ref.show_thing_information(index.internalPointer().ref))
+
+            menu.addAction("Показать вещь в пространстве",
+                           lambda: self.show_thing_in_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
 
 
-    def open_space_in_main_window(self, index: QModelIndex):
+    def show_thing_in_space(self, index: QModelIndex):
         node = index.internalPointer()
-        if node and node.node_type == NODE_TYPE_SPACE:
-            self.app_ref.open_space(node.ref)
+        print(f"NODE: {node.ref}")
+        self.app_ref.load_space_from_DB(index.internalPointer().ref.id_parent_space, thing_to_show=node.ref)
 
 
-    def show_space_description(self, index: QModelIndex):
-        pass
 
 
-    def show_thing_description(self, index: QModelIndex):
-        pass
+    # def open_space_in_main_window(self, index: QModelIndex):
+    #     try:
+    #         node = index.internalPointer()
+    #         if node and node.node_type == NODE_TYPE_SPACE:
+    #             self.app_ref.load_space_from_DB(node.ref.id_space)
+    #     except Exception as e:
+    #         print(e)
 
 
 

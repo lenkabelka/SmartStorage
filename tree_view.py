@@ -177,10 +177,10 @@ class TreeWidget(QTreeView):
             menu.addAction("Удалить пространство", lambda: self.delete_space(index))
         elif node_type == NODE_TYPE_SPACE:
             menu.addAction("Добавить развертку для подпространства", lambda: self.add_subspace_projection(index))
-            menu.addAction("Открыть подпространство как пространство", lambda: self.open_subspace_as_space(index))
+            menu.addAction("Открыть подпространство как пространство", lambda: self.open_subspace(index))
             menu.addAction("Посмотреть информацию о подпространстве",
                            lambda: self.app_ref.show_space_information(index.internalPointer().ref))
-            menu.addAction("Посмотреть все вещи в пространстве",
+            menu.addAction("Посмотреть информацию о всех вещах в пространстве",
                            lambda: self.app_ref.show_all_things_in_space(index.internalPointer().ref))
             menu.addSeparator()
             menu.addAction("Удалить подпространство", lambda: self.delete_subspace_from_space(index))
@@ -226,14 +226,15 @@ class TreeWidget(QTreeView):
         self.app_ref.add_subspace()
 
 
+
     def add_subspace_projection(self, index: QModelIndex):
         node = index.internalPointer()
         self.app_ref.add_subspace_projection(node.ref)
 
 
-    def open_subspace_as_space(self, index: QModelIndex):
+    def open_subspace(self, index: QModelIndex):
         node = index.internalPointer()
-        self.app_ref.open_space(node.ref)
+        self.app_ref.open_subspace_as_space(node.ref)
 
 
     def delete_subspace_from_space(self, index: QModelIndex):

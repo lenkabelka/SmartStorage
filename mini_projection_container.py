@@ -40,6 +40,7 @@ class ProjectionContainer(QWidget):
                         item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
                     else:
                         item_copy.parent = sub.reference_to_parent_thing
+                        item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вешь на всех сценах и подсветить
 
                     self.scene.addItem(item_copy)
 
@@ -121,6 +122,7 @@ class ProjectionContainer(QWidget):
                         item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
                     else:
                         item_copy.parent = sub.reference_to_parent_thing
+                        item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вещь на всех сценах и подсветить
 
                     self.scene.addItem(item_copy)
 

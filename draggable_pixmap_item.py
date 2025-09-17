@@ -10,6 +10,8 @@ import math
 
 
 
+
+
 class DraggablePixmapItem(QGraphicsPixmapItem):
     def __init__(self, pixmap, app, background_pixmap_item, parent):
         super().__init__(pixmap)
@@ -18,6 +20,10 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.binary_search = "version_1"
         self.original_pixmap = pixmap
         self.parent = parent
+        from space import Space
+        from thing import Thing
+        if parent is not None and isinstance(parent, Thing):
+            self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях, при выборе "показать вещь в пространстве"
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
 
@@ -57,8 +63,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
 
     def mousePressEvent(self, event):
-        from space import Space
-        from thing import Thing
+        # from space import Space
+        # from thing import Thing
         self.drag_offset = event.pos()
 
         if event.button() == Qt.MouseButton.RightButton:

@@ -2,16 +2,17 @@ from PyQt6.QtWidgets import (
     QApplication, QGraphicsScene, QGraphicsPixmapItem,
     QVBoxLayout, QPushButton, QWidget, QGridLayout, QHBoxLayout,
     QScrollArea, QSizePolicy, QMessageBox, QFrame, QStackedWidget,
-    QMainWindow, QGraphicsTextItem, QGraphicsDropShadowEffect, QGraphicsRectItem
+    QMainWindow, QGraphicsTextItem, QGraphicsDropShadowEffect
 )
-from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon, QColor, QPen
-from PyQt6.QtCore import Qt, QPointF, pyqtSignal
+from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon, QColor
+from PyQt6.QtCore import Qt, QPoint, QPointF, pyqtSignal
 import sys
 import random
 import add_projection as add_projection
 import add_space as add_space
 import add_thing_projection
 import draggable_pixmap_item as draggable_item
+import find_thing
 import utils as utils
 import image_container
 import space
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow):
         self.main_widget = MainWidget()
         self.setCentralWidget(self.main_widget)
 
-        self.action_find_thing.triggered.connect(self.find_thing)
+        self.action_find_thing.triggered.connect(self.main_widget.find_thing)
         self.action_save_space.triggered.connect(lambda: print("Меню сохранения нажато"))
         self.action_save_space.triggered.connect(self.main_widget.save_space_to_DB)
         self.action_open_space.triggered.connect(self.main_widget.load_space_from_db_by_selection_from_spaces_list)
@@ -87,10 +88,6 @@ class MainWindow(QMainWindow):
         self.main_widget.space_changed.connect(self.update_actions)
 
         self.update_actions()
-
-
-    def find_thing(self):
-        pass
 
 
     def update_actions(self):
@@ -268,61 +265,139 @@ class MainWidget(QWidget):
 
         self._open_space_windows = []
 
+        self.information_about_things = []
+        self.found_things_tree_views = []
+        self.information_about_spaces = []
+
+        self.offset_for_found_things_trees = 0
+
+
+    def find_thing(self):
+        find_thing_dialog = find_thing.FindThing()
+
+        while True:
+            if find_thing_dialog.exec():
+                parameters_for_search = find_thing_dialog.get_parameters_for_search()
+                print(f"parameters_for_search: {parameters_for_search}")
+
+                if not parameters_for_search[0]:
+                    QMessageBox.warning(self, "Заполните обязательные поля",
+                                        "Пожалуйста укажите ключевые слова для поиска вещи!")
+                elif not parameters_for_search[3]:
+                    QMessageBox.warning(self, "Заполните обязательные поля",
+                                        "Пожалуйста укажите пространства для поиска вещи!")
+
+                else:
+                    found_things = find_thing_dialog.find_thing_in_DB()
+
+                    if found_things:
+                        for found_thing in found_things:
+                            print(found_thing[3])
+                            top_space_of_thing = self.find_top_space_of_thing(found_thing[3], found_thing[1])
+                            print(top_space_of_thing)
+                        print(found_things)
+                    else:
+                        QMessageBox.warning(self, "Ничего не найдено",
+                                            "Ничего не найдено!")
+
+                    break  # успех — выходим из цикла
+
+            else:
+                break  # пользователь нажал "Отмена" — выходим
+
+
+    def find_top_space_of_thing(self, space_id, highlight_name):
+        try:
+
+            #id_top_space = space.get_top_space_id(space_id)
+            top_space = space.load_space_by_id(space_id)
+            tree_view_for_thing = tree_view_for_search.TreeWidgetForSearch(self)
+
+            #print(f"позиция: {self.pos().x() + self.offset_for_found_things_trees}, {self.pos().y() + self.offset_for_found_things_trees}")
+
+            tree_view_for_thing.move(self.mapToGlobal(self.rect().topLeft())
+                                     + QPoint(self.offset_for_found_things_trees, self.offset_for_found_things_trees))
+            self.offset_for_found_things_trees += 30
+
+            tree_view_for_thing.update_tree(top_space, highlight_name=highlight_name)
+            tree_view_for_thing.show()
+
+            self.found_things_tree_views.append(tree_view_for_thing)
+            return top_space
+
+        except Exception as e:
+            print(f"❌ Ошибка в find_top_space_of_thing: {e}")
+
 
     def handle_node_clicked(self,
                             clicked_ref):
+        try:
 
-        def focus_and_highlight(target_item):
-            # Удаляем эффект у всех остальных
-            for item in self.scene.items():
-                if isinstance(item, QGraphicsPixmapItem):
-                    item.setGraphicsEffect(None)
+            def focus_and_highlight(target_item):
+                # Удаляем эффект у всех остальных
+                for item in self.scene.items():
+                    if isinstance(item, QGraphicsPixmapItem):
+                        item.setGraphicsEffect(None)
 
-            # Устанавливаем фокус и подсветку на выбранный
-            #target_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
-            self.view.setFocus()
-            target_item.setFocus()
+                # Устанавливаем фокус и подсветку на выбранный
+                #target_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
+                self.view.setFocus()
+                target_item.setFocus()
 
-            effect = QGraphicsDropShadowEffect()
-            effect.setBlurRadius(15)
-            effect.setColor(QColor("red"))
-            effect.setOffset(0, 0)
-            target_item.setGraphicsEffect(effect)
+                effect = QGraphicsDropShadowEffect()
+                effect.setBlurRadius(15)
+                effect.setColor(QColor("red"))
+                effect.setOffset(0, 0)
+                target_item.setGraphicsEffect(effect)
 
-        #draggable_pixmap_item = None
-        if self.parent_space.current_projection:
-            if self.parent_space.current_projection.sub_projections:
+            #draggable_pixmap_item = None
+            if self.parent_space.current_projection:
+                if self.parent_space.current_projection.sub_projections:
 
-                item_on_scene = None
+                    item_on_scene = None
 
-                if isinstance(clicked_ref, thing.Thing):
-                    subprojection = next((subprojection for subprojection
-                                                 in self.parent_space.current_projection.sub_projections
-                                                 if subprojection.reference_to_parent_thing == clicked_ref), None)
+                    if isinstance(clicked_ref, thing.Thing):
 
-
-
-
-                    if subprojection:
-                        item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
-                                              if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                        print(f"ITEM ON SCENE: {item_on_scene}")
-
-                        #focus_and_highlight(item_on_scene)
-
-                else:
-                    subprojection = next((subprojection for subprojection
-                                                 in self.parent_space.current_projection.sub_projections
-                                                 if subprojection.reference_to_parent_space == clicked_ref), None)
+                        if clicked_ref.id_thing is not None:
+                            subprojection = next(
+                                (
+                                    subprojection
+                                    for subprojection in self.parent_space.current_projection.sub_projections
+                                    if getattr(subprojection.reference_to_parent_thing, "id_thing",
+                                               None) == clicked_ref.id_thing
+                                ),
+                                None
+                            )
+                        else:
+                            subprojection = next((subprojection for subprojection
+                                                         in self.parent_space.current_projection.sub_projections
+                                                         if subprojection.reference_to_parent_thing == clicked_ref), None)
 
 
-                    if subprojection:
-                        item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
-                                              if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                        print(f"ITEM ON SCENE: {item_on_scene}")
 
-                if item_on_scene:
-                    focus_and_highlight(item_on_scene)
+
+                        if subprojection:
+                            item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                                                  if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
+                            print(f"ITEM ON SCENE: {item_on_scene}")
+
+                            #focus_and_highlight(item_on_scene)
+
+                    else:
+                        subprojection = next((subprojection for subprojection
+                                                     in self.parent_space.current_projection.sub_projections
+                                                     if subprojection.reference_to_parent_space == clicked_ref), None)
+
+
+                        if subprojection:
+                            item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                                                  if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
+                            print(f"ITEM ON SCENE: {item_on_scene}")
+
+                    if item_on_scene:
+                        focus_and_highlight(item_on_scene)
+        except Exception as e:
+            print(e)
 
 
     def update_scene_size(self):
@@ -574,7 +649,6 @@ class MainWidget(QWidget):
 
     def update_main_scene(self, set_position=None):
         try:
-
             if self.scene.items():
                 self.scene.clear()
                 self.placeholder_for_projection_1 = None
@@ -1060,10 +1134,12 @@ class MainWidget(QWidget):
                 # то в БД сохранятся те развертки, которые были ранее
                 # сохранены, как мини-развертки)
                 else:
+                    print("DDDDDDDDDDDFFFFFFFFFFFFFFFFFRTRRRRRRRRRRRRRRRRR")
                     new_mini_projection = container.ProjectionContainer(
                         current_projection,
                         self
                     )
+                    print("!!!!!!!!!!")
 
                     self.parent_space.projections.append(self.parent_space.current_projection)
 
@@ -1145,10 +1221,22 @@ class MainWidget(QWidget):
                     self.update_main_scene(set_position=True)
 
 
-    def highlight_subprojections_on_mini_projections(self, parent=None):
+    def highlight_subprojections_on_mini_projections(self, parent=None, thing_to_highlight=None):
         for mini_projection in self.mini_projections_list:
             # Всегда очищаем старые выделения
             mini_projection.clear_highlights()
+
+            subprojection_to_highlight = None
+
+            if thing_to_highlight is not None:
+                print("thing_to_highlight is not None")
+                subprojection_to_highlight = next(
+                    (item for item in mini_projection.scene.items()
+                     if isinstance(item, QGraphicsPixmapItem)
+                     and getattr(item, "thing_id", None) == thing_to_highlight.id_thing),
+                    None
+                )
+
 
             if parent is not None:
                 # Ищем item, чей .parent соответствует переданному parent
@@ -1158,8 +1246,10 @@ class MainWidget(QWidget):
                     None
                 )
 
-                if subprojection_to_highlight:
-                    mini_projection.highlight(subprojection_to_highlight)
+            print(f"subprojection_to_highlight: {subprojection_to_highlight}")
+
+            if subprojection_to_highlight:
+                mini_projection.highlight(subprojection_to_highlight)
 
 
     def delete_all_subprojections(self, draggable_item_pointer):
@@ -1317,13 +1407,13 @@ class MainWidget(QWidget):
         self.show_full_structure_of_space()
 
 
-    def open_space(self, space_to_open: space.Space):
+    def open_subspace_as_space(self, space_to_open: space.Space):
 
         if self.parent_space.state == ObjectState.NEW:
             reply = QMessageBox.question(
                 self,
                 "Сохранить текущее пространство",
-                "Текущее пространство не сохранено!\nХотите сохранить его сохранить?",
+                "Текущее пространство не сохранено!\nХотите сохранить его?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.Yes
             )
@@ -1352,49 +1442,80 @@ class MainWidget(QWidget):
         self.update_mini_projections_layout()
 
 
-    def load_space_from_DB(self, id_space):
-        loaded_space = space.load_space_by_id(id_space)
+    def load_space_from_DB(self, id_space, thing_to_show=None):
+        try:
+            loaded_space = space.load_space_by_id(id_space)
 
-        self.parent_space = loaded_space
+            self.parent_space = loaded_space
 
-        if self.current_index == 0:
-            self.current_index = 1
-            self.stack_widget.setCurrentIndex(self.current_index)
+            if self.current_index == 0:
+                self.current_index = 1
+                self.stack_widget.setCurrentIndex(self.current_index)
 
-        self.update_tree_view()
-        self.update_images_layout()
+            if self.mini_projections_list:
+                self.mini_projections_list.clear()
 
-        if self.parent_space.projections:
-            # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
-            # если подразвёрток ни у одной развертки нет, то первую в списке projections
-            self.parent_space.current_projection = max(self.parent_space.projections,
-                                                       key=lambda p: len(p.sub_projections))
-            self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
-                            / self.parent_space.current_projection.projection_width)
-            self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
-                            / self.parent_space.current_projection.projection_height)
+            self.update_tree_view()
+            self.update_images_layout()
 
-            print(type(self.x_scale))
+            if self.parent_space.projections:
 
-            for proj in self.parent_space.projections:
-                for subproj in proj.sub_projections:
+                for proj in self.parent_space.projections:
+                    for subproj in proj.sub_projections:
 
-                    if subproj.id_parent_thing:
-                        subproj.reference_to_parent_thing = next((thing_item for thing_item in self.parent_space.things
-                                                                  if thing_item.id_thing == subproj.id_parent_thing),
-                                                                 None)
-                    elif subproj.id_parent_space:
-                        subproj.reference_to_parent_space = next(
-                            (space_item for space_item in self.parent_space.subspaces
-                             if space_item.id_space == subproj.id_parent_space), None)
+                        if subproj.id_parent_thing:
+                            subproj.reference_to_parent_thing = next((thing_item for thing_item in self.parent_space.things
+                                                                      if thing_item.id_thing == subproj.id_parent_thing),
+                                                                     None)
+                        elif subproj.id_parent_space:
+                            subproj.reference_to_parent_space = next(
+                                (space_item for space_item in self.parent_space.subspaces
+                                 if space_item.id_space == subproj.id_parent_space), None)
 
-            self.update_main_scene(True)
+                if thing_to_show is not None:
+                    for proj in self.parent_space.projections:
+                        if proj.sub_projections:
+                            subprojection = next(
+                                (
+                                    subprojection
+                                    for subprojection in proj.sub_projections
+                                    if getattr(subprojection.reference_to_parent_thing, "id_thing",
+                                               None) == thing_to_show.id_thing
+                                ),
+                                None
+                            )
 
-            for proj in self.parent_space.projections:
-                self.save_or_update_mini_projection(proj)
+                            if subprojection is not None:
+                                print(f"subprojection: {subprojection}")
+                                self.parent_space.current_projection = proj
+                                break
+                else:
+                     # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
+                    # если подразвёрток ни у одной развертки нет, то первую в списке projections
+                    self.parent_space.current_projection = max(self.parent_space.projections,
+                                                               key=lambda p: len(p.sub_projections))
 
-        self.space_changed.emit()
-        self.set_buttons_disabled_or_enabled()
+                self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
+                                / self.parent_space.current_projection.projection_width)
+                self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
+                                / self.parent_space.current_projection.projection_height)
+
+                self.update_main_scene(True)
+
+                for proj in self.parent_space.projections:
+                    self.save_or_update_mini_projection(proj)
+
+                if thing_to_show is not None:
+                    self.highlight_subprojections_on_mini_projections(thing_to_highlight=thing_to_show)
+
+            self.space_changed.emit()
+            self.set_buttons_disabled_or_enabled()
+
+            if thing_to_show is not None:
+                self.handle_node_clicked(thing_to_show)
+
+        except Exception as e:
+            print(e)
 
 
     def load_parent_space_from_DB(self):
@@ -1463,16 +1584,20 @@ class MainWidget(QWidget):
             self.save_current_projection_button.setEnabled(True)
 
 
-    def show_thing_information(self, parent):
+    def show_thing_information(self, thing_to_show_information):
         from information_about_thing import ThingInformation
-        self.thing_info = ThingInformation(parent)
-        self.thing_info.show()
+        thing_info = ThingInformation(thing_to_show_information)
+        thing_info.show()
+
+        self.information_about_things.append(thing_info)
 
 
-    def show_space_information(self, parent):
+    def show_space_information(self, space_to_show_information):
         from information_about_space import SpaceInformation
-        self.space_info = SpaceInformation(parent)
-        self.space_info.show()
+        space_info = SpaceInformation(space_to_show_information)
+        space_info.show()
+
+        self.information_about_spaces.append(space_info)
 
 
     def change_thing_information(self):
