@@ -28,6 +28,7 @@ import tree_view
 import all_spaces_in_DB
 import tree_view_for_search
 import main_scene
+import log_in as log
 
 
 class MainWindow(QMainWindow):
@@ -89,6 +90,12 @@ class MainWindow(QMainWindow):
 
         self.update_actions()
 
+        self.login()
+
+    def login(self):
+        login_widget = log.LogIn()
+        login_widget.exec()
+
 
     def update_actions(self):
         parent_space = self.main_widget.parent_space
@@ -108,6 +115,8 @@ class MainWidget(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        self.user_id = None
 
         self.parent_space = None
         self.x_scale = None
