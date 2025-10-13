@@ -60,7 +60,7 @@ class AddImage(QDialog):
         self.pixmap = None
 
         self.load_button.clicked.connect(self.load_image)
-        self.ok_button.clicked.connect(self.accept)
+        self.ok_button.clicked.connect(self.check_required_fields)
         self.cancel_button.clicked.connect(self.reject)
 
 
@@ -87,16 +87,17 @@ class AddImage(QDialog):
                 self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
 
+    def check_required_fields(self):
+        if not self.pixmap:
+            QMessageBox.warning(self, "Заполните обязательные поля",
+                                "Пожалуйста загрузите изображение пространства!")
+        else:
+            self.accept()
+
+
     def get_data(self):
         # Возвращаем имя, картинку
         return {
             "name": self.name_edit.text() if self.name_edit.text() else None,
             "image": self.pixmap if self.pixmap else None
         }
-
-
-# if __name__ == '__main__':
-#     app = QApplication(sys.argv)
-#     window = AddImage()
-#     window.show()
-#     sys.exit(app.exec())

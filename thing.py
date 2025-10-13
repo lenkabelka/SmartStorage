@@ -4,10 +4,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 import track_object_state
 import image as im
-import connect_DB as connection
-import psycopg2
-import utils
-#from space import Space
 
 
 @dataclass

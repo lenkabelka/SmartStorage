@@ -69,18 +69,3 @@ def open_space_details(space: space.Space):
         "Вы выбрали пространство",
         f"Имя: {space.name}\nОписание: {space.description or ''}"
     )
-
-
-# if __name__ == "__main__":
-#     app = QApplication(sys.argv)
-#
-#     try:
-#         space_list = load_all_spaces()
-#     except Exception as e:
-#         QMessageBox.critical(None, "Ошибка загрузки", f"Не удалось загрузить пространства:\n{e}")
-#         sys.exit(1)
-#
-#     dialog = SpaceListDialog(space_list, on_select_callback=open_space_details)
-#     dialog.exec()
-#
-#     sys.exit(0)

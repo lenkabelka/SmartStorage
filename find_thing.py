@@ -221,10 +221,3 @@ class FindThing(QDialog):
 
         self.accept()
         return results
-
-
-# if __name__ == '__main__':
-#     app = QApplication(sys.argv)
-#     window = FindThing()
-#     window.show()
-#     sys.exit(app.exec())

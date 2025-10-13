@@ -1,15 +1,13 @@
-from PyQt6.QtWidgets import (QGraphicsPixmapItem,
-                             QGraphicsItem,
-                             QGraphicsColorizeEffect,
-                             QMenu
-                             )
-from PyQt6.QtGui import QColor, QKeyEvent
-from PyQt6.QtCore import Qt, QPointF, QObject, pyqtSignal
+from PyQt6.QtWidgets import(
+    QGraphicsPixmapItem,
+    QGraphicsItem,
+    QGraphicsColorizeEffect,
+    QMenu
+)
+from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QPointF
 import utils as utils
 import math
-
-
-
 
 
 class DraggablePixmapItem(QGraphicsPixmapItem):
@@ -20,24 +18,18 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.binary_search = "version_1"
         self.original_pixmap = pixmap
         self.parent = parent
-        from space import Space
+
         from thing import Thing
         if parent is not None and isinstance(parent, Thing):
-            self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях, при выборе "показать вещь в пространстве"
+            self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях,
+                                              # при выборе "показать вещь в пространстве"
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
-
 
         self.hover_color = QColor(0, 200, 255, 150)
         self.click_color = QColor(255, 0, 0, 150)
         self.setAcceptHoverEvents(True)
         self.is_editable = True
-
-        self.setFlags(
-            QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
-            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
-            QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
-        )
         self.setAcceptHoverEvents(True)
         self.old_pos = self.pos()
         self.fixed = False
@@ -45,26 +37,28 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.item_id = id(self)
 
         self.background_pixmap = background_pixmap_item.pixmap()
-        #self.path_1 = background_path
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
+        # нужно для проверки столкновения с прозрачной областью, смотри функцию itemChange
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        # нужно для возможности двигать элемент стрелками
         self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
 
 
     def update_path(self, new_background_pixmap_item):
-        print(f"old_background: {self.background_pixmap}")
+        #print(f"old_background: {self.background_pixmap}")
         self.background_pixmap = new_background_pixmap_item.pixmap()
-        print(f"new_background: {self.background_pixmap}")
+        #print(f"new_background: {self.background_pixmap}")
 
         self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
         self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
     def mousePressEvent(self, event):
-        # from space import Space
-        # from thing import Thing
+        from space import Space
+        from thing import Thing
         self.drag_offset = event.pos()
 
         if event.button() == Qt.MouseButton.RightButton:
@@ -80,33 +74,22 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
             if isinstance(self.parent, Space):
                 delete_item_action = menu.addAction("Удалить пространство")
-            elif isinstance(self.parent, Thing):
-                delete_item_action = menu.addAction("Удалить вещь")
-
-            if isinstance(self.parent, Space):
                 delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
-            elif isinstance(self.parent, Thing):
-                delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
-
-            if isinstance(self.parent, Space):
-                delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
-            elif isinstance(self.parent, Thing):
-                delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
-
-            if isinstance(self.parent, Space):
+                delete_subprojections_action = menu.addAction(
+                    "Удалить все проекции этого пространства на всех развёртках")
                 show_information_action = menu.addAction("Показать информацию о подпространстве")
-            elif isinstance(self.parent, Thing):
-                show_information_action = menu.addAction("Показать информацию о вещи")
-
-            if isinstance(self.parent, Space):
                 menu.addAction("Посмотреть все вещи в пространстве",
                                lambda: self.app_ref.show_all_things_in_space(self.parent))
+            elif isinstance(self.parent, Thing):
+                delete_item_action = menu.addAction("Удалить вещь")
+                delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
+                delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
+                show_information_action = menu.addAction("Показать информацию о вещи")
 
             selected_action = menu.exec(event.screenPos())
 
             if selected_action == delete_subprojection_action:
                 self.app_ref.delete_one_subprojection(self)
-                #self.app_ref.update_tree_view()
 
             elif selected_action == delete_subprojections_action:
                 self.app_ref.delete_all_subprojections(self)
@@ -131,6 +114,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
         else:
             super().mousePressEvent(event)
+
 
     def mouseMoveEvent(self, event):
         new_scene_pos = event.scenePos() - self.drag_offset

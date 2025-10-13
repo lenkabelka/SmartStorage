@@ -3,23 +3,32 @@ import connect_DB as connection
 from PyQt6.QtWidgets import QDialog, QListWidget, QListWidgetItem, QVBoxLayout
 from PyQt6.QtCore import pyqtSignal
 
-def load_all_spaces_from_DB():
+def load_all_spaces_from_DB(user_id, global_role):
     config = connection.load_config()
     conn = connection.db_connect(config)
 
     try:
         with conn:
             with conn.cursor() as cursor:
-                query = """
-                    SELECT id_space, space_name, space_description
-                    FROM spaces.spaces
-                """
-                cursor.execute(query)
+                if global_role == "admin":
+                    # Админ видит абсолютно все пространства
+                    query = """
+                        SELECT id_space, space_name, space_description
+                        FROM spaces.spaces
+                    """
+                    cursor.execute(query)
+                else:
+                    # Остальные видят только свои пространства, где им назначена локальная роль
+                    query = """
+                        SELECT s.id_space, s.space_name, s.space_description
+                        FROM spaces.spaces s
+                        JOIN spaces.user_access ua ON s.id_space = ua.id_space
+                        WHERE ua.id_user = %s
+                    """
+                    cursor.execute(query, (user_id,))
+
                 results = cursor.fetchall()
-                if not results:
-                    return None
-                    #raise LookupError("В базе данных нет ни одного пространства")
-                return results
+                return results or []
     except Exception as e:
         raise RuntimeError(f"Ошибка загрузки пространств: {e}")
     finally:

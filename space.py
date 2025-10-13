@@ -21,8 +21,8 @@ class Space(track_object_state.Trackable):
     space_images: list[Optional[im.SpaceImage]] = field(default_factory=list)
     id_space: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
-
     things: list[Optional["th.Thing"]] = field(default_factory=list)
+
 
     def __post_init__(self):
         self._db_fields = {'id_space', 'name', 'description'}
@@ -168,10 +168,9 @@ def load_space_by_id(id_space: int) -> Space:
                     raise LookupError(f"Пространство с id={id_space} не найдено")
 
                 id_space_db, id_parent_space, name, description = row
-
                 space_from_DB = Space(
                     id_space=id_space_db,
-                    id_parent_space=id_parent_space,  # может быть None или int
+                    id_parent_space=id_parent_space,
                     name=name,
                     description=description
                 )
@@ -180,8 +179,6 @@ def load_space_by_id(id_space: int) -> Space:
                 space_from_DB.subspaces = load_space_subspaces(id_space_db, cursor)
                 space_from_DB.things = th.load_space_things(space_from_DB, cursor)
                 space_from_DB.projections = projection.load_space_projections(space_from_DB, cursor)
-
-                #choose_current_projection(space_from_DB)
 
                 return space_from_DB
     finally:
@@ -257,33 +254,3 @@ def get_top_space_id(starting_parent_id):
     except Exception as e:
         print(f"Ошибка при поиске верхнего пространства: {e}")
         raise
-
-
-
-
-# def load_space_subspaces(id_space: int, cursor) -> list[Space]:
-#     query = """
-#         SELECT id_space, id_parent_space, space_name, space_description
-#         FROM spaces.spaces
-#         WHERE id_parent_space = %s
-#     """
-#     cursor.execute(query, (id_space,))
-#     rows = cursor.fetchall()
-#
-#     subspaces = []
-#
-#     for id_space_DB, id_parent_space_DB, space_name_DB, space_description_DB in rows:
-#         try:
-#             subspace = Space(
-#                 id_space=id_space_DB,
-#                 id_parent_space=id_parent_space_DB,
-#                 name=space_name_DB,
-#                 description=space_description_DB
-#             )
-#         except Exception as e:
-#             print(f"Ошибка при создании подпространства Space: {e}")
-#             raise
-#
-#         subspaces.append(subspace)
-#
-#     return subspaces

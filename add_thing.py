@@ -66,7 +66,7 @@ class AddThing(QDialog):
 
         # Подключение сигналов
         self.load_button.clicked.connect(self.load_image)
-        self.ok_button.clicked.connect(self.accept)
+        self.ok_button.clicked.connect(self.check_required_fields)
         self.cancel_button.clicked.connect(self.reject)
 
     def load_image(self):
@@ -112,6 +112,13 @@ class AddThing(QDialog):
                 image.mark_deleted()
 
 
+    def check_required_fields(self):
+        if not self.name_edit.text():
+            QMessageBox.warning(self, "Заполните обязательные поля",
+                                "Пожалуйста укажите название вещи!")
+        else:
+            self.accept()
+
 
     def get_data(self):
         # Возвращаем имя, описание, картинку
@@ -120,9 +127,3 @@ class AddThing(QDialog):
             "description": self.description_edit.toPlainText() if self.description_edit.toPlainText() else None,
             "thing_images": self.thing_images if self.thing_images else None
         }
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = AddThing()
-    window.show()
-    sys.exit(app.exec())
