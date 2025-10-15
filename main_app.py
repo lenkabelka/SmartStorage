@@ -383,34 +383,35 @@ class MainWidget(QWidget):
                 raise PermissionError("Ваш тип пользователя не позволяет создавать пространства")
 
             # Основная логика создания нового пространства
-            if self.parent_space is None:
-                self.add_space()
+            add_space_accepted = False
+            if self.parent_space is None or self.parent_space.state == ObjectState.UNMODIFIED:
+                add_space_accepted = self.add_space()
             else:
-                if self.parent_space.state in (ObjectState.NEW, ObjectState.MODIFIED):
-                    reply = QMessageBox.question(
-                        self,
-                        "Сохранить пространство",
-                        "Пространство не сохранено!\nХотите сохранить пространство?",
-                        QMessageBox.StandardButton.Yes
-                        | QMessageBox.StandardButton.No
-                        | QMessageBox.StandardButton.Cancel,
-                        QMessageBox.StandardButton.Cancel
-                    )
+            #if self.parent_space.state in (ObjectState.NEW, ObjectState.MODIFIED):
+                reply = QMessageBox.question(
+                    self,
+                    "Сохранить пространство",
+                    "Пространство не сохранено!\nХотите сохранить пространство?",
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel
+                )
 
-                    if reply == QMessageBox.StandardButton.Yes:
-                        self.save_space_to_DB()
-                        self.update_app_state()
-                        self.add_space()
+                if reply == QMessageBox.StandardButton.Yes:
+                    self.save_space_to_DB()
+                    #self.update_app_view()
+                    add_space_accepted = self.add_space()
 
-                    elif reply == QMessageBox.StandardButton.No:
-                        self.update_app_state()
-                        self.add_space()
+                elif reply == QMessageBox.StandardButton.No:
+                    #self.update_app_view()
+                    add_space_accepted = self.add_space()
 
-                    elif reply == QMessageBox.StandardButton.Cancel:
-                        return
-                else:
-                    self.update_app_state()
-                    self.add_space()
+                elif reply == QMessageBox.StandardButton.Cancel:
+                    return
+
+            if add_space_accepted:
+                self.update_app_view()
 
         except PermissionError as e:
             QMessageBox.warning(self, "Нет прав", str(e))
@@ -437,14 +438,16 @@ class MainWidget(QWidget):
             self.current_index = 1
             self.stack_widget.setCurrentIndex(self.current_index)
 
-            self.update_tree_view()
+            #self.update_tree_view()
 
             self.space_changed.emit()
 
             self.set_buttons_disabled_or_enabled()
 
+            return True
+
         else:
-            return
+            return False
 
 
     def add_space_projection(self):
@@ -2102,17 +2105,13 @@ class MainWidget(QWidget):
         self.tree.update_tree(self.parent_space)
 
 
-    def update_app_state(self):
+    def update_app_view(self):
         self.update_main_scene()
-        print("1")
+        self.mini_projections_list.clear()
         self.update_mini_projections_layout()
-        print("2")
         self.update_tree_view()
-        print("3")
-        if self.parent_space.space_images:
-            print("4")
-            self.clear_layout(self.layout_images_of_space)
-            print("5")
+        #if self.parent_space.space_images:
+        self.update_images_layout()
 
 
     def show_space_of_thing(self, space_id, highlight_name):
