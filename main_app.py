@@ -84,6 +84,12 @@ class MainWindow(QMainWindow):
         self.action_open_space.triggered.connect(self.main_widget.load_space_from_db_by_selection_from_spaces_list)
         self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
         self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
+
+        self.action_delete_space.triggered.connect(
+            lambda: self.main_widget.delete_space(self.main_widget.parent_space)
+            if self.main_widget.parent_space is not None else None
+        )
+
         self.action_exit.triggered.connect(QApplication.quit)
         self.main_widget.space_changed.connect(self.update_actions)
 
