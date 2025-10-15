@@ -53,43 +53,45 @@ class TreeWidget(QTreeView):
 
         return current_node
 
-    from PyQt6 import QtWidgets
-
-    def clear_tree(self):
-        """Простое очищение дерева"""
-        self.setModel(None)
-        self.root_item = None
-        self.model = None
-
+    # from PyQt6 import QtWidgets
+    #
+    # def clear_tree(self):
+    #     """Простое очищение дерева"""
+    #     self.setModel(None)
+    #     self.root_item = None
+    #     self.model = None
+    #
+    #
+    # def update_tree(self, parent_space=None):
+    #     """Обновляет модель, начиная с нового пространства"""
+    #     if parent_space is None or parent_space.state == "DELETED":
+    #         self.clear_tree()
+    #         return
+    #
+    #     # Если пространство существует — строим дерево
+    #     self.root_item = TreeNode(None, "root", TreeNode.TYPE_SPACE)
+    #     root_child = self.build_tree_nodes(parent_space)
+    #     if root_child is not None:
+    #         self.root_item.add_child(root_child)
+    #
+    #     self.model = TreeModel(self.root_item, self)
+    #     self.setModel(self.model)
+    #     self.expandAll()
 
     def update_tree(self, parent_space=None):
         """Обновляет модель, начиная с нового пространства"""
-        if parent_space is None or parent_space.state == "DELETED":
-            self.clear_tree()
-            return
-
-        # Если пространство существует — строим дерево
         self.root_item = TreeNode(None, "root", TreeNode.TYPE_SPACE)
-        root_child = self.build_tree_nodes(parent_space)
-        if root_child is not None:
-            self.root_item.add_child(root_child)
+
+        if parent_space is not None and parent_space.state != "DELETED":
+            print("--AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            root_child = self.build_tree_nodes(parent_space)
+            if root_child is not None:
+                self.root_item.add_child(root_child)
 
         self.model = TreeModel(self.root_item, self)
         self.setModel(self.model)
         self.expandAll()
 
-    # def update_tree(self, parent_space=None):
-    #     """Обновляет модель, начиная с нового пространства"""
-    #     self.root_item = TreeNode(None, "root", TreeNode.TYPE_SPACE)
-    #
-    #     if parent_space is not None and parent_space.state != "DELETED":
-    #         root_child = self.build_tree_nodes(parent_space)
-    #         if root_child is not None:
-    #             self.root_item.add_child(root_child)
-    #
-    #     self.model = TreeModel(self.root_item, self)
-    #     self.setModel(self.model)
-    #     self.expandAll()
 
     def open_context_menu(self, position: QPoint):
         index = self.indexAt(position)

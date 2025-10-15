@@ -1234,38 +1234,116 @@ class MainWidget(QWidget):
             )
             return
 
+        if space_to_delete.state == ObjectState.NEW:
+            space_to_delete = None
+        else:
+            space_to_delete.mark_deleted()
+            if space_to_delete.projections:
+                for proj in space_to_delete.projections:
+                    proj.mark_deleted()
+                    if proj.sub_projections:
+                        for subproj in proj.sub_projections:
+                            subproj.mark_deleted()
+            if space_to_delete.subspaces:
+                for sub in space_to_delete.subspaces:
+                    sub.mark_deleted()
+            if space_to_delete.things:
+                for item in space_to_delete.things:
+                    item.mark_deleted()
+            if space_to_delete.space_images:
+                for image in space_to_delete.space_images:
+                    image.mark_deleted()
         if self.parent_space == space_to_delete:
-
-            if self.parent_space.state == ObjectState.NEW:
-                self.parent_space = None
-            else:
-                self.parent_space.mark_deleted()
-                if self.parent_space.projections:
-                    for proj in self.parent_space.projections:
-                        proj.mark_deleted()
-                        if proj.sub_projections:
-                            for subproj in proj.sub_projections:
-                                subproj.mark_deleted()
-                if self.parent_space.subspaces:
-                    for sub in self.parent_space.subspaces:
-                        sub.mark_deleted()
-                if self.parent_space.things:
-                    for item in self.parent_space.things:
-                        item.mark_deleted()
-                if self.parent_space.space_images:
-                    for image in self.parent_space.space_images:
-                        image.mark_deleted()
-
             self.clear_layout(self.layout_images_of_space)
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
             self.mini_projections_list.clear()
-            self.update_mini_projections_layout()
-            self.update_tree_view()
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
             self.set_placeholders_on_main_scene()
+
+        self.update_mini_projections_layout()
+        self.update_tree_view()
+
+
+    # def delete_space(self, space_to_delete):
+    #
+    #     # Проверка прав доступа
+    #     if not self.access_manager.can_edit(space_to_delete):
+    #         QMessageBox.warning(
+    #             self,
+    #             "Доступ запрещён",
+    #             "У вас нет прав для удаления пространства."
+    #         )
+    #         return
+    #
+    #     if self.parent_space == space_to_delete:
+    #
+    #         if self.parent_space.state == ObjectState.NEW:
+    #             self.parent_space = None
+    #         else:
+    #             self.parent_space.mark_deleted()
+    #             if self.parent_space.projections:
+    #                 for proj in self.parent_space.projections:
+    #                     proj.mark_deleted()
+    #                     if proj.sub_projections:
+    #                         for subproj in proj.sub_projections:
+    #                             subproj.mark_deleted()
+    #             if self.parent_space.subspaces:
+    #                 for sub in self.parent_space.subspaces:
+    #                     sub.mark_deleted()
+    #             if self.parent_space.things:
+    #                 for item in self.parent_space.things:
+    #                     item.mark_deleted()
+    #             if self.parent_space.space_images:
+    #                 for image in self.parent_space.space_images:
+    #                     image.mark_deleted()
+    #
+    #     self.clear_layout(self.layout_images_of_space)
+    #     self.scene.clear()
+    #     self.placeholder_for_projection_1 = None
+    #     self.placeholder_for_projection_2 = None
+    #     self.mini_projections_list.clear()
+    #     self.update_mini_projections_layout()
+    #     self.update_tree_view()
+    #     self.space_changed.emit()
+    #     self.set_buttons_disabled_or_enabled()
+    #     self.set_placeholders_on_main_scene()
+
+    # def delete_space(self, space_to_delete):
+    #     if self.parent_space == space_to_delete:
+    #
+    #         if self.parent_space.state == ObjectState.NEW:
+    #             self.parent_space = None
+    #         else:
+    #             self.parent_space.mark_deleted()
+    #             if self.parent_space.projections:
+    #                 for proj in self.parent_space.projections:
+    #                     proj.mark_deleted()
+    #                     if proj.sub_projections:
+    #                         for subproj in proj.sub_projections:
+    #                             subproj.mark_deleted()
+    #             if self.parent_space.subspaces:
+    #                 for sub in self.parent_space.subspaces:
+    #                     sub.mark_deleted()
+    #             if self.parent_space.things:
+    #                 for item in self.parent_space.things:
+    #                     item.mark_deleted()
+    #             if self.parent_space.space_images:
+    #                 for image in self.parent_space.space_images:
+    #                     image.mark_deleted()
+    #
+    #         self.clear_layout(self.layout_images_of_space)
+    #         self.scene.clear()
+    #         self.placeholder_for_projection_1 = None
+    #         self.placeholder_for_projection_2 = None
+    #         self.mini_projections_list.clear()
+    #         self.update_mini_projections_layout()
+    #         self.update_tree_view()
+    #         self.space_changed.emit()
+    #         self.set_buttons_disabled_or_enabled()
+    #         self.set_placeholders_on_main_scene()
 
 
     def save_space_to_DB(self):
@@ -1779,16 +1857,24 @@ class MainWidget(QWidget):
 
 
     def clear_layout(self, layout):
+        print("00")
         for i in reversed(range(layout.count())):
+            print("11")
             item = layout.takeAt(i)  # <-- обязательно удалить из layout
+            print("22")
             if item is not None:
                 widget = item.widget()
+                print("33")
                 if widget:
                     widget.setParent(None)  # <-- отключить от layout
+                    print("44")
                     widget.deleteLater()  # <-- пометить на удаление
+                    print("55")
                 else:
                     sublayout = item.layout()
+                    print("66")
                     if sublayout:
+                        print("77")
                         self.clear_layout(sublayout)
 
 
@@ -2018,10 +2104,15 @@ class MainWidget(QWidget):
 
     def update_app_state(self):
         self.update_main_scene()
+        print("1")
         self.update_mini_projections_layout()
+        print("2")
         self.update_tree_view()
+        print("3")
         if self.parent_space.space_images:
-            self.clear_layout(self.parent_space.space_images)
+            print("4")
+            self.clear_layout(self.layout_images_of_space)
+            print("5")
 
 
     def show_space_of_thing(self, space_id, highlight_name):
