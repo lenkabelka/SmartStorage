@@ -93,7 +93,12 @@ class MainWindow(QMainWindow):
         self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
         self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
         self.action_exit.triggered.connect(self.close) # метод close() вызовет closeEvent
-        self.action_delete_space.triggered.connect(self.main_widget.delete_space)
+        #self.action_delete_space.triggered.connect(self.main_widget.delete_space(self.main_widget.parent_space)) #!!!!!!!!!!!!!!!!!!!!
+        self.action_delete_space.triggered.connect(
+            lambda: self.main_widget.delete_space(self.main_widget.parent_space)
+            if self.main_widget.parent_space is not None else None
+        )
+
         self.main_widget.space_changed.connect(self.update_actions)
 
         self.update_actions()
@@ -503,6 +508,7 @@ class MainWidget(QWidget):
                                 new_projection.projection_description = temp_dict_new_space_projection["description"]
 
                             self.parent_space.current_projection = new_projection
+                            self.parent_space.current_projection.z_pos = -1
                             self.update_main_scene()
 
                         # --- Замена существующей картинки ---
@@ -532,6 +538,8 @@ class MainWidget(QWidget):
                                 self.parent_space.current_projection.projection_description = \
                                     temp_dict_new_space_projection["description"]
 
+                            self.parent_space.current_projection.z_pos = -1
+                            #item.setZValue(new_sub_projection.z_pos)
                             self.update_main_scene(set_position=False)
 
                             if self.parent_space.current_projection.sub_projections:
@@ -640,6 +648,14 @@ class MainWidget(QWidget):
                             temp_dict_new_subspace_projection["y_sm"],
                             reference_to_parent_space=subspace_to_add_projection
                         )
+                        items = self.scene.items()  # список всех QGraphicsItem
+                        if items:
+                            max_item = max(items, key=lambda i: i.zValue())
+                            max_z_int = int(max_item.zValue())
+                            new_sub_projection.z_pos = max_z_int + 1
+                        else:
+                            new_sub_projection.z_pos = int(0)
+
                         new_sub_projection.mark_new()
 
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
@@ -663,6 +679,7 @@ class MainWidget(QWidget):
                         item_rect = item.boundingRect()
                         offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                         item.setPos(center - offset)
+                        item.setZValue(new_sub_projection.z_pos)
 
                         self.scene.addItem(item)
                         self.scene.update_items_movable_flag(item_to_update=item)
@@ -767,6 +784,16 @@ class MainWidget(QWidget):
                     reference_to_parent_projection=self.parent_space.current_projection,
                     reference_to_parent_thing=thing_to_add_projection
                 )
+
+                items = self.scene.items()  # список всех QGraphicsItem
+                if items:
+                    max_item = max(items, key=lambda i: i.zValue())
+                    print(f"max_item: {max_item}")
+                    max_z_int = int(max_item.zValue())
+                    new_thing_projection.z_pos = max_z_int + 1
+                else:
+                    new_thing_projection.z_pos = int(0)
+
                 new_thing_projection.mark_new()
 
                 item = draggable_item.DraggablePixmapItem(
@@ -788,6 +815,7 @@ class MainWidget(QWidget):
                 item_rect = item.boundingRect()
                 offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                 item.setPos(center - offset)
+                item.setZValue(new_thing_projection.z_pos)
 
                 self.scene.addItem(item)
                 self.scene.update_items_movable_flag(item_to_update=item)
@@ -1573,6 +1601,70 @@ class MainWidget(QWidget):
         self._open_space_windows.append(scroll_window)
 
         scroll_window.show()
+
+
+    def find_projection(self, draggable_on_scene):
+        if self.parent_space:
+            if self.parent_space.current_projection:
+                if self.parent_space.current_projection.sub_projections:
+                    projection = next((proj for proj in self.parent_space.current_projection.sub_projections
+                                       if proj.scaled_projection_pixmap == draggable_on_scene), None)
+
+                    if projection:
+                        print(f"----projection: {projection}")
+                        return projection
+        return None
+
+
+    def change_z_position_of_draggable(self, draggable_on_scene):
+        try:
+            z = int(draggable_on_scene.zValue())
+            max_z = max((item.zValue() for item in self.scene.items()), default=0)
+            if z == max_z:
+                return
+            else:
+
+                if self.parent_space:
+                    if self.parent_space.current_projection:
+                        if self.parent_space.current_projection.sub_projections:
+                            temp_list_of_subprojections = sorted(self.parent_space.current_projection.sub_projections,
+                                              key=lambda sub_proj: sub_proj.z_pos)
+                            temp_list_of_subprojections[z].z_pos += 1
+                            temp_list_of_subprojections[z + 1].z_pos -= 1
+
+                            for sub in self.parent_space.current_projection.sub_projections:
+                                print(f"{sub.projection_name}: -- {sub.z_pos}")
+
+                        #max_z = max((item.zValue() for item in self.scene.items()), default=0)
+                        #if int(temp_list_of_subprojections[z].z_pos) != int(max_z):
+                            #temp_list_of_subprojections[z + 1].z_pos -= 1
+
+
+
+            # z = draggable_on_scene.zValue()
+            # projection = self.find_projection(draggable_on_scene)
+            # if projection:
+            #     print(f"z_pos before: {projection.z_pos}")
+            #     projection.z_pos = z + 1
+            #     print(f"z_pos after: {projection.z_pos}")
+
+
+            # items = self.scene.items()
+            # print(f"items: {items}")
+            # i = items.index(draggable_on_scene)
+            # print(f"i: {i}")
+            # j = i + 1
+            # print(f"j: {j}")
+            # z_i = items[i].zValue()
+            # print(f"z_i: {z_i}")
+            # z_j = items[j].zValue()
+            # print(f"z_j: {z_j}")
+            # # items[i].setZValue(z_j)
+            # # items[j].setZValue(z_i)
+
+            self.update_main_scene()#set_position=True)
+        except Exception as e:
+            print(f"Ошибка в update_main_scene: {e}")
 
 
     ################################################################################################################

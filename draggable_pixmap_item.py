@@ -71,6 +71,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             delete_subprojection_action = None
             delete_subprojections_action = None
             show_information_action = None
+            change_z_position = None
 
             if isinstance(self.parent, Space):
                 delete_item_action = menu.addAction("Удалить пространство")
@@ -86,6 +87,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
                 show_information_action = menu.addAction("Показать информацию о вещи")
 
+            change_z_position = menu.addAction("-----")
+
             selected_action = menu.exec(event.screenPos())
 
             if selected_action == delete_subprojection_action:
@@ -99,6 +102,10 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
             elif selected_action == move_action:
                 self.unfreeze()
+
+            elif selected_action == change_z_position:
+                self.app_ref.find_projection(self)
+                self.app_ref.change_z_position_of_draggable(self)
 
             elif selected_action == delete_item_action:
                 if isinstance(self.parent, Space):
