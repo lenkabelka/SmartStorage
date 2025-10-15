@@ -85,10 +85,10 @@ class MainWindow(QMainWindow):
         self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
         self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
 
-        self.action_delete_space.triggered.connect(
-            lambda: self.main_widget.delete_space(self.main_widget.parent_space)
-            if self.main_widget.parent_space is not None else None
-        )
+        # self.action_delete_space.triggered.connect(
+        #     lambda: self.main_widget.delete_space(self.main_widget.parent_space)
+        #     if self.main_widget.parent_space is not None else None
+        # )
 
         self.action_exit.triggered.connect(QApplication.quit)
         self.main_widget.space_changed.connect(self.update_actions)
@@ -466,16 +466,19 @@ class MainWidget(QWidget):
 
     def update_app_state(self):
         self.update_main_scene()
+        self.mini_projections_list.clear()
         self.update_mini_projections_layout()
         self.update_tree_view()
-        if self.parent_space.space_images:
-            self.clear_layout(self.parent_space.space_images)
+        #if self.parent_space.space_images:
+        self.update_images_layout()
 
 
     def create_new_space(self):
-        if self.parent_space is None:
-            self.add_space()
+        if self.parent_space is None or self.parent_space.state == ObjectState.UNMODIFIED:
+            if self.add_space():
+                self.update_app_state()
         else:
+            add_space_accepted = False
             if self.parent_space.state == ObjectState.NEW or self.parent_space.state == ObjectState.MODIFIED:
                 reply = QMessageBox.question(
                     self,
@@ -489,18 +492,18 @@ class MainWidget(QWidget):
 
                 if reply == QMessageBox.StandardButton.Yes:
                     self.save_space_to_DB()
-                    self.update_app_state()
+                    #self.update_app_state()
                     self.add_space()
 
                 elif reply == QMessageBox.StandardButton.No:
-                    self.update_app_state()
+                    #self.update_app_state()
                     self.add_space()
 
                 elif reply == QMessageBox.StandardButton.Cancel:
                     return
-            else:
-                self.update_app_state()
-                self.add_space()
+
+                if add_space_accepted:
+                    self.update_app_state()
 
 
     def add_space(self):
@@ -529,11 +532,12 @@ class MainWidget(QWidget):
                     self.space_changed.emit()
 
                     self.set_buttons_disabled_or_enabled()
-
-                    break  # успех — выходим из цикла
+                    return True
+                    #break  # успех — выходим из цикла
 
             else:
-                break  # пользователь нажал "Отмена" — выходим
+                return False
+                #break  # пользователь нажал "Отмена" — выходим
 
 
     def add_space_projection(self):
