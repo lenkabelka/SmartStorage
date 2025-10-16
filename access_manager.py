@@ -18,26 +18,28 @@ class AccessManager:
         return "unknown"
 
     def can_edit(self, space: Space) -> bool:
+        print(f"space: {space}")
         """Проверяет, может ли пользователь редактировать указанное пространство."""
         caller = self._get_caller_name()
-        print(f"[DEBUG] can_edit() вызван из функции: {caller}")
+        #print(f"[DEBUG] can_edit() вызван из функции: {caller}")
 
         # 1. Глобальная роль администратора
         if self.user.role == "admin":
             return True
 
         # 2. Новые или несохранённые пространства (созданы в текущей сессии)
+
         if getattr(space, "state", None) == track_state.ObjectState.NEW or getattr(space, "id_space", None) is None:
             return True
 
         # 3. Проверка по БД
-        print(f"user_role_from_db, can_edit: {self.get_user_role_from_db(space.id_space)}")
+        #print(f"user_role_from_db, can_edit: {self.get_user_role_from_db(space.id_space)}")
         return self.get_user_role_from_db(space.id_space) == "editor"
 
     def can_view(self, space: Space) -> bool:
         """Проверяет, может ли пользователь просматривать указанное пространство."""
         caller = self._get_caller_name()
-        print(f"[DEBUG] can_view() вызван из функции: {caller}")
+        #print(f"[DEBUG] can_view() вызван из функции: {caller}")
 
         # 1. Администратор может всё
         if self.user.role == "admin":
@@ -48,7 +50,7 @@ class AccessManager:
             return True
 
         # 3. Проверка по БД
-        print(f"user_role_from_db, can_view: {self.get_user_role_from_db(space.id_space)}")
+        #print(f"user_role_from_db, can_view: {self.get_user_role_from_db(space.id_space)}")
         return self.get_user_role_from_db(space.id_space) in ("editor", "viewer")
 
     def get_user_role_from_db(self, id_space: int) -> str | None:

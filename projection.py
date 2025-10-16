@@ -234,8 +234,11 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
             height_DB
         ) = row
         # из БД приходит Decimal вместо float
-        width_DB = float(width_DB)
-        height_DB = float(height_DB)
+        width_DB = float(width_DB) if width_DB is not None else None
+        height_DB = float(height_DB) if height_DB is not None else None
+        x_pos_DB = float(x_pos_DB) if x_pos_DB is not None else None
+        y_pos_DB = float(y_pos_DB) if y_pos_DB is not None else None
+        z_pos_DB = float(z_pos_DB) if z_pos_DB is not None else None
 
         # Преобразуем байты в QImage
         image = QImage()
@@ -269,6 +272,8 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
             )
 
             projection_from_DB.sub_projections = load_projection_subprojections(projection_from_DB, cursor)
+
+            print(f"projection_from_DB.state: {projection_from_DB.state}")
 
         except Exception as e:
             print(f"Ошибка при создании Projection: {e}")
@@ -319,8 +324,11 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
             height_DB
         ) = row
         # из БД приходит Decimal вместо float
-        width_DB = float(width_DB)
-        height_DB = float(height_DB)
+        width_DB = float(width_DB) if width_DB is not None else None
+        height_DB = float(height_DB) if height_DB is not None else None
+        x_pos_DB = float(x_pos_DB) if x_pos_DB is not None else None
+        y_pos_DB = float(y_pos_DB) if y_pos_DB is not None else None
+        z_pos_DB = float(z_pos_DB) if z_pos_DB is not None else None
 
         # Преобразуем байты в QImage
         #image = QImage()

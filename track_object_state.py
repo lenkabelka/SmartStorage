@@ -31,6 +31,7 @@ class Trackable(ABC):
                 if hasattr(self, '_state'):
                     # Меняю состояние, если объект не NEW и не DELETED
                     if self._state == ObjectState.UNMODIFIED:
+                        print(f"[DEBUG] → Состояние изменено на MODIFIED для ❌❌❌❌❌❌❌❌❌❌❌ {self}")
                         self._state = ObjectState.MODIFIED
                 return
         super().__setattr__(key, value)

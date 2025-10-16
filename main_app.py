@@ -93,12 +93,7 @@ class MainWindow(QMainWindow):
         self.action_show_full_structure_of_space.triggered.connect(self.main_widget.show_full_structure_of_space)
         self.action_create_new_space.triggered.connect(self.main_widget.create_new_space)
         self.action_exit.triggered.connect(self.close) # метод close() вызовет closeEvent
-        #self.action_delete_space.triggered.connect(self.main_widget.delete_space(self.main_widget.parent_space)) #!!!!!!!!!!!!!!!!!!!!
-        self.action_delete_space.triggered.connect(
-            lambda: self.main_widget.delete_space(self.main_widget.parent_space)
-            if self.main_widget.parent_space is not None else None
-        )
-
+        self.action_delete_space.triggered.connect(self.main_widget.delete_space)
         self.main_widget.space_changed.connect(self.update_actions)
 
         self.update_actions()
@@ -547,7 +542,7 @@ class MainWidget(QWidget):
 
                             if self.parent_space.current_projection.sub_projections:
                                 for subproj in self.parent_space.current_projection.sub_projections:
-                                    print(f"subproj.scaled_projection_pixmap: {subproj.scaled_projection_pixmap}")
+                                    #print(f"subproj.scaled_projection_pixmap: {subproj.scaled_projection_pixmap}")
                                     subproj.scaled_projection_pixmap.update_path(
                                         self.parent_space.current_projection.scaled_projection_pixmap)
                         break
@@ -725,7 +720,7 @@ class MainWidget(QWidget):
                     new_thing.thing_images = dict_of_new_space["thing_images"]
 
                 self.parent_space.things.append(new_thing)
-                print(f"self.parent_space.things: {self.parent_space.things}")
+                #print(f"self.parent_space.things: {self.parent_space.things}")
 
                 self.add_thing_projection(new_thing)
 
@@ -791,7 +786,7 @@ class MainWidget(QWidget):
                 items = self.scene.items()  # список всех QGraphicsItem
                 if items:
                     max_item = max(items, key=lambda i: i.zValue())
-                    print(f"max_item: {max_item}")
+                    #print(f"max_item: {max_item}")
                     max_z_int = int(max_item.zValue())
                     new_thing_projection.z_pos = max_z_int + 1
                 else:
@@ -986,7 +981,7 @@ class MainWidget(QWidget):
                     self.parent_space.projections.append(self.parent_space.current_projection)
 
                     self.mini_projections_list.insert(0, new_mini_projection)
-                    print(self.mini_projections_list)
+                    #print(self.mini_projections_list)
                     self.update_mini_projections_layout()
 
 
@@ -1226,10 +1221,10 @@ class MainWidget(QWidget):
 
 
     # ACTION
-    def delete_space(self, space_to_delete):
+    def delete_space(self):
 
         # Проверка прав доступа
-        if not self.access_manager.can_edit(space_to_delete):
+        if not self.access_manager.can_edit(self.parent_space):
             QMessageBox.warning(
                 self,
                 "Доступ запрещён",
@@ -1237,37 +1232,38 @@ class MainWidget(QWidget):
             )
             return
 
-        if space_to_delete.state == ObjectState.NEW:
-            space_to_delete = None
-        else:
-            space_to_delete.mark_deleted()
-            if space_to_delete.projections:
-                for proj in space_to_delete.projections:
-                    proj.mark_deleted()
-                    if proj.sub_projections:
-                        for subproj in proj.sub_projections:
-                            subproj.mark_deleted()
-            if space_to_delete.subspaces:
-                for sub in space_to_delete.subspaces:
-                    sub.mark_deleted()
-            if space_to_delete.things:
-                for item in space_to_delete.things:
-                    item.mark_deleted()
-            if space_to_delete.space_images:
-                for image in space_to_delete.space_images:
-                    image.mark_deleted()
-        if self.parent_space == space_to_delete:
+        if self.parent_space:
+            if self.parent_space.state == ObjectState.NEW:
+                self.parent_space = None
+            else:
+                self.parent_space.mark_deleted()
+                if self.parent_space.projections:
+                    for proj in self.parent_space.projections:
+                        proj.mark_deleted()
+                        if proj.sub_projections:
+                            for subproj in proj.sub_projections:
+                                subproj.mark_deleted()
+                if self.parent_space.subspaces:
+                    for sub in self.parent_space.subspaces:
+                        sub.mark_deleted()
+                if self.parent_space.things:
+                    for item in self.parent_space.things:
+                        item.mark_deleted()
+                if self.parent_space.space_images:
+                    for image in self.parent_space.space_images:
+                        image.mark_deleted()
+
             self.clear_layout(self.layout_images_of_space)
             self.scene.clear()
             self.placeholder_for_projection_1 = None
             self.placeholder_for_projection_2 = None
             self.mini_projections_list.clear()
+            self.update_mini_projections_layout()
+            self.update_tree_view()
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
-            self.set_placeholders_on_main_scene()
-
-        self.update_mini_projections_layout()
-        self.update_tree_view()
+            #self.set_placeholders_on_main_scene()
+            self.save_space_to_DB()
 
 
     # def delete_space(self, space_to_delete):
@@ -1515,7 +1511,7 @@ class MainWidget(QWidget):
                             )
 
                             if subprojection is not None:
-                                print(f"subprojection: {subprojection}")
+                                #print(f"subprojection: {subprojection}")
                                 self.parent_space.current_projection = proj
                                 break
                 else:
@@ -1668,7 +1664,7 @@ class MainWidget(QWidget):
         layout = QVBoxLayout(things_info)
 
         for th in sp.things:
-            print(th.name)
+            #print(th.name)
             info = ThingInformation(th)
             layout.addWidget(info)
 
@@ -1692,7 +1688,7 @@ class MainWidget(QWidget):
                                        if proj.scaled_projection_pixmap == draggable_on_scene), None)
 
                     if projection:
-                        print(f"----projection: {projection}")
+                        #print(f"----projection: {projection}")
                         return projection
         return None
 
@@ -1716,34 +1712,7 @@ class MainWidget(QWidget):
                             for sub in self.parent_space.current_projection.sub_projections:
                                 print(f"{sub.projection_name}: -- {sub.z_pos}")
 
-                        #max_z = max((item.zValue() for item in self.scene.items()), default=0)
-                        #if int(temp_list_of_subprojections[z].z_pos) != int(max_z):
-                            #temp_list_of_subprojections[z + 1].z_pos -= 1
-
-
-
-            # z = draggable_on_scene.zValue()
-            # projection = self.find_projection(draggable_on_scene)
-            # if projection:
-            #     print(f"z_pos before: {projection.z_pos}")
-            #     projection.z_pos = z + 1
-            #     print(f"z_pos after: {projection.z_pos}")
-
-
-            # items = self.scene.items()
-            # print(f"items: {items}")
-            # i = items.index(draggable_on_scene)
-            # print(f"i: {i}")
-            # j = i + 1
-            # print(f"j: {j}")
-            # z_i = items[i].zValue()
-            # print(f"z_i: {z_i}")
-            # z_j = items[j].zValue()
-            # print(f"z_j: {z_j}")
-            # # items[i].setZValue(z_j)
-            # # items[j].setZValue(z_i)
-
-            self.update_main_scene()#set_position=True)
+            self.update_main_scene(set_position=True)
         except Exception as e:
             print(f"Ошибка в update_main_scene: {e}")
 
@@ -1769,7 +1738,7 @@ class MainWidget(QWidget):
             subprojection_to_highlight = None
 
             if thing_to_highlight is not None:
-                print("thing_to_highlight is not None")
+                #print("thing_to_highlight is not None")
                 subprojection_to_highlight = next(
                     (item for item in mini_projection.scene.items()
                      if isinstance(item, QGraphicsPixmapItem)
@@ -1839,45 +1808,37 @@ class MainWidget(QWidget):
         items_mini = sorted(mini.scene.items(), key=sort_key)
 
         if len(items_main) != len(items_mini):
-            print("len не равны")
+            #print("len не равны")
             return False
 
         for item_main, item_mini in zip(items_main, items_mini):
             # QGraphicsPixmapItem и DraggablePixmapItem в данном случае будут сравниваться, как равные
             if not isinstance(item_main, QGraphicsPixmapItem) or not isinstance(item_mini, QGraphicsPixmapItem):
-                print("типы не равны")
+                #print("типы не равны")
                 return False
 
             if item_main.pos() != item_mini.pos():
-                print("позиции не равны")
+                #print("позиции не равны")
                 return False
 
             if item_main.zValue() != item_mini.zValue():
-                print("Z не равны")
+                #print("Z не равны")
                 return False
 
         return True
 
 
     def clear_layout(self, layout):
-        print("00")
         for i in reversed(range(layout.count())):
-            print("11")
             item = layout.takeAt(i)  # <-- обязательно удалить из layout
-            print("22")
             if item is not None:
                 widget = item.widget()
-                print("33")
                 if widget:
                     widget.setParent(None)  # <-- отключить от layout
-                    print("44")
                     widget.deleteLater()  # <-- пометить на удаление
-                    print("55")
                 else:
                     sublayout = item.layout()
-                    print("66")
                     if sublayout:
-                        print("77")
                         self.clear_layout(sublayout)
 
 
@@ -2022,7 +1983,7 @@ class MainWidget(QWidget):
                         if subprojection:
                             item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
                                                   if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                            print(f"ITEM ON SCENE: {item_on_scene}")
+                            #print(f"ITEM ON SCENE: {item_on_scene}")
 
                             #focus_and_highlight(item_on_scene)
 
@@ -2035,7 +1996,7 @@ class MainWidget(QWidget):
                         if subprojection:
                             item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
                                                   if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                            print(f"ITEM ON SCENE: {item_on_scene}")
+                            #print(f"ITEM ON SCENE: {item_on_scene}")
 
                     if item_on_scene:
                         focus_and_highlight(item_on_scene)

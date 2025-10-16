@@ -46,14 +46,14 @@ class MainScene(QGraphicsScene):
                 # Установим флаг перемещения
                 item_to_update.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, can_edit)
 
-                # Получим все установленные флаги
-                flags = item_to_update.flags()
-
-                # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
-                enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
-                print("Enabled flags for DraggablePixmapItem:")
-                for f in enabled_flags:
-                    print(" -", f.name)
+                # # Получим все установленные флаги
+                # flags = item_to_update.flags()
+                #
+                # # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
+                # enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
+                # print("Enabled flags for DraggablePixmapItem:")
+                # for f in enabled_flags:
+                #     print(" -", f.name)
 
         else:
             for item in self.items():
@@ -61,14 +61,14 @@ class MainScene(QGraphicsScene):
                     # Установим флаг перемещения
                     item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, can_edit)
 
-                    # Получим все установленные флаги
-                    flags = item.flags()
-
-                    # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
-                    enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
-                    print("Enabled flags for DraggablePixmapItem:")
-                    for f in enabled_flags:
-                        print(" -", f.name)
+                    # # Получим все установленные флаги
+                    # flags = item.flags()
+                    #
+                    # # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
+                    # enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
+                    # print("Enabled flags for DraggablePixmapItem:")
+                    # for f in enabled_flags:
+                    #     print(" -", f.name)
 
 
     def mouseDoubleClickEvent(self, event):

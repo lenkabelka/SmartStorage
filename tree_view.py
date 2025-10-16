@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt, QPoint, pyqtSignal, QModelIndex
 from PyQt6.QtWidgets import QTreeView, QMenu, QAbstractItemView
 from tree_model import TreeNode, TreeModel
+from track_object_state import ObjectState
 
 class TreeWidget(QTreeView):
 
@@ -24,7 +25,7 @@ class TreeWidget(QTreeView):
         """Создаёт узел пространства и добавляет только подпространства первого уровня и вещи,
            заменяя название на 'Пространство без доступа', если пользователь не имеет прав."""
 
-        if getattr(space, "state", None) == "DELETED":  # замените ObjectState.DELETED при необходимости
+        if getattr(space, "state", None) == ObjectState.DELETED:
             return None
 
         permissions = self.check_permissions_of_user(space)
@@ -36,7 +37,7 @@ class TreeWidget(QTreeView):
 
         # Добавляем подпространства первого уровня
         for subspace in getattr(space, "subspaces", []):
-            if getattr(subspace, "state", None) != "DELETED":
+            if getattr(subspace, "state", None) != ObjectState.DELETED:
                 sub_permissions = self.check_permissions_of_user(subspace)
                 if not sub_permissions:
                     child_node = TreeNode(subspace, "Пространство без доступа", TreeNode.TYPE_SPACE)
@@ -47,45 +48,20 @@ class TreeWidget(QTreeView):
         # Добавляем вещи
         if permissions:
             for thing in getattr(space, "things", []):
-                if getattr(thing, "state", None) != "DELETED":
+                if getattr(thing, "state", None) != ObjectState.DELETED:
                     thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
                     current_node.add_child(thing_node)
 
         return current_node
-
-    # from PyQt6 import QtWidgets
-    #
-    # def clear_tree(self):
-    #     """Простое очищение дерева"""
-    #     self.setModel(None)
-    #     self.root_item = None
-    #     self.model = None
-    #
-    #
-    # def update_tree(self, parent_space=None):
-    #     """Обновляет модель, начиная с нового пространства"""
-    #     if parent_space is None or parent_space.state == "DELETED":
-    #         self.clear_tree()
-    #         return
-    #
-    #     # Если пространство существует — строим дерево
-    #     self.root_item = TreeNode(None, "root", TreeNode.TYPE_SPACE)
-    #     root_child = self.build_tree_nodes(parent_space)
-    #     if root_child is not None:
-    #         self.root_item.add_child(root_child)
-    #
-    #     self.model = TreeModel(self.root_item, self)
-    #     self.setModel(self.model)
-    #     self.expandAll()
 
     def update_tree(self, parent_space=None):
         """Обновляет модель, начиная с нового пространства"""
         self.root_item = TreeNode(None, "root", TreeNode.TYPE_SPACE)
 
         if parent_space is not None and parent_space.state != "DELETED":
-            print("--AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             root_child = self.build_tree_nodes(parent_space)
             if root_child is not None:
+                #print(f"root_child: {root_child}")
                 self.root_item.add_child(root_child)
 
         self.model = TreeModel(self.root_item, self)
