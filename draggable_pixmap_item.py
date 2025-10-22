@@ -24,6 +24,9 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
             self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях,
                                               # при выборе "показать вещь в пространстве"
 
+        # для четкого изображения
+        self.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
+
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
 
         self.hover_color = QColor(0, 200, 255, 150)

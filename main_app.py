@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QScrollArea, QSizePolicy, QMessageBox, QFrame, QStackedWidget,
     QMainWindow, QGraphicsTextItem, QGraphicsDropShadowEffect, QDialog, QApplication
 )
-from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon, QColor
+from PyQt6.QtGui import QFont, QAction, QPixmap, QIcon, QColor, QPainter
 from PyQt6.QtCore import Qt, QPoint, QPointF, pyqtSignal
 import sys
 import random
@@ -259,6 +259,9 @@ class MainWidget(QWidget):
         self.view = zoomable_graphics_view.ZoomableGraphicsView(self.scene)
         self.view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
+        # Рендеринг высокого качества
+        self.view.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        self.view.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
 
         self.layout_space_creation.addWidget(self.view)
 
@@ -814,7 +817,6 @@ class MainWidget(QWidget):
                 offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
                 item.setPos(center - offset)
                 item.setZValue(new_thing_projection.z_pos)
-
                 self.scene.addItem(item)
                 self.scene.update_items_movable_flag(item_to_update=item)
                                                         # при добавлении новой подразвертки
@@ -1694,6 +1696,7 @@ class MainWidget(QWidget):
 
 
     def change_z_position_of_draggable(self, draggable_on_scene):
+        #TODO проверку прав
         try:
             z = int(draggable_on_scene.zValue())
             max_z = max((item.zValue() for item in self.scene.items()), default=0)
@@ -1872,6 +1875,7 @@ class MainWidget(QWidget):
                     = QGraphicsPixmapItem(self.parent_space.current_projection.original_pixmap)
                 min_z = min((item.zValue() for item in self.scene.items()), default=0)
                 self.parent_space.current_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+                self.parent_space.current_projection.scaled_projection_pixmap.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
                 self.scene.addItem(self.parent_space.current_projection.scaled_projection_pixmap)
 
                 if self.parent_space.current_projection.sub_projections:
