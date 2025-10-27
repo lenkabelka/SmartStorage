@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QApplication, QGraphicsScene, QGraphicsPixmapItem,
+    QGraphicsScene, QGraphicsPixmapItem,
     QVBoxLayout, QPushButton, QWidget, QGridLayout, QHBoxLayout,
     QScrollArea, QSizePolicy, QMessageBox, QFrame, QStackedWidget,
     QMainWindow, QGraphicsTextItem, QGraphicsDropShadowEffect, QDialog, QApplication
@@ -329,37 +329,40 @@ class MainWidget(QWidget):
 
 
     def find_thing(self):
-        find_thing_dialog = find_thing.FindThing()
+        try:
+            find_thing_dialog = find_thing.FindThing(self, self.user.id, self.user.role)
 
-        while True:
-            if find_thing_dialog.exec():
-                parameters_for_search = find_thing_dialog.get_parameters_for_search()
-                print(f"parameters_for_search: {parameters_for_search}")
+            while True:
+                if find_thing_dialog.exec():
+                    parameters_for_search = find_thing_dialog.get_parameters_for_search()
+                    print(f"parameters_for_search: {parameters_for_search}")
 
-                if not parameters_for_search[0]:
-                    QMessageBox.warning(self, "Заполните обязательные поля",
-                                        "Пожалуйста укажите ключевые слова для поиска вещи!")
-                elif not parameters_for_search[3]:
-                    QMessageBox.warning(self, "Заполните обязательные поля",
-                                        "Пожалуйста укажите пространства для поиска вещи!")
+                    if not parameters_for_search[0]:
+                        QMessageBox.warning(self, "Заполните обязательные поля",
+                                            "Пожалуйста укажите ключевые слова для поиска вещи!")
+                    elif not parameters_for_search[3]:
+                        QMessageBox.warning(self, "Заполните обязательные поля",
+                                            "Пожалуйста укажите пространства для поиска вещи!")
+
+                    else:
+                        found_things = find_thing_dialog.find_thing_in_DB()
+
+                        if found_things:
+                            for found_thing in found_things:
+                                print(found_thing[3])
+                                top_space_of_thing = self.show_space_of_thing(found_thing[3], found_thing[1])
+                                print(top_space_of_thing)
+                            print(found_things)
+                        else:
+                            QMessageBox.warning(self, "Ничего не найдено",
+                                                "Ничего не найдено!")
+
+                        break  # успех — выходим из цикла
 
                 else:
-                    found_things = find_thing_dialog.find_thing_in_DB()
-
-                    if found_things:
-                        for found_thing in found_things:
-                            print(found_thing[3])
-                            top_space_of_thing = self.show_space_of_thing(found_thing[3], found_thing[1])
-                            print(top_space_of_thing)
-                        print(found_things)
-                    else:
-                        QMessageBox.warning(self, "Ничего не найдено",
-                                            "Ничего не найдено!")
-
-                    break  # успех — выходим из цикла
-
-            else:
-                break  # пользователь нажал "Отмена" — выходим
+                    break  # пользователь нажал "Отмена" — выходим
+        except Exception as e:
+            print(e)
 
     def create_new_space(self):
 
@@ -959,7 +962,7 @@ class MainWidget(QWidget):
                 QMessageBox.warning(self, "Развёртка отсутствует", "У Вас нет развертки для сохранения!")
                 return
             else:
-                self.get_subprojection_position()
+                self.set_subprojection_position_from_its_scene_position()
 
                 # Если мини проекция уже сохранена, то, если нужно, обновляем её вид
                 mini_projection_to_change = next((mini for mini in self.mini_projections_list if
@@ -1009,10 +1012,19 @@ class MainWidget(QWidget):
                 self.scene.clear()
 
             if projection:
+                # сначала удаляем подразвёртки удаляемой развёртки
+                if projection.sub_projections is not None:
+                    for sub in projection.sub_projections:
+                        if sub.state == ObjectState.NEW:
+                            projection.sub_projections.remove(sub)
+                        elif sub.state == ObjectState.DELETED:
+                            sub.mark_deleted()
+                # удаляем саму развёртку
                 if projection.state == ObjectState.NEW:
                     self.parent_space.projections.remove(projection)
                 else:
                     projection.mark_deleted()
+
 
         self.mini_projections_list.remove(mini_projection_to_remove)
         self.update_mini_projections_layout()
@@ -1090,7 +1102,7 @@ class MainWidget(QWidget):
                     else:
                         subprojection_to_remove.mark_deleted()
 
-                    self.get_subprojection_position() # чтобы другие подразвертки не сдвигались,
+                    self.set_subprojection_position_from_its_scene_position() # чтобы другие подразвертки не сдвигались,
                                                       # изначально у них сохраненная позиция та, что в БД
                     self.update_main_scene(set_position=True)
 
@@ -1155,7 +1167,7 @@ class MainWidget(QWidget):
                     if subprojection_to_remove_in_current_projection:
                         self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove_in_current_projection)
 
-            self.get_subprojection_position()  # чтобы другие подразвертки не сдвигались,
+            self.set_subprojection_position_from_its_scene_position()  # чтобы другие подразвертки не сдвигались,
             # изначально у них сохраненная позиция та, что в БД
             self.update_main_scene(set_position=True)
             for proj in self.parent_space.projections:
@@ -1266,85 +1278,6 @@ class MainWidget(QWidget):
             self.set_buttons_disabled_or_enabled()
             #self.set_placeholders_on_main_scene()
             self.save_space_to_DB()
-
-
-    # def delete_space(self, space_to_delete):
-    #
-    #     # Проверка прав доступа
-    #     if not self.access_manager.can_edit(space_to_delete):
-    #         QMessageBox.warning(
-    #             self,
-    #             "Доступ запрещён",
-    #             "У вас нет прав для удаления пространства."
-    #         )
-    #         return
-    #
-    #     if self.parent_space == space_to_delete:
-    #
-    #         if self.parent_space.state == ObjectState.NEW:
-    #             self.parent_space = None
-    #         else:
-    #             self.parent_space.mark_deleted()
-    #             if self.parent_space.projections:
-    #                 for proj in self.parent_space.projections:
-    #                     proj.mark_deleted()
-    #                     if proj.sub_projections:
-    #                         for subproj in proj.sub_projections:
-    #                             subproj.mark_deleted()
-    #             if self.parent_space.subspaces:
-    #                 for sub in self.parent_space.subspaces:
-    #                     sub.mark_deleted()
-    #             if self.parent_space.things:
-    #                 for item in self.parent_space.things:
-    #                     item.mark_deleted()
-    #             if self.parent_space.space_images:
-    #                 for image in self.parent_space.space_images:
-    #                     image.mark_deleted()
-    #
-    #     self.clear_layout(self.layout_images_of_space)
-    #     self.scene.clear()
-    #     self.placeholder_for_projection_1 = None
-    #     self.placeholder_for_projection_2 = None
-    #     self.mini_projections_list.clear()
-    #     self.update_mini_projections_layout()
-    #     self.update_tree_view()
-    #     self.space_changed.emit()
-    #     self.set_buttons_disabled_or_enabled()
-    #     self.set_placeholders_on_main_scene()
-
-    # def delete_space(self, space_to_delete):
-    #     if self.parent_space == space_to_delete:
-    #
-    #         if self.parent_space.state == ObjectState.NEW:
-    #             self.parent_space = None
-    #         else:
-    #             self.parent_space.mark_deleted()
-    #             if self.parent_space.projections:
-    #                 for proj in self.parent_space.projections:
-    #                     proj.mark_deleted()
-    #                     if proj.sub_projections:
-    #                         for subproj in proj.sub_projections:
-    #                             subproj.mark_deleted()
-    #             if self.parent_space.subspaces:
-    #                 for sub in self.parent_space.subspaces:
-    #                     sub.mark_deleted()
-    #             if self.parent_space.things:
-    #                 for item in self.parent_space.things:
-    #                     item.mark_deleted()
-    #             if self.parent_space.space_images:
-    #                 for image in self.parent_space.space_images:
-    #                     image.mark_deleted()
-    #
-    #         self.clear_layout(self.layout_images_of_space)
-    #         self.scene.clear()
-    #         self.placeholder_for_projection_1 = None
-    #         self.placeholder_for_projection_2 = None
-    #         self.mini_projections_list.clear()
-    #         self.update_mini_projections_layout()
-    #         self.update_tree_view()
-    #         self.space_changed.emit()
-    #         self.set_buttons_disabled_or_enabled()
-    #         self.set_placeholders_on_main_scene()
 
 
     def save_space_to_DB(self):
@@ -1695,29 +1628,80 @@ class MainWidget(QWidget):
         return None
 
 
-    def change_z_position_of_draggable(self, draggable_on_scene):
-        #TODO проверку прав
+    def move_draggable_to_another_z_position(self, draggable_to_move, parent_name_of_reference_subprojection):
+        """
+        Перемещает элемент (`draggable_to_move`) на новый уровень по оси Z относительно другого элемента на сцене.
+        """
+
+        # Проверка прав
+        if not self.access_manager.can_view(self.parent_space):
+            QMessageBox.warning(
+                self,
+                "Доступ запрещён",
+                "У вас нет прав для редактирования пространства."
+            )
+            return
+
+        # Находим перемещаемый subprojection
+        subprojection_to_move = next(
+            (sub for sub in self.parent_space.current_projection.sub_projections
+             if sub.scaled_projection_pixmap == draggable_to_move),
+            None
+        )
+
+        # Находим reference_subprojection по имени связанного родителя
+        reference_subprojection = next(
+            (sub for sub in self.parent_space.current_projection.sub_projections
+             if ((sub.reference_to_parent_space is not None and
+                  sub.reference_to_parent_space.name == parent_name_of_reference_subprojection)
+                 or
+                 (sub.reference_to_parent_thing is not None and
+                  sub.reference_to_parent_thing.name == parent_name_of_reference_subprojection))),
+            None
+        )
+
+        if not subprojection_to_move or not reference_subprojection:
+            print("Ошибка: один из подэлементов не найден.")
+            return
+
+        if not (self.parent_space and self.parent_space.current_projection and
+                self.parent_space.current_projection.sub_projections):
+            print("Ошибка: текущая проекция или список подэлементов отсутствует.")
+            return
+
+        # Сортируем по текущему z_pos
+        self.parent_space.current_projection.sub_projections.sort(
+            key=lambda sub: sub.z_pos
+        )
+
         try:
-            z = int(draggable_on_scene.zValue())
-            max_z = max((item.zValue() for item in self.scene.items()), default=0)
-            if z == max_z:
-                return
-            else:
+            index_1 = self.parent_space.current_projection.sub_projections.index(subprojection_to_move)
+            index_2 = self.parent_space.current_projection.sub_projections.index(reference_subprojection)
+        except ValueError:
+            print("Ошибка: элементы не найдены в отсортированном списке.")
+            return
 
-                if self.parent_space:
-                    if self.parent_space.current_projection:
-                        if self.parent_space.current_projection.sub_projections:
-                            temp_list_of_subprojections = sorted(self.parent_space.current_projection.sub_projections,
-                                              key=lambda sub_proj: sub_proj.z_pos)
-                            temp_list_of_subprojections[z].z_pos += 1
-                            temp_list_of_subprojections[z + 1].z_pos -= 1
+        if index_1 == index_2:
+            # чтобы зря не перерисовывать сцену
+            return
 
-                            for sub in self.parent_space.current_projection.sub_projections:
-                                print(f"{sub.projection_name}: -- {sub.z_pos}")
+        if index_1 < index_2:
+            subprojection_to_move.z_pos = reference_subprojection.z_pos
+            for subprojection in self.parent_space.current_projection.sub_projections[index_1 + 1 : index_2 + 1]:
+                subprojection.z_pos -= 1.0
 
-            self.update_main_scene(set_position=True)
-        except Exception as e:
-            print(f"Ошибка в update_main_scene: {e}")
+        else: # index_2 < index_1
+            subprojection_to_move.z_pos = reference_subprojection.z_pos + 1
+            for subprojection in self.parent_space.current_projection.sub_projections[index_2 + 1 : index_1]:
+                subprojection.z_pos += 1.0
+
+        for sub in self.parent_space.current_projection.sub_projections:
+            print(f"{sub.projection_name}: {sub.z_pos}")
+
+        self.set_subprojection_position_from_its_scene_position(z=False) # z не надо брать со сцены,
+                                                                         # потому что мы именно её сейчас рассчитываем
+                                                                         # и устанавливаем для правильной отрисовки на сцене
+        self.update_main_scene(set_position=True)
 
 
     ################################################################################################################
@@ -1761,7 +1745,7 @@ class MainWidget(QWidget):
                 mini_projection.highlight(subprojection_to_highlight)
 
 
-    def get_subprojection_position(self):
+    def set_subprojection_position_from_its_scene_position(self, x=True, y=True, z=True):
         if self.parent_space.current_projection.sub_projections:
             for sub_projection in self.parent_space.current_projection.sub_projections:
                 if sub_projection.state != ObjectState.DELETED:
@@ -1770,9 +1754,12 @@ class MainWidget(QWidget):
                         continue
                     relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item,
                                                                                                              0, 0)
-                    sub_projection.x_pos = relative_pos.x()
-                    sub_projection.y_pos = relative_pos.y()
-                    sub_projection.z_pos = item.zValue()
+                    if x:
+                        sub_projection.x_pos = relative_pos.x()
+                    if y:
+                        sub_projection.y_pos = relative_pos.y()
+                    if z:
+                        sub_projection.z_pos = item.zValue()
 
 
     def update_mini_projections_layout(self):
@@ -1899,7 +1886,9 @@ class MainWidget(QWidget):
                                 self,
                                 self.parent_space.current_projection.scaled_projection_pixmap,
                                 parent=parent)
-                            if sub.z_pos:
+                            if sub.z_pos is not None:
+                                print(f"TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT {sub.projection_name}: {sub.z_pos}")
+
                                 sub.scaled_projection_pixmap.setZValue(sub.z_pos)
 
                             # необходимо при открытии мини-развертки на главное сцене
@@ -2104,6 +2093,10 @@ class MainWidget(QWidget):
 
     def is_space_saved(self):
         if self.parent_space:
+            if not self.is_current_projection_saved():
+                return False
+
+
             if (self.parent_space.state == ObjectState.NEW
                     or self.parent_space.state == ObjectState.MODIFIED
                     or self.parent_space.state == ObjectState.DELETED):

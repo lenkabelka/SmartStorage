@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import(
     QGraphicsPixmapItem,
     QGraphicsItem,
     QGraphicsColorizeEffect,
-    QMenu
+    QMenu, QWidget, QHBoxLayout, QVBoxLayout,
+    QLabel, QComboBox, QWidgetAction
 )
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt, QPointF
@@ -64,66 +65,100 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         from thing import Thing
         self.drag_offset = event.pos()
 
-        if event.button() == Qt.MouseButton.RightButton:
-            menu = QMenu()
-            freeze_action = menu.addAction("Зафиксировать")
-            move_action = menu.addAction("Подвинуть")
+        try:
 
-            # Переменная delete_action может быть None, если ни один тип не подходит
-            delete_item_action = None
-            delete_subprojection_action = None
-            delete_subprojections_action = None
-            show_information_action = None
-            add_one_to_z_position = None
+            if event.button() == Qt.MouseButton.RightButton:
+                menu = QMenu()
+                freeze_action = menu.addAction("Зафиксировать")
+                move_action = menu.addAction("Подвинуть")
 
-            if isinstance(self.parent, Space):
-                delete_item_action = menu.addAction("Удалить пространство")
-                delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
-                delete_subprojections_action = menu.addAction(
-                    "Удалить все проекции этого пространства на всех развёртках")
-                show_information_action = menu.addAction("Показать информацию о подпространстве")
-                menu.addAction("Посмотреть все вещи в пространстве",
-                               lambda: self.app_ref.show_all_things_in_space(self.parent))
-            elif isinstance(self.parent, Thing):
-                delete_item_action = menu.addAction("Удалить вещь")
-                delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
-                delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
-                show_information_action = menu.addAction("Показать информацию о вещи")
+                # Переменная delete_action может быть None, если ни один тип не подходит
+                delete_item_action = None
+                delete_subprojection_action = None
+                delete_subprojections_action = None
+                show_information_action = None
+                set_above_other_subprojection = None
 
-            add_one_to_z_position = menu.addAction("Сдвинуть проекцию по оси z на одну позицию выше")
-
-            selected_action = menu.exec(event.screenPos())
-
-            if selected_action == delete_subprojection_action:
-                self.app_ref.delete_one_subprojection(self)
-
-            elif selected_action == delete_subprojections_action:
-                self.app_ref.delete_all_subprojections(self)
-
-            elif selected_action == freeze_action:
-                self.freeze()
-
-            elif selected_action == move_action:
-                self.unfreeze()
-
-            elif selected_action == add_one_to_z_position:
-                self.app_ref.find_projection(self)
-                self.app_ref.change_z_position_of_draggable(self)
-
-            elif selected_action == delete_item_action:
                 if isinstance(self.parent, Space):
-                    self.app_ref.delete_subspace(self.parent)
+                    delete_item_action = menu.addAction("Удалить пространство")
+                    delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
+                    delete_subprojections_action = menu.addAction(
+                        "Удалить все проекции этого пространства на всех развёртках")
+                    show_information_action = menu.addAction("Показать информацию о подпространстве")
+                    menu.addAction("Посмотреть все вещи в пространстве",
+                                   lambda: self.app_ref.show_all_things_in_space(self.parent))
                 elif isinstance(self.parent, Thing):
-                    self.app_ref.delete_thing(self.parent)
+                    delete_item_action = menu.addAction("Удалить вещь")
+                    delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
+                    delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
+                    show_information_action = menu.addAction("Показать информацию о вещи")
 
-            elif selected_action == show_information_action:
-                if isinstance(self.parent, Thing):
-                    self.app_ref.show_thing_information(self.parent)
-                elif isinstance(self.parent, Space):
-                    self.app_ref.show_space_information(self.parent)
 
-        else:
-            super().mousePressEvent(event)
+                # Контейнер для текста и комбобокса
+                move_to_another_z_position = QWidgetAction(menu)
+
+                container = QWidget()
+                layout = QHBoxLayout(container)
+                layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                #layout.setContentsMargins(6, 2, 6, 2)  # аккуратные отступы
+
+                # Текст как часть пункта меню
+                # QLabel не обязательный, можно просто ComboBox
+                combo = QComboBox()
+
+                # Заполняем ComboBox
+                if self.app_ref.parent_space is not None and self.app_ref.parent_space.current_projection is not None:
+                    if self.app_ref.parent_space.current_projection.sub_projections:
+                        for item in self.app_ref.parent_space.current_projection.sub_projections:
+                            parent = item.reference_to_parent_space or item.reference_to_parent_thing
+                            if parent is not None:
+                                combo.addItem(parent.name)
+
+                # Добавляем COMBO в layout (без Label, как ты и хочешь)
+                layout.addWidget(combo)
+
+                # Устанавливаем контейнер в QAction
+                move_to_another_z_position.setDefaultWidget(container)
+                set_above_other_subprojection = menu.addAction("Поместить поверх подразвертки:")  # обычный текст (без ComboBox)
+                menu.addAction(move_to_another_z_position)  # ComboBox как следующий пункт
+
+
+
+                selected_action = menu.exec(event.screenPos())
+
+                if selected_action == set_above_other_subprojection:
+                    self.app_ref.find_projection(self)
+                    self.app_ref.move_draggable_to_another_z_position(self, combo.currentText())
+
+                elif selected_action == delete_subprojection_action:
+                    self.app_ref.delete_one_subprojection(self)
+
+                elif selected_action == delete_subprojections_action:
+                    self.app_ref.delete_all_subprojections(self)
+
+                elif selected_action == freeze_action:
+                    self.freeze()
+
+                elif selected_action == move_action:
+                    self.unfreeze()
+
+                elif selected_action == delete_item_action:
+                    if isinstance(self.parent, Space):
+                        self.app_ref.delete_subspace(self.parent)
+                    elif isinstance(self.parent, Thing):
+                        self.app_ref.delete_thing(self.parent)
+
+                elif selected_action == show_information_action:
+                    if isinstance(self.parent, Thing):
+                        self.app_ref.show_thing_information(self.parent)
+                    elif isinstance(self.parent, Space):
+                        self.app_ref.show_space_information(self.parent)
+
+            else:
+                super().mousePressEvent(event)
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
 
 
     def mouseMoveEvent(self, event):

@@ -302,6 +302,7 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
             projection_height
         FROM spaces.projections
         WHERE id_parent_projection = %s
+        ORDER BY z_pos
     """
     cursor.execute(query, (proj.id_projection,))
     rows = cursor.fetchall()

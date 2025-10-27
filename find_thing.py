@@ -11,13 +11,13 @@ import psycopg2
 
 
 class FindThing(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, user_id=None, user_role=None):
         super().__init__(parent)
         self.setWindowTitle("Найти вещь")
         self.setWindowIcon(QIcon("icons/mini_logo.png"))
         self.selected_file = ""
 
-        self.spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB()
+        self.spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(user_id,user_role)
         print(self.spaces_in_DB)
         spaces_names = [space[1] for space in self.spaces_in_DB]
         print(spaces_names)
