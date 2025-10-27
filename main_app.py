@@ -696,6 +696,51 @@ class MainWidget(QWidget):
                 break  # пользователь нажал "Отмена" — выходим
 
 
+    @staticmethod
+    def change_thing_information(self, thing_to_change: thing.Thing):
+        try:
+            change_thing_dialog = add_thing.AddThing()
+
+            # Заполняем поля текущими данными
+            change_thing_dialog.name_edit.setText(thing_to_change.name)
+            change_thing_dialog.description_edit.setText(thing_to_change.description)
+
+            # Если есть изображения, добавляем их в диалог
+            change_thing_dialog.thing_images = list(thing_to_change.thing_images)  # копия списка
+            change_thing_dialog.update_images_layout()
+
+            result = change_thing_dialog.exec()
+
+            if result:
+                # Сохраняем изменения обратно в объект
+                thing_to_change.name = change_thing_dialog.name_edit.text()
+                thing_to_change.description = change_thing_dialog.description_edit.toPlainText()
+                thing_to_change.thing_images = list(change_thing_dialog.thing_images)
+
+        except Exception as e:
+            print("Ошибка при редактировании вещи:", e)
+
+
+    @staticmethod
+    def change_space_information(space_to_change: space.Space):
+        try:
+            change_space_dialog = add_space.AddSpace()
+
+            # Заполняем поля текущими данными
+            change_space_dialog.name_edit.setText(space_to_change.name)
+            change_space_dialog.description_edit.setText(space_to_change.description)
+
+            result = change_space_dialog.exec()
+
+            if result:
+                # Сохраняем изменения обратно в объект
+                space_to_change.name = change_space_dialog.name_edit.text()
+                space_to_change.description = change_space_dialog.description_edit.toPlainText()
+
+        except Exception as e:
+            print("Ошибка при редактировании вещи:", e)
+
+
     def add_thing(self):
 
         if not self.access_manager.can_edit(self.parent_space):
@@ -1575,9 +1620,6 @@ class MainWidget(QWidget):
         self.information_about_spaces.append(space_info)
 
 
-    def change_thing_information(self):
-        pass
-
     def show_all_things_in_space(self, sp: space.Space):
         from information_about_thing import ThingInformation
 
@@ -2129,6 +2171,14 @@ class MainWidget(QWidget):
                                         or pr.state == ObjectState.MODIFIED
                                         or pr.state == ObjectState.DELETED):
                                     return False
+
+                if self.parent_space.subspaces:
+                    for sub in self.parent_space.subspaces:
+                        if (sub.state == ObjectState.NEW
+                                or sub.state == ObjectState.MODIFIED
+                                or sub.state == ObjectState.DELETED):
+                            return False
+
                 return True
         else:
             return True

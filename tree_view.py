@@ -90,8 +90,10 @@ class TreeWidget(QTreeView):
             menu.addAction("Добавить вещь", lambda: self.add_thing())
             menu.addAction("Посмотреть информацию о пространстве",
                            lambda: self.app_ref.show_space_information(item.ref))
-            menu.addAction("Посмотреть все вещи в пространстве",
+            menu.addAction("Посмотреть информацию о всех вещах в пространстве",
                            lambda: self.app_ref.show_all_things_in_space(item.ref))
+            menu.addAction("Изменить информацию о пространстве",
+                           lambda: self.app_ref.change_space_information(item.ref))
             menu.addSeparator()
             menu.addAction("Удалить пространство", lambda: self.delete_space(index))
         elif node_type == TreeNode.TYPE_SPACE:
@@ -99,18 +101,22 @@ class TreeWidget(QTreeView):
             menu.addAction("Открыть подпространство как пространство", lambda: self.open_subspace(index))
             menu.addAction("Посмотреть информацию о подпространстве",
                            lambda: self.app_ref.show_space_information(item.ref))
-            menu.addAction("Посмотреть информацию о всех вещах в пространстве",
+            menu.addAction("Посмотреть информацию о всех вещах в подпространстве",
                            lambda: self.app_ref.show_all_things_in_space(item.ref))
+            menu.addAction("Изменить информацию о подпространстве",
+                           lambda: self.app_ref.change_space_information(item.ref))
             menu.addSeparator()
             menu.addAction("Удалить подпространство", lambda: self.delete_subspace_from_space(index))
         elif node_type == TreeNode.TYPE_THING:
             menu.addAction("Добавить развертку для вещи", lambda: self.add_thing_projection(index))
             menu.addAction("Посмотреть информацию о вещи",
                            lambda: self.app_ref.show_thing_information(item.ref))
+            menu.addAction("Изменить информацию о вещи", lambda: self.app_ref.change_thing_information(item.ref))
             menu.addSeparator()
             menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
         menu.exec(self.viewport().mapToGlobal(position))
+
 
     def find_index_by_ref(self, ref, parent_index=QModelIndex()):
         row_count = self.model.rowCount(parent_index)
