@@ -42,8 +42,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
         self.background_pixmap = background_pixmap_item.pixmap()
 
-        self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
         # нужно для проверки столкновения с прозрачной областью, смотри функцию itemChange
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
@@ -51,13 +51,16 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
 
 
-    def update_path(self, new_background_pixmap_item):
+    def update_path(self, new_background_pixmap_item=None):
         #print(f"old_background: {self.background_pixmap}")
-        self.background_pixmap = new_background_pixmap_item.pixmap()
+        if new_background_pixmap_item is not None:
+            self.background_pixmap = new_background_pixmap_item.pixmap()
         #print(f"new_background: {self.background_pixmap}")
 
-        self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        # контур развертки
+        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        # контур подразвертки
+        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
     def mousePressEvent(self, event):
@@ -92,6 +95,8 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                     delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
                     delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
                     show_information_action = menu.addAction("Показать информацию о вещи")
+
+                change_information_action = menu.addAction("Изменить")
 
 
                 # Контейнер для текста и комбобокса
@@ -129,6 +134,9 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 if selected_action == set_above_other_subprojection:
                     self.app_ref.find_projection(self)
                     self.app_ref.move_draggable_to_another_z_position(self, combo.currentText())
+
+                elif selected_action == change_information_action:
+                    self.app_ref.change_thing_or_subspace_subprojection(self)
 
                 elif selected_action == delete_subprojection_action:
                     self.app_ref.delete_one_subprojection(self)
@@ -198,7 +206,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 current_pos = self.pos()
                 desired_pos = value
 
-                if utils.allow_movement(self.path_1, self.path_2, desired_pos.x(), desired_pos.y()):
+                if utils.allow_movement(self.path_background, self.path_subprojection, desired_pos.x(), desired_pos.y()):
                     return value
 
                 if self.binary_search == "version_1":
@@ -215,7 +223,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         best_pos = None
         while True:
             possible_pos = (start + end) / 2
-            if utils.allow_movement(self.path_1, self.path_2, possible_pos.x(), possible_pos.y()):
+            if utils.allow_movement(self.path_background, self.path_subprojection, possible_pos.x(), possible_pos.y()):
                 best_pos = possible_pos
                 start = possible_pos
             else:
@@ -242,7 +250,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 start.y() + (end.y() - start.y()) * mid
             )
 
-            if utils.allow_movement(self.path_1, self.path_2, mid_point.x(), mid_point.y()):
+            if utils.allow_movement(self.path_background, self.path_subprojection, mid_point.x(), mid_point.y()):
                 best_pos = mid_point
                 left = mid
             else:

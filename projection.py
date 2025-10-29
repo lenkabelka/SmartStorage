@@ -196,6 +196,7 @@ class Projection(track_object_state.Trackable):
 
 def load_space_projections(space_in_DB, cursor) -> list[Projection]:
 
+    # Загружаем только развертки. Подразвертки не загружаем в список разверток id_parent_projection IS NULL
     query = """
         SELECT 
             id_projection, 
@@ -212,6 +213,7 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
             projection_height
         FROM spaces.projections
         WHERE id_parent_space = %s
+            AND id_parent_projection IS NULL;
     """
     cursor.execute(query, (space_in_DB.id_space,))
     rows = cursor.fetchall()
@@ -273,7 +275,7 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
 
             projection_from_DB.sub_projections = load_projection_subprojections(projection_from_DB, cursor)
 
-            print(f"projection_from_DB.state: {projection_from_DB.state}")
+            print(f"projection_from_DB.sub_projections: {projection_from_DB.sub_projections}")
 
         except Exception as e:
             print(f"Ошибка при создании Projection: {e}")
