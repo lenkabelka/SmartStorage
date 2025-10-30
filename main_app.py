@@ -1705,8 +1705,9 @@ class MainWidget(QWidget):
             return
         else:
             # Проверка прав
-            if self.access_manager.get_user_role_from_db(self.parent_space.id_parent_space):
-                print(f"-----ID: {self.parent_space.id_parent_space}")
+            if not self.access_manager.can_view(self.parent_space.id_parent_space):
+                #print(f"-----ID: {self.parent_space.id_parent_space}")
+                #print(f"-----USER-ID: {self.user.id}")
                 QMessageBox.warning(
                     self,
                     "Доступ запрещён",
