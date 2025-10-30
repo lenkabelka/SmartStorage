@@ -1547,9 +1547,6 @@ class MainWidget(QWidget):
 
     def open_subspace_as_space(self, space_to_open: space.Space):
 
-        #TODO тут реализован только случай, когда подразвертка новая. Но если это подпространство уже сохранено в базе,
-        # то нужно вызывыть метод загрузки подпространства из базы данных
-
         # Проверка прав
         if not self.access_manager.can_view(space_to_open):
             QMessageBox.warning(
@@ -1573,18 +1570,38 @@ class MainWidget(QWidget):
             elif reply == QMessageBox.StandardButton.No:
                 pass
 
-        self.parent_space = space_to_open
+        if space_to_open.state == ObjectState.NEW:
 
-        if self.parent_space.projections:
-            self.parent_space.current_projection = random.choice(self.parent_space.projections)
+            self.parent_space = space_to_open
+            # если подпространство новое, то у него не может быть еще подразверток
+            if self.parent_space.projections:
+                self.parent_space.current_projection = random.choice(self.parent_space.projections)
 
-            self.update_main_scene()
-            self.update_tree_view()
-            self.mini_projections_list.clear()
+                self.update_main_scene()
+                self.update_tree_view()
+                self.mini_projections_list.clear()
 
-            for proj in self.parent_space.projections:
-                self.save_or_update_mini_projection(proj, check_permissions=False)
-            self.update_mini_projections_layout()
+                for proj in self.parent_space.projections:
+                    self.save_or_update_mini_projection(proj, check_permissions=False)
+                self.update_mini_projections_layout()
+
+        elif space_to_open.state == ObjectState.UNMODIFIED:
+            self.load_space_from_DB(space_to_open.id_space)
+
+        elif space_to_open.state == ObjectState.MODIFIED:
+            reply = QMessageBox.question(self, "Подпространство было изменено",
+                                "Вы изменили это пространство, но эти "
+                                "изменения ещё не были сохранены. "
+                                "Хотите сохранить эти изменения?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                space_to_open.save_space()
+                self.load_space_from_DB(space_to_open.id_space)
+            elif reply == QMessageBox.StandardButton.No:
+                self.load_space_from_DB(space_to_open.id_space)
 
         self.update_tree_view()
         self.update_main_scene()
@@ -1594,7 +1611,6 @@ class MainWidget(QWidget):
 
 
     def load_space_from_DB(self, id_space, thing_to_show=None):
-        print("SSSSSSSSSSSSSSSSSSS")
         try:
             loaded_space = space.load_space_by_id(id_space)
             # Проверка прав
@@ -1609,7 +1625,6 @@ class MainWidget(QWidget):
                 self.stack_widget.setCurrentIndex(self.current_index)
 
             if self.mini_projections_list:
-                print("WHY WHY WHY")
                 self.mini_projections_list.clear()
                 self.update_mini_projections_layout()
 
@@ -1691,6 +1706,7 @@ class MainWidget(QWidget):
         else:
             # Проверка прав
             if self.access_manager.get_user_role_from_db(self.parent_space.id_parent_space):
+                print(f"-----ID: {self.parent_space.id_parent_space}")
                 QMessageBox.warning(
                     self,
                     "Доступ запрещён",
