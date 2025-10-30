@@ -37,13 +37,13 @@ class TreeWidgetForSearch(QTreeView):
         current_node = TreeNode(space_in_DB, space_in_DB.name, TreeNode.TYPE_SPACE)
 
         # Рекурсивно обрабатываем подпространства
-        for subspace in getattr(space_in_DB, "subspaces", []):
+        for subspace in sorted(getattr(space_in_DB, "subspaces", []), key=lambda s: s.name.lower()):
             child_node = self.build_tree_nodes(subspace)
             current_node.add_child(child_node)
 
         # Обрабатываем вещи
         if permissions:
-            for thing in getattr(space_in_DB, "things", []):
+            for thing in sorted(getattr(space_in_DB, "things", []), key=lambda t: t.name.lower()):
                 thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
                 current_node.add_child(thing_node)
 

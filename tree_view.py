@@ -36,7 +36,7 @@ class TreeWidget(QTreeView):
             current_node = TreeNode(space, space.name, TreeNode.TYPE_SPACE)
 
         # Добавляем подпространства первого уровня
-        for subspace in getattr(space, "subspaces", []):
+        for subspace in sorted(getattr(space, "subspaces", []), key=lambda s: s.name.lower()):
             if getattr(subspace, "state", None) != ObjectState.DELETED:
                 sub_permissions = self.check_permissions_of_user(subspace)
                 if not sub_permissions:
@@ -47,7 +47,7 @@ class TreeWidget(QTreeView):
 
         # Добавляем вещи
         if permissions:
-            for thing in getattr(space, "things", []):
+            for thing in sorted(getattr(space, "things", []), key=lambda t: t.name.lower()):
                 if getattr(thing, "state", None) != ObjectState.DELETED:
                     thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
                     current_node.add_child(thing_node)
