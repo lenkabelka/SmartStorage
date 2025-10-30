@@ -1,15 +1,14 @@
-from PyQt6.QtWidgets import (QGraphicsPixmapItem,
-                             QGraphicsItem,
-                             QGraphicsColorizeEffect,
-                             QMenu
-                             )
-from PyQt6.QtGui import QColor, QKeyEvent
-from PyQt6.QtCore import Qt, QPointF, QObject, pyqtSignal
+from PyQt6.QtWidgets import(
+    QGraphicsPixmapItem,
+    QGraphicsItem,
+    QGraphicsColorizeEffect,
+    QMenu, QWidget, QHBoxLayout, QVBoxLayout,
+    QLabel, QComboBox, QWidgetAction
+)
+from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QPointF
 import utils as utils
 import math
-
-
-
 
 
 class DraggablePixmapItem(QGraphicsPixmapItem):
@@ -20,24 +19,21 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.binary_search = "version_1"
         self.original_pixmap = pixmap
         self.parent = parent
-        from space import Space
+
         from thing import Thing
         if parent is not None and isinstance(parent, Thing):
-            self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях, при выборе "показать вещь в пространстве"
+            self.parent_id = parent.id_thing  # это нужно, чтобы "подсветить" развертки вещи на мини-проекциях,
+                                              # при выборе "показать вещь в пространстве"
+
+        # для четкого изображения
+        self.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
 
         self.setShapeMode(QGraphicsPixmapItem.ShapeMode.MaskShape)
-
 
         self.hover_color = QColor(0, 200, 255, 150)
         self.click_color = QColor(255, 0, 0, 150)
         self.setAcceptHoverEvents(True)
         self.is_editable = True
-
-        self.setFlags(
-            QGraphicsItem.GraphicsItemFlag.ItemIsMovable |
-            QGraphicsItem.GraphicsItemFlag.ItemIsSelectable |
-            QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
-        )
         self.setAcceptHoverEvents(True)
         self.old_pos = self.pos()
         self.fixed = False
@@ -45,92 +41,133 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         self.item_id = id(self)
 
         self.background_pixmap = background_pixmap_item.pixmap()
-        #self.path_1 = background_path
 
-        self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
+        # нужно для проверки столкновения с прозрачной областью, смотри функцию itemChange
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        # нужно для возможности двигать элемент стрелками
         self.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
 
 
-    def update_path(self, new_background_pixmap_item):
-        print(f"old_background: {self.background_pixmap}")
-        self.background_pixmap = new_background_pixmap_item.pixmap()
-        print(f"new_background: {self.background_pixmap}")
+    def update_path(self, new_background_pixmap_item=None):
+        #print(f"old_background: {self.background_pixmap}")
+        if new_background_pixmap_item is not None:
+            self.background_pixmap = new_background_pixmap_item.pixmap()
+        #print(f"new_background: {self.background_pixmap}")
 
-        self.path_1 = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_2 = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        # контур развертки
+        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        # контур подразвертки
+        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
 
     def mousePressEvent(self, event):
-        # from space import Space
-        # from thing import Thing
+        from space import Space
+        from thing import Thing
         self.drag_offset = event.pos()
 
-        if event.button() == Qt.MouseButton.RightButton:
-            menu = QMenu()
-            freeze_action = menu.addAction("Зафиксировать")
-            move_action = menu.addAction("Подвинуть")
+        try:
 
-            # Переменная delete_action может быть None, если ни один тип не подходит
-            delete_item_action = None
-            delete_subprojection_action = None
-            delete_subprojections_action = None
-            show_information_action = None
+            if event.button() == Qt.MouseButton.RightButton:
+                menu = QMenu()
+                freeze_action = menu.addAction("Зафиксировать")
+                move_action = menu.addAction("Подвинуть")
 
-            if isinstance(self.parent, Space):
-                delete_item_action = menu.addAction("Удалить пространство")
-            elif isinstance(self.parent, Thing):
-                delete_item_action = menu.addAction("Удалить вещь")
+                # Переменная delete_action может быть None, если ни один тип не подходит
+                delete_item_action = None
+                delete_subprojection_action = None
+                delete_subprojections_action = None
+                show_information_action = None
+                set_above_other_subprojection = None
 
-            if isinstance(self.parent, Space):
-                delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
-            elif isinstance(self.parent, Thing):
-                delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
-
-            if isinstance(self.parent, Space):
-                delete_subprojections_action = menu.addAction("Удалить все проекции этого пространства на всех развёртках")
-            elif isinstance(self.parent, Thing):
-                delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
-
-            if isinstance(self.parent, Space):
-                show_information_action = menu.addAction("Показать информацию о подпространстве")
-            elif isinstance(self.parent, Thing):
-                show_information_action = menu.addAction("Показать информацию о вещи")
-
-            if isinstance(self.parent, Space):
-                menu.addAction("Посмотреть все вещи в пространстве",
-                               lambda: self.app_ref.show_all_things_in_space(self.parent))
-
-            selected_action = menu.exec(event.screenPos())
-
-            if selected_action == delete_subprojection_action:
-                self.app_ref.delete_one_subprojection(self)
-                #self.app_ref.update_tree_view()
-
-            elif selected_action == delete_subprojections_action:
-                self.app_ref.delete_all_subprojections(self)
-
-            elif selected_action == freeze_action:
-                self.freeze()
-
-            elif selected_action == move_action:
-                self.unfreeze()
-
-            elif selected_action == delete_item_action:
                 if isinstance(self.parent, Space):
-                    self.app_ref.delete_subspace(self.parent)
+                    delete_item_action = menu.addAction("Удалить пространство")
+                    delete_subprojection_action = menu.addAction("Удалить эту проекцию пространства")
+                    delete_subprojections_action = menu.addAction(
+                        "Удалить все проекции этого пространства на всех развёртках")
+                    show_information_action = menu.addAction("Показать информацию о подпространстве")
+                    menu.addAction("Посмотреть все вещи в пространстве",
+                                   lambda: self.app_ref.show_all_things_in_space(self.parent))
                 elif isinstance(self.parent, Thing):
-                    self.app_ref.delete_thing(self.parent)
+                    delete_item_action = menu.addAction("Удалить вещь")
+                    delete_subprojection_action = menu.addAction("Удалить эту проекцию вещи")
+                    delete_subprojections_action = menu.addAction("Удалить все проекции этой вещи на всех развёртках")
+                    show_information_action = menu.addAction("Показать информацию о вещи")
 
-            elif selected_action == show_information_action:
-                if isinstance(self.parent, Thing):
-                    self.app_ref.show_thing_information(self.parent)
-                elif isinstance(self.parent, Space):
-                    self.app_ref.show_space_information(self.parent)
+                change_information_action = menu.addAction("Изменить")
 
-        else:
-            super().mousePressEvent(event)
+
+                # Контейнер для текста и комбобокса
+                move_to_another_z_position = QWidgetAction(menu)
+
+                container = QWidget()
+                layout = QHBoxLayout(container)
+                layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+                #layout.setContentsMargins(6, 2, 6, 2)  # аккуратные отступы
+
+                # Текст как часть пункта меню
+                # QLabel не обязательный, можно просто ComboBox
+                combo = QComboBox()
+
+                # Заполняем ComboBox
+                if self.app_ref.parent_space is not None and self.app_ref.parent_space.current_projection is not None:
+                    if self.app_ref.parent_space.current_projection.sub_projections:
+                        for item in self.app_ref.parent_space.current_projection.sub_projections:
+                            parent = item.reference_to_parent_space or item.reference_to_parent_thing
+                            if parent is not None:
+                                combo.addItem(parent.name)
+
+                # Добавляем COMBO в layout (без Label, как ты и хочешь)
+                layout.addWidget(combo)
+
+                # Устанавливаем контейнер в QAction
+                move_to_another_z_position.setDefaultWidget(container)
+                set_above_other_subprojection = menu.addAction("Поместить поверх подразвертки:")  # обычный текст (без ComboBox)
+                menu.addAction(move_to_another_z_position)  # ComboBox как следующий пункт
+
+
+
+                selected_action = menu.exec(event.screenPos())
+
+                if selected_action == set_above_other_subprojection:
+                    self.app_ref.find_projection(self)
+                    self.app_ref.move_draggable_to_another_z_position(self, combo.currentText())
+
+                elif selected_action == change_information_action:
+                    self.app_ref.change_thing_or_subspace_subprojection(self)
+
+                elif selected_action == delete_subprojection_action:
+                    self.app_ref.delete_one_subprojection(self)
+
+                elif selected_action == delete_subprojections_action:
+                    self.app_ref.delete_all_subprojections(self)
+
+                elif selected_action == freeze_action:
+                    self.freeze()
+
+                elif selected_action == move_action:
+                    self.unfreeze()
+
+                elif selected_action == delete_item_action:
+                    if isinstance(self.parent, Space):
+                        self.app_ref.delete_subspace(self.parent)
+                    elif isinstance(self.parent, Thing):
+                        self.app_ref.delete_thing(self.parent)
+
+                elif selected_action == show_information_action:
+                    if isinstance(self.parent, Thing):
+                        self.app_ref.show_thing_information(self.parent)
+                    elif isinstance(self.parent, Space):
+                        self.app_ref.show_space_information(self.parent)
+
+            else:
+                super().mousePressEvent(event)
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
 
     def mouseMoveEvent(self, event):
         new_scene_pos = event.scenePos() - self.drag_offset
@@ -169,7 +206,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 current_pos = self.pos()
                 desired_pos = value
 
-                if utils.allow_movement(self.path_1, self.path_2, desired_pos.x(), desired_pos.y()):
+                if utils.allow_movement(self.path_background, self.path_subprojection, desired_pos.x(), desired_pos.y()):
                     return value
 
                 if self.binary_search == "version_1":
@@ -186,7 +223,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
         best_pos = None
         while True:
             possible_pos = (start + end) / 2
-            if utils.allow_movement(self.path_1, self.path_2, possible_pos.x(), possible_pos.y()):
+            if utils.allow_movement(self.path_background, self.path_subprojection, possible_pos.x(), possible_pos.y()):
                 best_pos = possible_pos
                 start = possible_pos
             else:
@@ -213,7 +250,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 start.y() + (end.y() - start.y()) * mid
             )
 
-            if utils.allow_movement(self.path_1, self.path_2, mid_point.x(), mid_point.y()):
+            if utils.allow_movement(self.path_background, self.path_subprojection, mid_point.x(), mid_point.y()):
                 best_pos = mid_point
                 left = mid
             else:

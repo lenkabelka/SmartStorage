@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsDropShadowEffect, QGraphicsPixmapItem
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsDropShadowEffect, QGraphicsPixmapItem, QGraphicsItem
 from PyQt6.QtGui import QColor
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from draggable_pixmap_item import DraggablePixmapItem
 
 class MainScene(QGraphicsScene):
@@ -9,15 +9,14 @@ class MainScene(QGraphicsScene):
 
     def __init__(self, app_ref, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.app_ref = app_ref  # если нужно
-        # self.background = None  # если хочешь запомнить фон отдельно
+        self.app_ref = app_ref
+
 
     def mousePressEvent(self, event):
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
         if type(item) == DraggablePixmapItem:
             self.focus_and_highlight(item)
-
             try:
                 self.app_ref.highlight_subprojections_on_mini_projections(item.parent)
             except Exception as e:
@@ -27,12 +26,49 @@ class MainScene(QGraphicsScene):
             # Это фон — убираем подсветку
             self.clear_highlights()
             self.app_ref.highlight_subprojections_on_mini_projections(None)
+
         else:
             # Клик по пустому месту — тоже убираем подсветку
             self.clear_highlights()
             self.app_ref.highlight_subprojections_on_mini_projections(None)
 
         super().mousePressEvent(event)
+
+
+    def update_items_movable_flag(self, item_to_update=None):
+        """Выставляет всем DraggablePixmapItem флаг ItemIsMovable в зависимости от прав пользователя."""
+        can_edit = self.app_ref.access_manager.can_edit(self.app_ref.parent_space)
+
+        print(f"can_edit: {can_edit}")
+
+        if item_to_update:
+            if isinstance(item_to_update, DraggablePixmapItem):
+                # Установим флаг перемещения
+                item_to_update.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, can_edit)
+
+                # # Получим все установленные флаги
+                # flags = item_to_update.flags()
+                #
+                # # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
+                # enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
+                # print("Enabled flags for DraggablePixmapItem:")
+                # for f in enabled_flags:
+                #     print(" -", f.name)
+
+        else:
+            for item in self.items():
+                if isinstance(item, DraggablePixmapItem):
+                    # Установим флаг перемещения
+                    item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, can_edit)
+
+                    # # Получим все установленные флаги
+                    # flags = item.flags()
+                    #
+                    # # Переберём все возможные флаги и выведем включённые для элементов DraggablePixmapItem
+                    # enabled_flags = [f for f in QGraphicsItem.GraphicsItemFlag if flags & f]
+                    # print("Enabled flags for DraggablePixmapItem:")
+                    # for f in enabled_flags:
+                    #     print(" -", f.name)
 
 
     def mouseDoubleClickEvent(self, event):
@@ -49,6 +85,7 @@ class MainScene(QGraphicsScene):
             if isinstance(obj, DraggablePixmapItem):
                 obj.setGraphicsEffect(None)
                 obj.clearFocus()
+
 
     def focus_and_highlight(self, item):
         self.clear_highlights()

@@ -31,10 +31,10 @@ class AddSpace(QDialog):
         self.setLayout(layout)
 
         # Сигналы
-        self.ok_button.clicked.connect(self.create_space)
+        self.ok_button.clicked.connect(self.check_required_fields)
         self.cancel_button.clicked.connect(self.reject)
 
-    def create_space(self):
+    def check_required_fields(self):
         if not self.name_edit.text():
             QMessageBox.warning(self, "Заполните обязательные поля",
                                 "Пожалуйста укажите название пространства!")

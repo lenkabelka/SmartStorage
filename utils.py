@@ -1,8 +1,9 @@
 import numpy as np
-from PyQt6.QtGui import QPixmap, QImage, qAlpha, QPainterPath, QTransform
+from PyQt6.QtGui import QPixmap, QImage, qAlpha, QTransform
 from PyQt6.QtCore import QRect, QBuffer, QPointF, Qt
 import cv2
 import math
+from PyQt6.QtGui import QPainterPath
 
 
 def crop_transparent_edges(image: QImage) -> QImage:
@@ -29,12 +30,12 @@ def crop_transparent_edges(image: QImage) -> QImage:
     return image.copy(rect)
 
 
-def calculate_new_image_size(image, x_sm, y_sm):
+def calculate_new_image_size(image, x_width, y_height):
     new_height = image.height()
     new_width = image.width()
     if image:
         ratio_px = image.width() / image.height()
-        ratio_sm = x_sm / y_sm
+        ratio_sm = x_width / y_height
         if math.isclose(ratio_px, ratio_sm, abs_tol=0.0005):
             print("равны")
             new_height = image.height()
@@ -51,6 +52,7 @@ def calculate_new_image_size(image, x_sm, y_sm):
             new_height = image.height()
 
         return image.scaled(new_width, new_height)
+    return None
 
 
 def get_scaled_pixmap(image: QImage,
@@ -142,12 +144,12 @@ def get_path(contours, hierarchy):
         return path
 
 
-def allow_movement(path_1, path_2, new_x, new_y):
+def allow_movement(path_parent, path_child, new_x, new_y):
     transform = QTransform()
     transform.translate(new_x, new_y)
-    transformed_path_2 = transform.map(path_2)
+    transformed_path_child = transform.map(path_child)
 
-    if path_1.contains(transformed_path_2):
+    if path_parent.contains(transformed_path_child):
         return True
     else:
         return False
@@ -172,3 +174,24 @@ def clear_layout(layout):
             widget.setParent(None)
         elif item.layout() is not None:
             clear_layout(item.layout())
+
+
+def iterate_pixels_in_path(path: QPainterPath, step: int = 1):
+    """
+    Генерирует *все пиксели внутри path*
+
+    :param path: QPainterPath любой формы
+    :param step: шаг перебора (1 = каждый пиксель, 2 = каждый второй и т.д.)
+    :yield: QPointF - координаты пикселя внутри path
+    """
+    bounds = path.boundingRect()
+    left = int(bounds.left())
+    right = int(bounds.right())
+    top = int(bounds.top())
+    bottom = int(bounds.bottom())
+
+    for y in range(top, bottom + 1, step):
+        for x in range(left, right + 1, step):
+            point = QPointF(x, y)
+            if path.contains(point):
+                yield point
