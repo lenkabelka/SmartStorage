@@ -214,7 +214,7 @@ class MainWidget(QWidget):
         self.scroll_for_images.setWidgetResizable(True)
         self.scroll_for_images.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.scroll_for_images.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
+##################
         self.layout_projections_of_space = QVBoxLayout()
 
         self.container_projections_of_space = QWidget()  # контейнер для развертки
@@ -235,7 +235,7 @@ class MainWidget(QWidget):
 
         self.layout_projections.addWidget(self.scroll_for_projections_of_space)
         self.layout_projections.addWidget(self.add_new_space_projection_button)
-
+#####################
         self.container_images_of_space.setLayout(self.layout_images_of_space)
         self.container_images_of_space.adjustSize()
         self.scroll_for_images.setWidget(self.container_images_of_space)
@@ -1164,20 +1164,22 @@ class MainWidget(QWidget):
                         self.update_mini_projections_layout()
 
                 # Если мини проекция не сохранена, то сохраняем её
-                # (также добавляем её в self.parent_space.projections.
+                # (также добавляем её в self.parent_space.projections,
+                # если она ObjectState.NEW;
                 # Если пользователь нажмет "сохранить пространство",
                 # то в БД сохранятся те развертки, которые были ранее
                 # сохранены, как мини-развертки)
                 else:
                     new_mini_projection = container.ProjectionContainer(
                         current_projection,
-                        self
+                        self#,
+                        #self.container_projections_of_space
                     )
 
-                    self.parent_space.projections.append(self.parent_space.current_projection)
-
+                    if self.parent_space.current_projection.state == ObjectState.NEW:
+                        self.parent_space.projections.append(self.parent_space.current_projection)
+                    #TODO проверить ещё раз
                     self.mini_projections_list.insert(0, new_mini_projection)
-                    #print(self.mini_projections_list)
                     self.update_mini_projections_layout()
 
 
@@ -1330,6 +1332,7 @@ class MainWidget(QWidget):
                                 else:
                                     #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
                                     # нельзя удалить подразвертку того пространства, к которому нет доступа
+                                    #TODO продумать этот момент
                                     if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
                                         continue
 
@@ -1583,7 +1586,6 @@ class MainWidget(QWidget):
 
                 for proj in self.parent_space.projections:
                     self.save_or_update_mini_projection(proj, check_permissions=False)
-                self.update_mini_projections_layout()
 
         elif space_to_open.state == ObjectState.UNMODIFIED:
             self.load_space_from_DB(space_to_open.id_space)
@@ -1605,9 +1607,26 @@ class MainWidget(QWidget):
 
         self.update_tree_view()
         self.update_main_scene()
-        self.mini_projections_list = []
-        self.update_mini_projections_layout()
-        self.clear_layout(self.layout_images_of_space)
+        self.fill_mini_projections_list(self.parent_space.projections)
+        for proj in self.parent_space.projections:
+            self.save_or_update_mini_projection(proj, check_permissions=False)
+        self.update_images_layout()
+
+
+    def fill_mini_projections_list(self, space_projections: list):
+        self.mini_projections_list.clear()
+        for proj in space_projections:
+            if proj.state != ObjectState.DELETED:
+                new_mini_projection = container.ProjectionContainer(
+                    proj,
+                    self#,
+                    #self.container_projections_of_space
+                )
+                print(f"new: {new_mini_projection}")
+                self.mini_projections_list.append(new_mini_projection)
+
+
+
 
 
     def load_space_from_DB(self, id_space, thing_to_show=None):
@@ -1980,7 +1999,6 @@ class MainWidget(QWidget):
 
 
     def update_mini_projections_layout(self):
-
         utils.clear_layout(self.layout_projections_of_space)
 
         current_projection = next((mini_projection for mini_projection in self.mini_projections_list
@@ -1994,6 +2012,7 @@ class MainWidget(QWidget):
         for widget in self.mini_projections_list:
             if widget.saved_projection.state != ObjectState.DELETED:
                 self.layout_projections_of_space.addWidget(widget)
+        # чтобы миниразвертки прижимались к верхнему краю
         self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
