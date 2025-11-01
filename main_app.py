@@ -863,6 +863,8 @@ class MainWidget(QWidget):
                 thing_to_change.description = change_thing_dialog.description_edit.toPlainText()
                 thing_to_change.thing_images = list(change_thing_dialog.thing_images)
 
+                self.update_tree_view()
+
         except Exception as e:
             print("Ошибка при редактировании вещи:", e)
 
@@ -888,6 +890,8 @@ class MainWidget(QWidget):
                 # Сохраняем изменения обратно в объект
                 space_to_change.name = change_space_dialog.name_edit.text()
                 space_to_change.description = change_space_dialog.description_edit.toPlainText()
+
+                self.update_tree_view()
 
         except Exception as e:
             print("Ошибка при редактировании вещи:", e)
