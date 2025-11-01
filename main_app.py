@@ -623,6 +623,8 @@ class MainWidget(QWidget):
 
         if self.parent_space.current_projection.sub_projections:
             for subprojection in self.parent_space.current_projection.sub_projections:
+                if subprojection.state == ObjectState.DELETED:
+                    continue
                 if subprojection.reference_to_parent_space == subspace_to_add_projection:
                     QMessageBox.warning(self, "Запрет добавления проекции",
                                         "На одну проекцию пространства можно добавить "
@@ -955,6 +957,8 @@ class MainWidget(QWidget):
 
         if self.parent_space.current_projection.sub_projections:
             for subprojection in self.parent_space.current_projection.sub_projections:
+                if subprojection.state == ObjectState.DELETED:
+                    continue
                 if subprojection.reference_to_parent_thing == thing_to_add_projection:
                     QMessageBox.warning(self, "Запрет добавления проекции",
                                         "На одну проекцию пространства можно добавить "
@@ -1223,7 +1227,7 @@ class MainWidget(QWidget):
                     for sub in projection.sub_projections:
                         if sub.state == ObjectState.NEW:
                             projection.sub_projections.remove(sub)
-                        elif sub.state == ObjectState.DELETED:
+                        else:
                             sub.mark_deleted()
                 # удаляем саму развёртку
                 if projection.state == ObjectState.NEW:
@@ -1306,6 +1310,9 @@ class MainWidget(QWidget):
                     if subprojection_to_remove.state == ObjectState.NEW:
                         self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
                     else:
+                        print(f"SUBPROJECTION_STATE: {subprojection_to_remove.state}")
+                        print(f"SUBPROJECTION_ID: {subprojection_to_remove.id_projection}")
+
                         subprojection_to_remove.mark_deleted()
 
 
