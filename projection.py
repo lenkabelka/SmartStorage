@@ -164,6 +164,7 @@ class Projection(track_object_state.Trackable):
             for sub_projection in self.sub_projections:
                 if sub_projection.state == ObjectState.DELETED:
                     subprojections_to_remove.append(sub_projection)
+                    sub_projection.save(cursor)
                 else:
                     # привязка к пространству
                     if subspaces and not sub_projection.id_parent_space:
