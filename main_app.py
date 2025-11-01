@@ -599,6 +599,9 @@ class MainWidget(QWidget):
 
             self.parent_space.subspaces.append(new_space)
 
+            if self.parent_space.id_space is not None:
+                new_space.id_parent_space = self.parent_space.id_space
+
             self.add_subspace_projection(new_space)
             self.update_tree_view()
         else:
@@ -667,6 +670,7 @@ class MainWidget(QWidget):
                             temp_dict_new_subspace_projection["y_height"],
                             reference_to_parent_space=subspace_to_add_projection
                         )
+
                         items = self.scene.items()  # список всех QGraphicsItem
                         if items:
                             max_item = max(items, key=lambda i: i.zValue())
@@ -915,6 +919,9 @@ class MainWidget(QWidget):
 
                 if dict_of_new_space["thing_images"]:
                     new_thing.thing_images = dict_of_new_space["thing_images"]
+
+                if self.parent_space.id_space is not None:
+                    new_thing.id_parent_space = self.parent_space.id_space
 
                 self.parent_space.things.append(new_thing)
                 #print(f"self.parent_space.things: {self.parent_space.things}")
@@ -1170,17 +1177,23 @@ class MainWidget(QWidget):
                 # то в БД сохранятся те развертки, которые были ранее
                 # сохранены, как мини-развертки)
                 else:
-                    new_mini_projection = container.ProjectionContainer(
-                        current_projection,
-                        self#,
-                        #self.container_projections_of_space
-                    )
+                    # сохраняем миниразвертки только у разверток, подразвертки не сохраняем как миниразвертки
+                    if (
+                            # не отображаем подразвёртки на мини проекциях
+                            current_projection.reference_to_parent_projection is None
+                            and current_projection.id_parent_projection is None
+                    ):
+                        new_mini_projection = container.ProjectionContainer(
+                            current_projection,
+                            self#,
+                            #self.container_projections_of_space
+                        )
 
-                    if self.parent_space.current_projection.state == ObjectState.NEW:
-                        self.parent_space.projections.append(self.parent_space.current_projection)
-                    #TODO проверить ещё раз
-                    self.mini_projections_list.insert(0, new_mini_projection)
-                    self.update_mini_projections_layout()
+                        if self.parent_space.current_projection.state == ObjectState.NEW:
+                            self.parent_space.projections.append(self.parent_space.current_projection)
+                        #TODO проверить ещё раз
+                        self.mini_projections_list.insert(0, new_mini_projection)
+                        self.update_mini_projections_layout()
 
 
     def delete_mini_projection(self, mini_projection):
@@ -1559,7 +1572,7 @@ class MainWidget(QWidget):
             )
             return
 
-        if self.parent_space.state == ObjectState.NEW:
+        if not self.is_space_saved():
             reply = QMessageBox.question(
                 self,
                 "Сохранить текущее пространство",
@@ -1585,7 +1598,13 @@ class MainWidget(QWidget):
                 self.mini_projections_list.clear()
 
                 for proj in self.parent_space.projections:
-                    self.save_or_update_mini_projection(proj, check_permissions=False)
+                    if (
+                            # не отображаем подразвёртки на мини проекциях
+                            proj.reference_to_parent_projection is None
+                            and proj.id_parent_projection is None
+                    ):
+                        self.save_or_update_mini_projection(proj, check_permissions=False)
+                    self.update_mini_projections_layout()
 
         elif space_to_open.state == ObjectState.UNMODIFIED:
             self.load_space_from_DB(space_to_open.id_space)
