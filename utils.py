@@ -14,13 +14,48 @@ def crop_transparent_edges(image: QImage) -> QImage:
     left, top = image.width(), image.height()
     right, bottom = 0, 0
 
+    #for y in range(image.height()):
+    #    for x in range(image.width()):
+    #        if qAlpha(image.pixel(x, y)) > 0:
+    #            left = min(left, x)
+    #            right = max(right, x)
+    #            top = min(top, y)
+    #            bottom = max(bottom, y)
+
+    found = False
+    for x in range(image.width()):
+        for y in range(image.height()):
+            if qAlpha(image.pixel(x, y)) > 0:
+                left = x
+                found = True
+                break
+        if found: break
+
+    found = False
     for y in range(image.height()):
         for x in range(image.width()):
             if qAlpha(image.pixel(x, y)) > 0:
-                left = min(left, x)
-                right = max(right, x)
-                top = min(top, y)
-                bottom = max(bottom, y)
+                top = y
+                found = True
+                break
+        if found: break
+
+    found = False
+    for x in range(image.width() - 1, 0, -1):
+        for y in range(image.height()):
+            if qAlpha(image.pixel(x, y)) > 0:
+                right = x
+                found = True
+                break
+        if found: break
+
+    for y in range(image.height() - 1, 0, -1):
+        for x in range(image.width()):
+            if qAlpha(image.pixel(x, y)) > 0:
+                bottom = y
+                found = True
+                break
+        if found: break
 
     if left > right or top > bottom:
         return QImage()  # Пустая картинка
