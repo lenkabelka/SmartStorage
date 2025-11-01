@@ -17,9 +17,9 @@ class LogIn(QDialog):
 
 
         # Валидация
-        nickname_regex = QRegularExpression("^[A-Za-z0-9]{1,25}$")
+        nickname_regex = QRegularExpression("^[A-Za-zА-Яа-яЁё0-9]{1,25}$")
         email_regex = QRegularExpression("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
-        password_regex = QRegularExpression("^[A-Za-z0-9%&§/]{1,25}$")
+        password_regex = QRegularExpression("^[A-Za-zА-Яа-яЁё0-9]{1,25}$")
 
         username_validator = QRegularExpressionValidator(nickname_regex, self)
         password_validator = QRegularExpressionValidator(password_regex, self)
