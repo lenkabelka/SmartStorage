@@ -21,8 +21,10 @@ class ProjectionContainer(QWidget):
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
 
-        label = QLabel(self.saved_projection.projection_name)
-        layout.addWidget(label)
+        self.projection_name = self.saved_projection.projection_name
+
+        self.label = QLabel(self.projection_name)
+        layout.addWidget(self.label)
         layout.addWidget(self.view)
 
         # Копия current_projection:
@@ -102,42 +104,50 @@ class ProjectionContainer(QWidget):
             self.view.fitInView(self.background_item, Qt.AspectRatioMode.KeepAspectRatio)
 
 
+    def update_mini_projection_name(self, projection_to_change):
+        self.label.setText(projection_to_change.projection_name)
+
+
     def update_scene(self, projection_to_change):
-        self.scene.clear()
-        self.sub_projections_list = None
-        if projection_to_change.sub_projections:
-            self.sub_projections_list = projection_to_change.sub_projections
+        try:
+            self.scene.clear()
+            self.sub_projections_list = None
+            if projection_to_change.sub_projections:
+                self.sub_projections_list = projection_to_change.sub_projections
 
-        self.background_item = QGraphicsPixmapItem(projection_to_change.original_pixmap)
-        self.scene.addItem(self.background_item)
+            self.background_item = QGraphicsPixmapItem(projection_to_change.original_pixmap)
+            self.scene.addItem(self.background_item)
 
-        if self.sub_projections_list:
-            for sub in self.sub_projections_list:
-                if sub.state != ObjectState.DELETED:
-                    item_copy = QGraphicsPixmapItem(sub.original_pixmap)
-                    item_copy.setPos(sub.x_pos, sub.y_pos)
-                    item_copy.setZValue(sub.z_pos)
+            if self.sub_projections_list:
+                for sub in self.sub_projections_list:
+                    if sub.state != ObjectState.DELETED:
+                        item_copy = QGraphicsPixmapItem(sub.original_pixmap)
+                        item_copy.setPos(sub.x_pos, sub.y_pos)
+                        item_copy.setZValue(sub.z_pos)
 
-                    if sub.reference_to_parent_space:
-                        item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
-                    else:
-                        item_copy.parent = sub.reference_to_parent_thing
-                        item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вещь на всех сценах и подсветить
+                        if sub.reference_to_parent_space:
+                            item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
+                        else:
+                            item_copy.parent = sub.reference_to_parent_thing
+                            item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вещь на всех сценах и подсветить
 
-                    self.scene.addItem(item_copy)
+                        self.scene.addItem(item_copy)
 
-        min_z = min((item.zValue() for item in self.scene.items()), default=0)
-        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+            min_z = min((item.zValue() for item in self.scene.items()), default=0)
+            self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
 
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+            self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+            self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.view.setSceneRect(self.scene.itemsBoundingRect())
-        self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-        self.update_view_size()
+            self.view.setSceneRect(self.scene.itemsBoundingRect())
+            self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.update_view_size()
 
-        self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        except Exception as e:
+            print(e)
 
 
     def clear_highlights(self):
