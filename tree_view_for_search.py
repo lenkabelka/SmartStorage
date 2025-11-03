@@ -108,6 +108,8 @@ class TreeWidgetForSearch(QTreeView):
                 "Посмотреть информацию о пространстве",
                 lambda: self.app_ref.show_space_information(item.ref)
             )
+            menu.addAction("Посмотреть информацию о всех вещах в пространстве",
+                           lambda: self.app_ref.show_all_things_in_space(item.ref))
 
         elif node_type == TreeNode.TYPE_THING:
             menu.addAction(
