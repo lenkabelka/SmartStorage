@@ -113,7 +113,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         try:
-            if self.main_widget.is_space_saved():
+            if self.main_widget.is_current_space_saved():
                 event.accept()
 
             else:
@@ -1583,7 +1583,7 @@ class MainWidget(QWidget):
             )
             return
 
-        if not self.is_space_saved():
+        if not self.is_current_space_saved():
             reply = QMessageBox.question(
                 self,
                 "Сохранить текущее пространство",
@@ -1593,6 +1593,16 @@ class MainWidget(QWidget):
             )
 
             if reply == QMessageBox.StandardButton.Yes:
+
+                # Проверка прав
+                if not self.access_manager.can_edit(self.parent_space):
+                    QMessageBox.warning(
+                        self,
+                        "Доступ запрещён",
+                        "У вас нет прав для сохранения этого пространства."
+                    )
+                    return
+
                 self.save_space_to_DB()
             elif reply == QMessageBox.StandardButton.No:
                 pass
@@ -1755,8 +1765,6 @@ class MainWidget(QWidget):
         else:
             # Проверка прав
             if not self.access_manager.can_view(self.parent_space.id_parent_space):
-                #print(f"-----ID: {self.parent_space.id_parent_space}")
-                #print(f"-----USER-ID: {self.user.id}")
                 QMessageBox.warning(
                     self,
                     "Доступ запрещён",
@@ -1764,7 +1772,34 @@ class MainWidget(QWidget):
                 )
                 return
 
-        self.load_space_from_DB(self.parent_space.id_parent_space)
+        if not self.is_current_space_saved():
+            reply = QMessageBox.question(
+                self,
+                "Сохранить текущее пространство",
+                "Текущее пространство не сохранено!\nХотите сохранить его?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+
+                # Проверка прав
+                if not self.access_manager.can_edit(self.parent_space):
+                    QMessageBox.warning(
+                        self,
+                        "Доступ запрещён",
+                        "У вас нет прав для сохранения этого пространства."
+                    )
+                    return
+
+                self.save_space_to_DB()
+                self.load_space_from_DB(self.parent_space.id_parent_space)
+
+            elif reply == QMessageBox.StandardButton.No:
+                self.load_space_from_DB(self.parent_space.id_parent_space)
+
+        else:
+            self.load_space_from_DB(self.parent_space.id_parent_space)
 
 
     def load_space_from_db_by_selection_from_spaces_list(self):
@@ -1825,7 +1860,9 @@ class MainWidget(QWidget):
 
         else:
             QMessageBox.warning(self, "Новое пространство", "Это пространство новое, его структура "
-                                                            "уже показана полностью в дереве справа!")
+                                                            "уже показана полностью в дереве справа! "
+                                                            "Сохраните это пространство, чтобы увидеть его "
+                                                            "положение относительно других пространств.")
 
 
     def show_thing_information(self, thing_to_show_information):
@@ -2059,6 +2096,33 @@ class MainWidget(QWidget):
                 return False
 
 
+    # def is_main_scene_equal_to_mini_scene(self, mini):
+    #     def sort_key(item):
+    #         return item.zValue(), item.pos().x(), item.pos().y()
+    #
+    #     items_main = sorted(self.scene.items(), key=sort_key)
+    #     items_mini = sorted(mini.scene.items(), key=sort_key)
+    #
+    #     if len(items_main) != len(items_mini):
+    #         #print("len не равны")
+    #         return False
+    #
+    #     for item_main, item_mini in zip(items_main, items_mini):
+    #         # QGraphicsPixmapItem и DraggablePixmapItem в данном случае будут сравниваться, как равные
+    #         if not isinstance(item_main, QGraphicsPixmapItem) or not isinstance(item_mini, QGraphicsPixmapItem):
+    #             #print("типы не равны")
+    #             return False
+    #
+    #         if item_main.pos() != item_mini.pos():
+    #             #print("позиции не равны")
+    #             return False
+    #
+    #         if item_main.zValue() != item_mini.zValue():
+    #             #print("Z не равны")
+    #             return False
+    #
+    #     return True
+
     def is_main_scene_equal_to_mini_scene(self, mini):
         def sort_key(item):
             return item.zValue(), item.pos().x(), item.pos().y()
@@ -2067,21 +2131,19 @@ class MainWidget(QWidget):
         items_mini = sorted(mini.scene.items(), key=sort_key)
 
         if len(items_main) != len(items_mini):
-            #print("len не равны")
             return False
 
         for item_main, item_mini in zip(items_main, items_mini):
-            # QGraphicsPixmapItem и DraggablePixmapItem в данном случае будут сравниваться, как равные
-            if not isinstance(item_main, QGraphicsPixmapItem) or not isinstance(item_mini, QGraphicsPixmapItem):
-                #print("типы не равны")
+            if not (issubclass(type(item_main), QGraphicsPixmapItem) and
+                    issubclass(type(item_mini), QGraphicsPixmapItem)):
                 return False
 
-            if item_main.pos() != item_mini.pos():
-                #print("позиции не равны")
+            # Проверка позиции и Z
+            if item_main.pos() != item_mini.pos() or item_main.zValue() != item_mini.zValue():
                 return False
 
-            if item_main.zValue() != item_mini.zValue():
-                #print("Z не равны")
+            # Проверка pixmap
+            if item_main.pixmap().cacheKey() != item_mini.pixmap().cacheKey():
                 return False
 
         return True
@@ -2358,7 +2420,7 @@ class MainWidget(QWidget):
             print(f"Ошибка в find_top_space_of_thing: {e}")
 
 
-    def is_space_saved(self):
+    def is_current_space_saved(self):
         if self.parent_space:
             if not self.is_current_projection_saved():
                 return False
