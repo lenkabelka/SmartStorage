@@ -74,7 +74,7 @@ class ProjectionContainer(QWidget):
         if action == delete_action:
             if self.app_ref:
                 self.app_ref.delete_mini_projection(self)
-            self.deleteLater()
+                #self.deleteLater()
         if action == set_as_main_scene_action:
             if self.app_ref:
                 self.app_ref.set_mini_projection_on_main_scene(self)
