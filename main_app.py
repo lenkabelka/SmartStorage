@@ -836,6 +836,7 @@ class MainWidget(QWidget):
                             subprojection.projection_height = data["y_height"]
                             subprojection.projection_image = data["image"]
                             item.setPos(subprojection.x_pos, subprojection.y_pos)
+                            subprojection.original_pixmap = pixmap
                             subprojection.scaled_projection_pixmap = item
                             self.scene.removeItem(draggable)
 
@@ -1216,6 +1217,9 @@ class MainWidget(QWidget):
                             mini_projection_to_change.update_mini_projection_name(current_projection)
 
                         if not self.is_main_scene_equal_to_mini_scene(mini_projection_to_change):
+
+                            print("Я ТУТОЧКИ!!!!")
+
                             mini_projection_to_change.update_scene(current_projection)
 
                         self.update_mini_projections_layout()
@@ -1389,6 +1393,7 @@ class MainWidget(QWidget):
 
             if projection:
                 projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state)
+
                 self.parent_space.current_projection = projection
 
                 self.set_x_and_y_scales(

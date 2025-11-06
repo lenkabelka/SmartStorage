@@ -98,6 +98,9 @@ class AddProjection(QDialog):
 
     def check_required_fields(self):
         """Проверяет обязательные поля и показывает предупреждения при их отсутствии."""
+        if not self.check_size():
+            return
+
         if not self.name_edit.text().strip():
             QMessageBox.warning(self, "Заполните обязательные поля",
                                 "Пожалуйста, укажите название проекции!")
@@ -156,11 +159,31 @@ class AddProjection(QDialog):
                 self.set_image()
 
 
+    def check_size(self):
+        str_x = False
+        str_y = False
+        if self.x_width.text():
+            for ch in self.x_width.text():
+                if ch != "0" and ch != ".":
+                    str_x = True
+
+        if self.y_height.text():
+            for ch in self.y_height.text():
+                if ch != "0" and ch != ".":
+                    str_y = True
+
+        if str_x and str_y:
+            return True
+        else:
+            QMessageBox.warning(self, "Некорректный размер", "Введите корректные размеры проекции!")
+            return False
+
+
     def get_data(self):
         return {
             "name": self.name_edit.text(),
             "description": self.description_edit.toPlainText() if self.description_edit.toPlainText() else None,
             "image": self.image if self.image else None,
-            "x_width": float(self.x_width.text()) if self.x_width and self.image else None,
-            "y_height": float(self.y_height.text()) if self.y_height and self.image else None
+            "x_width": float(self.x_width.text()) if self.x_width and self.image and self.x_width.text() != "" else None,
+            "y_height": float(self.y_height.text()) if self.y_height and self.image and self.y_height.text() != "" else None
         }

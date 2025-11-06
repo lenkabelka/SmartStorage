@@ -113,6 +113,8 @@ class ProjectionContainer(QWidget):
 
     def update_scene(self, projection_to_change):
         try:
+            self.saved_projection_state = projection_to_change.save_state()
+
             self.scene.clear()
             self.sub_projections_list = None
             if projection_to_change.sub_projections:
