@@ -823,8 +823,8 @@ class MainWidget(QWidget):
                         # В противном случае оставим подразвертке те же координаты, что были на момент
                         # редактирования
 
-                        if subprojection.state == ObjectState.NEW:
-                            self.set_subprojection_position_from_its_scene_position()
+                        #if subprojection.state == ObjectState.NEW:
+                        self.set_subprojection_position_from_its_scene_position()
 
                         if utils.allow_movement(item.path_background, item.path_subprojection, subprojection.x_pos,
                                                 subprojection.y_pos):
@@ -1939,6 +1939,31 @@ class MainWidget(QWidget):
 
 
     def load_space_from_db_by_selection_from_spaces_list(self):
+
+        if not self.is_current_space_saved():
+            reply = QMessageBox.question(
+                self,
+                "Сохранить текущее пространство",
+                "Текущее пространство не сохранено!\nХотите сохранить его?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.Yes
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+
+                # Проверка прав
+                if not self.access_manager.can_edit(self.parent_space):
+                    QMessageBox.warning(
+                        self,
+                        "Доступ запрещён",
+                        "У вас нет прав для сохранения этого пространства."
+                    )
+                else:
+                    self.save_space_to_DB()
+
+            elif reply == QMessageBox.StandardButton.No:
+                pass
+
         spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(self.user.id, self.user.role)
 
         if spaces_in_DB is None:
