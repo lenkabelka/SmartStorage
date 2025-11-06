@@ -32,7 +32,7 @@ class ImageContainer(QWidget):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        delete_action = menu.addAction("Удалить изображение")
+        delete_action = menu.addAction("Удалить эту фотографию пространства")
         action = menu.exec(event.globalPos())
         if action == delete_action:
 

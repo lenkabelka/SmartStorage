@@ -43,7 +43,7 @@ class AddImage(QDialog):
         layout.addWidget(QLabel("Название изображения"))
         layout.addWidget(self.name_edit)
 
-        layout.addWidget(QLabel("Картинка:"))
+        layout.addWidget(QLabel("Картинка*:"))
         layout.addWidget(self.image_label)
 
 
