@@ -459,26 +459,21 @@ class MainWidget(QWidget):
             if not self.access_manager.can_edit(self.parent_space):
                 raise PermissionError("У вас нет прав для добавления или изменения проекции этого пространства")
 
+            # --------------
+            # Это необходимо, если изменяется картинка проекции пространтсва,
+            # но её размеры, воодимые пользователем, не меняются
+            current_projection_width = None
+            current_projection_height = None
+            old_scaled_pixmap = None
+            if self.parent_space.current_projection:
+                current_projection_width = self.parent_space.current_projection.projection_width
+                current_projection_height = self.parent_space.current_projection.projection_height
+                old_scaled_pixmap = self.parent_space.current_projection.scaled_projection_pixmap
+            position = False
+            # --------------
+
             # --- Основная логика добавления / замены проекции ---
             add_projection_dialog = add_projection.AddProjection(projection_parent=self.parent_space)
-
-            current_projection_width = self.parent_space.current_projection.projection_width
-            current_projection_height = self.parent_space.current_projection.projection_height
-            scaled = self.parent_space.current_projection.scaled_projection_pixmap
-            if self.parent_space.current_projection.sub_projections:
-                for subproj in self.parent_space.current_projection.sub_projections:
-                    print(f"X_new:{subproj.x_pos}")
-                    print(f"Y_new:{subproj.y_pos}")
-                    print(f"Z_new:{subproj.z_pos}")
-
-            self.set_subprojection_position_from_its_scene_position(scaled=scaled)
-
-            if self.parent_space.current_projection.sub_projections:
-                for subproj in self.parent_space.current_projection.sub_projections:
-                    print(f"--X_new:{subproj.x_pos}")
-                    print(f"--Y_new:{subproj.y_pos}")
-                    print(f"--Z_new:{subproj.z_pos}")
-
 
             while True:
 
@@ -501,18 +496,6 @@ class MainWidget(QWidget):
 
                     temp_dict_new_space_projection = add_projection_dialog.get_data()
                     projection_name = temp_dict_new_space_projection["name"]
-
-                    # is_name_busy = False
-                    # if self.parent_space.projections:
-                    #     is_name_busy = any(
-                    #         projection.projection_name == projection_name
-                    #         for projection in self.parent_space.projections
-                    #     )
-                    #
-                    # if is_name_busy:
-                    #     QMessageBox.warning(self, "Имя занято",
-                    #                         "Такое имя уже существует. Пожалуйста, введите другое.")
-
 
                     # --- Добавление новой картинки ---
                     if self.parent_space.current_projection is None:
@@ -595,40 +578,31 @@ class MainWidget(QWidget):
                         new_projection_height = temp_dict_new_space_projection["y_height"]
 
                         #item.setZValue(new_sub_projection.z_pos)
-                        position = False
-                        if current_projection_width == new_projection_width and current_projection_height == new_projection_height:
-                            print({current_projection_width}, {current_projection_height})
-                            print({new_projection_width}, {new_projection_height})
+
+                        # если размеры подпроекции пространства (которые вводит пользователь) не изменились,
+                        # то при отрисовке главной сцены оставляем подпроекции подпространств и вещей
+                        # на той же позиции position = True, в которой они находятся на текущей проекции
+                        if (current_projection_width == new_projection_width
+                                and current_projection_height == new_projection_height):
                             position = True
-                            print("I am here!")
 
+                            if self.parent_space.current_projection.sub_projections:
 
-
-                        #self.set_subprojection_position_from_its_scene_position(scaled=scaled)
-                        if self.parent_space.current_projection.sub_projections:
-                            for subproj in self.parent_space.current_projection.sub_projections:
-                                subproj.x_pos = subproj.x_pos * self.x_scale
-                                subproj.y_pos = subproj.y_pos * self.y_scale
+                                self.update_subprojections_position_on_space_projection_change(
+                                    old_scaled_pixmap, self.parent_space.current_projection
+                                )
                         self.update_main_scene(set_position=position)
 
-                        if self.parent_space.current_projection.sub_projections:
-                            for subproj in self.parent_space.current_projection.sub_projections:
-                                subproj.x_pos = subproj.x_pos * self.x_scale
-                                subproj.y_pos = subproj.y_pos * self.y_scale
-                                #subproj.z_pos
-                                print(f"X_new:{subproj.x_pos}")
-                                print(f"Y_new:{subproj.y_pos}")
-                                print(f"Z_new:{subproj.z_pos}")
-
-                                #print(f"subproj.scaled_projection_pixmap: {subproj.scaled_projection_pixmap}")
-                                subproj.scaled_projection_pixmap.update_path(
-                                    self.parent_space.current_projection.scaled_projection_pixmap)
+                        for subproj in self.parent_space.current_projection.sub_projections:
+                            subproj.scaled_projection_pixmap.update_path(
+                                self.parent_space.current_projection.scaled_projection_pixmap)
 
                         print(f"STATE: {self.parent_space.current_projection.state}")
                     break
                 else:
                     # пользователь нажал "Отмена" - выходим
                     break
+
             if not self.parent_space.current_projection:
                 self.set_placeholders_on_main_scene()
 
@@ -1351,16 +1325,32 @@ class MainWidget(QWidget):
                 self.update_mini_projections_layout()
 
 
-    def calculate_subprojections_positions_by_changing_its_projection(self):
+    def update_subprojections_position_on_space_projection_change(self, old_scaled_pixmap, projection):
         """
-
+        Рассчитывает и устанавливает новые позиции x_pos и y_pos для подпроекций, если меняется их родительская проекция
+        (само изображение и соответственно количество его пикселей), но при этом не меняется длина проекции,
+        которую вводит пользователь (т.е. не меняются размеры проекции пространства).
         """
+        if projection.sub_projections:
+            for sub_projection in projection.sub_projections:
+                if sub_projection.state != ObjectState.DELETED:
+                    item = sub_projection.scaled_projection_pixmap
+                    if old_scaled_pixmap is not None:
+                        if item is None:
+                            continue
+                        relative_pos = old_scaled_pixmap.mapFromItem(item, 0, 0)
+                        sub_projection.x_pos = relative_pos.x()
+                        sub_projection.y_pos = relative_pos.y()
 
-    def update_projection_from_mini_projection(self):
-        """
+            for sub_projection in projection.sub_projections:
+                if sub_projection.state != ObjectState.DELETED:
+                    item = sub_projection.scaled_projection_pixmap
 
-        """
-
+                    if old_scaled_pixmap is not None:
+                        if item is None:
+                            continue
+                        sub_projection.x_pos = sub_projection.x_pos * self.x_scale
+                        sub_projection.y_pos = sub_projection.y_pos * self.y_scale
 
 
     def set_mini_projection_on_main_scene(self, mini_projection):
@@ -1378,13 +1368,14 @@ class MainWidget(QWidget):
             projection = next((projection for projection in self.parent_space.projections
                                if projection == mini_projection_to_set_on_scene.saved_projection), None)
 
-            obj1 = self.parent_space.current_projection
-            obj2 = projection
-
-            if obj1 is obj2:
-                print("Это один и тот же объект")
-            else:
-                print("Это разные объекты")
+            # obj1 = self.parent_space.current_projection
+            # obj2 = projection
+            #
+            # if obj1 is obj2:
+            #     self.parent_space.current_projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state)
+            #     print("Это один и тот же объект")
+            # else:
+            #     print("Это разные объекты")
 
             # !!! Когда я выбираю "Открыть, как главную проекцию" в контекстном меню в случае самой верхней мини развертки,
             # то верхняя мини развертка "делается" из текущей развертки,
@@ -1397,6 +1388,7 @@ class MainWidget(QWidget):
 
 
             if projection:
+                projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state)
                 self.parent_space.current_projection = projection
 
                 self.set_x_and_y_scales(
@@ -1404,11 +1396,6 @@ class MainWidget(QWidget):
                     self.parent_space.current_projection.projection_width,
                     self.parent_space.current_projection.projection_height
                 )
-
-                # if self.parent_space.current_projection.sub_projections:
-                #     for sub in self.parent_space.current_projection.sub_projections:
-                #         sub.x_pos = sub.x_pos * self.x_scale
-                #         sub.y_pos = sub.y_pos * self.y_scale
 
                 self.update_main_scene(set_position=True)
                 self.update_mini_projections_layout()

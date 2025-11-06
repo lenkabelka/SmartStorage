@@ -11,6 +11,9 @@ class ProjectionContainer(QWidget):
 
         self.app_ref = app
         self.saved_projection = projection_to_save
+
+        self.saved_projection_state = projection_to_save.save_state()
+
         self.sub_projections_list = None
         if projection_to_save.sub_projections:
             self.sub_projections_list = projection_to_save.sub_projections

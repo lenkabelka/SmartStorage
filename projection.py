@@ -58,6 +58,84 @@ class Projection(track_object_state.Trackable):
         super().__post_init__()
 
 
+    # --- сохранение состояния ---
+    def save_state(self) -> dict:
+        """Сохраняет текущее состояние проекции в словарь (безопасно для None)."""
+        state = {
+            "projection_name": self.projection_name,
+            "projection_image": QImage(self.projection_image) if self.projection_image else None,
+            "original_pixmap": QPixmap(self.original_pixmap) if self.original_pixmap else None,
+            "projection_width": self.projection_width,
+            "projection_height": self.projection_height,
+            "projection_description": self.projection_description,
+            "x_pos": self.x_pos,
+            "y_pos": self.y_pos,
+            "z_pos": self.z_pos,
+            "id_projection": self.id_projection,
+            "id_parent_projection": self.id_parent_projection,
+            "id_parent_space": self.id_parent_space,
+            "id_parent_thing": (
+                getattr(self.reference_to_parent_thing, "id_thing", self.id_parent_thing)
+            ),
+
+            # --- Родительские ссылки (если есть) ---
+            "reference_to_parent_space": self.reference_to_parent_space,
+            "reference_to_parent_thing": self.reference_to_parent_thing,
+            "reference_to_parent_projection": self.reference_to_parent_projection,
+
+            # --- Подпроекции (рекурсивно) ---
+            "sub_projections": [
+                sub.save_state() for sub in self.sub_projections
+            ] if self.sub_projections else [],
+        }
+        return state
+
+
+    # --- восстановление состояния ---
+    def restore_state(self, state: dict):
+        """Восстанавливает объект из сохранённого состояния (включая родителей, если они заданы)."""
+        self.projection_name = state.get("projection_name")
+
+        img = state.get("projection_image")
+        self.projection_image = QImage(img) if img is not None else None
+
+        pix = state.get("original_pixmap")
+        self.original_pixmap = QPixmap(pix) if pix is not None else None
+
+        self.projection_width = state.get("projection_width")
+        self.projection_height = state.get("projection_height")
+        self.projection_description = state.get("projection_description")
+        self.x_pos = state.get("x_pos")
+        self.y_pos = state.get("y_pos")
+        self.z_pos = state.get("z_pos")
+
+        self.id_projection = state.get("id_projection")
+        self.id_parent_projection = state.get("id_parent_projection")
+        self.id_parent_space = state.get("id_parent_space")
+        self.id_parent_thing = state.get("id_parent_thing")
+
+        # --- Восстанавливаем родительские ссылки, если они есть ---
+        ref_space = state.get("reference_to_parent_space")
+        ref_thing = state.get("reference_to_parent_thing")
+        ref_proj = state.get("reference_to_parent_projection")
+
+        self.reference_to_parent_space = ref_space if ref_space is not None else None
+        self.reference_to_parent_thing = ref_thing if ref_thing is not None else None
+        self.reference_to_parent_projection = ref_proj if ref_proj is not None else None
+
+        # --- Подпроекции ---
+        self.sub_projections = []
+        for sub_state in state.get("sub_projections", []):
+            sub_proj = Projection(
+                projection_name=sub_state.get("projection_name", ""),
+                projection_image=sub_state.get("projection_image"),
+                original_pixmap=sub_state.get("original_pixmap")
+            )
+            sub_proj.restore_state(sub_state)
+            self.sub_projections.append(sub_proj)
+
+
+
     # id_projection
     # id_parent_projection
     # id_parent_space
