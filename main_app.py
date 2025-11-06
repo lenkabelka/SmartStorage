@@ -1356,6 +1356,12 @@ class MainWidget(QWidget):
 
         """
 
+    def update_projection_from_mini_projection(self):
+        """
+
+        """
+
+
 
     def set_mini_projection_on_main_scene(self, mini_projection):
 
@@ -1371,6 +1377,24 @@ class MainWidget(QWidget):
         if mini_projection_to_set_on_scene:
             projection = next((projection for projection in self.parent_space.projections
                                if projection == mini_projection_to_set_on_scene.saved_projection), None)
+
+            obj1 = self.parent_space.current_projection
+            obj2 = projection
+
+            if obj1 is obj2:
+                print("Это один и тот же объект")
+            else:
+                print("Это разные объекты")
+
+            # !!! Когда я выбираю "Открыть, как главную проекцию" в контекстном меню в случае самой верхней мини развертки,
+            # то верхняя мини развертка "делается" из текущей развертки,
+            # т.е. current_projection и mini_projection_to_set_on_scene.saved_projection это один и тот же объект.
+            # При этом при создании мини проекции я делаю копии элементов со сцены,
+            # чтобы отобразить их на мини проекции. Копию же самого объекта projection я не делаю,
+            # а значит self.parent_space.current_projection = projection я не могу использовать для установления
+            # верхней мини проекции на главную сцену без обновления у projection аттрибутов, связанных с отрисовкой
+            # элементов на главной сцене !!!
+
 
             if projection:
                 self.parent_space.current_projection = projection
