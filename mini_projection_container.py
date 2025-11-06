@@ -66,7 +66,7 @@ class ProjectionContainer(QWidget):
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         delete_action = QAction("Удалить эту проекцию", self)
-        set_as_main_scene_action = QAction("Открыть, как главную развёртку", self)
+        set_as_main_scene_action = QAction("Открыть, как главную проекцию", self)
         menu.addAction(delete_action)
         menu.addAction(set_as_main_scene_action)
 

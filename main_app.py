@@ -462,9 +462,28 @@ class MainWidget(QWidget):
             # --- Основная логика добавления / замены проекции ---
             add_projection_dialog = add_projection.AddProjection(projection_parent=self.parent_space)
 
+            current_projection_width = self.parent_space.current_projection.projection_width
+            current_projection_height = self.parent_space.current_projection.projection_height
+            scaled = self.parent_space.current_projection.scaled_projection_pixmap
+            if self.parent_space.current_projection.sub_projections:
+                for subproj in self.parent_space.current_projection.sub_projections:
+                    print(f"X_new:{subproj.x_pos}")
+                    print(f"Y_new:{subproj.y_pos}")
+                    print(f"Z_new:{subproj.z_pos}")
+
+            self.set_subprojection_position_from_its_scene_position(scaled=scaled)
+
+            if self.parent_space.current_projection.sub_projections:
+                for subproj in self.parent_space.current_projection.sub_projections:
+                    print(f"--X_new:{subproj.x_pos}")
+                    print(f"--Y_new:{subproj.y_pos}")
+                    print(f"--Z_new:{subproj.z_pos}")
+
+
             while True:
 
                 if self.parent_space.current_projection is not None:
+
                     # --------------
                     # Передаём текущие данные в диалог, чтобы они отобразились при вызове "изменить проекцию"
                     add_projection_dialog.name_edit.setText(self.parent_space.current_projection.projection_name)
@@ -472,9 +491,6 @@ class MainWidget(QWidget):
                         self.parent_space.current_projection.projection_description)
                     add_projection_dialog.x_width.setText(str(self.parent_space.current_projection.projection_width))
                     add_projection_dialog.y_height.setText(str(self.parent_space.current_projection.projection_height))
-
-                    print(f"--- projection_width: {self.parent_space.current_projection.projection_width}")
-                    print(f"--- projection_height: {self.parent_space.current_projection.projection_height}")
 
                     if self.parent_space.current_projection.projection_image:
                         add_projection_dialog.image = self.parent_space.current_projection.projection_image
@@ -574,12 +590,36 @@ class MainWidget(QWidget):
                             self.parent_space.current_projection.projection_description = \
                                 temp_dict_new_space_projection["description"]
 
-                        self.parent_space.current_projection.z_pos = -1
+                        #self.parent_space.current_projection.z_pos = -1 #TODO
+                        new_projection_width = temp_dict_new_space_projection["x_width"]
+                        new_projection_height = temp_dict_new_space_projection["y_height"]
+
                         #item.setZValue(new_sub_projection.z_pos)
-                        self.update_main_scene(set_position=False)
+                        position = False
+                        if current_projection_width == new_projection_width and current_projection_height == new_projection_height:
+                            print({current_projection_width}, {current_projection_height})
+                            print({new_projection_width}, {new_projection_height})
+                            position = True
+                            print("I am here!")
+
+
+
+                        #self.set_subprojection_position_from_its_scene_position(scaled=scaled)
+                        if self.parent_space.current_projection.sub_projections:
+                            for subproj in self.parent_space.current_projection.sub_projections:
+                                subproj.x_pos = subproj.x_pos * self.x_scale
+                                subproj.y_pos = subproj.y_pos * self.y_scale
+                        self.update_main_scene(set_position=position)
 
                         if self.parent_space.current_projection.sub_projections:
                             for subproj in self.parent_space.current_projection.sub_projections:
+                                subproj.x_pos = subproj.x_pos * self.x_scale
+                                subproj.y_pos = subproj.y_pos * self.y_scale
+                                #subproj.z_pos
+                                print(f"X_new:{subproj.x_pos}")
+                                print(f"Y_new:{subproj.y_pos}")
+                                print(f"Z_new:{subproj.z_pos}")
+
                                 #print(f"subproj.scaled_projection_pixmap: {subproj.scaled_projection_pixmap}")
                                 subproj.scaled_projection_pixmap.update_path(
                                     self.parent_space.current_projection.scaled_projection_pixmap)
@@ -621,8 +661,8 @@ class MainWidget(QWidget):
             if self.parent_space.id_space is not None:
                 new_space.id_parent_space = self.parent_space.id_space
 
-            self.add_subspace_projection(new_space)
             self.update_tree_view()
+            self.add_subspace_projection(new_space)
         else:
             return
 
@@ -955,10 +995,8 @@ class MainWidget(QWidget):
                 self.parent_space.things.append(new_thing)
                 #print(f"self.parent_space.things: {self.parent_space.things}")
 
-                self.add_thing_projection(new_thing)
-
                 self.update_tree_view()
-
+                self.add_thing_projection(new_thing)
                 break  # успех — выходим из цикла
 
             else:
@@ -1257,11 +1295,9 @@ class MainWidget(QWidget):
                 reply = QMessageBox.question(
                     self,
                     "Удаление проекции пространства",
-                    "Удаление этой проекции также удалит текщую проекцию пространства!\nУдалить проекцию?",
+                    "Удаление этой мини проекции также\nудалит текщую проекцию пространства!\nВсё равно удалить мини проекцию?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes
-                    | QMessageBox.StandardButton.No
-                    | QMessageBox.StandardButton.Cancel,
-                    QMessageBox.StandardButton.Cancel
                 )
 
                 if reply == QMessageBox.StandardButton.Yes:
@@ -1293,9 +1329,6 @@ class MainWidget(QWidget):
                 elif reply == QMessageBox.StandardButton.No:
                     return
 
-                elif reply == QMessageBox.StandardButton.Cancel:
-                    return
-
             else:
                 projection = next((projection for projection in self.parent_space.projections
                                    if projection == mini_projection_to_remove.saved_projection), None)
@@ -1316,6 +1349,12 @@ class MainWidget(QWidget):
 
                 self.mini_projections_list.remove(mini_projection_to_remove)
                 self.update_mini_projections_layout()
+
+
+    def calculate_subprojections_positions_by_changing_its_projection(self):
+        """
+
+        """
 
 
     def set_mini_projection_on_main_scene(self, mini_projection):
@@ -1341,6 +1380,11 @@ class MainWidget(QWidget):
                     self.parent_space.current_projection.projection_width,
                     self.parent_space.current_projection.projection_height
                 )
+
+                # if self.parent_space.current_projection.sub_projections:
+                #     for sub in self.parent_space.current_projection.sub_projections:
+                #         sub.x_pos = sub.x_pos * self.x_scale
+                #         sub.y_pos = sub.y_pos * self.y_scale
 
                 self.update_main_scene(set_position=True)
                 self.update_mini_projections_layout()
@@ -2129,21 +2173,36 @@ class MainWidget(QWidget):
                 mini_projection.highlight(subprojection_to_highlight)
 
 
-    def set_subprojection_position_from_its_scene_position(self, x=True, y=True, z=True):
+    def set_subprojection_position_from_its_scene_position(self, x=True, y=True, z=True, scaled=None):
         if self.parent_space.current_projection.sub_projections:
             for sub_projection in self.parent_space.current_projection.sub_projections:
                 if sub_projection.state != ObjectState.DELETED:
                     item = sub_projection.scaled_projection_pixmap
-                    if item is None or self.parent_space.current_projection.scaled_projection_pixmap is None:
-                        continue
-                    relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item,
-                                                                                                             0, 0)
-                    if x:
-                        sub_projection.x_pos = relative_pos.x()
-                    if y:
-                        sub_projection.y_pos = relative_pos.y()
-                    if z:
-                        sub_projection.z_pos = item.zValue()
+
+                    if scaled is not None:
+                        if item is None:
+                            continue
+                        relative_pos = scaled.mapFromItem(item,
+                                                                                                                 0, 0)
+                        if x:
+                            sub_projection.x_pos = relative_pos.x()
+                        if y:
+                            sub_projection.y_pos = relative_pos.y()
+                        if z:
+                            sub_projection.z_pos = item.zValue()
+
+                    else:
+                        if item is None or self.parent_space.current_projection.scaled_projection_pixmap is None:
+                            continue
+
+                        relative_pos = self.parent_space.current_projection.scaled_projection_pixmap.mapFromItem(item,
+                                                                                                                 0, 0)
+                        if x:
+                            sub_projection.x_pos = relative_pos.x()
+                        if y:
+                            sub_projection.y_pos = relative_pos.y()
+                        if z:
+                            sub_projection.z_pos = item.zValue()
 
 
     def update_mini_projections_layout(self):
@@ -2342,6 +2401,9 @@ class MainWidget(QWidget):
                             # необходимо при открытии мини-развертки на главное сцене
                             if set_position:
                                 if sub.x_pos and sub.y_pos:
+                                    print(f"!!!-X_new:{sub.x_pos}")
+                                    print(f"!!!-Y_new:{sub.y_pos}")
+                                    print(f"!!!-Z_new:{sub.z_pos}")
                                     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
                             else:
                                 # теперь подпроекции будут появляться в середине сцены
