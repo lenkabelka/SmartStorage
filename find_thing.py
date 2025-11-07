@@ -8,13 +8,14 @@ import sys
 import all_spaces_in_DB
 import connect_DB as connection
 import psycopg2
+import utils
 
 
 class FindThing(QDialog):
     def __init__(self, parent=None, user_id=None, user_role=None):
         super().__init__(parent)
         self.setWindowTitle("Найти вещь")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.selected_file = ""
 
         self.spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(user_id,user_role)

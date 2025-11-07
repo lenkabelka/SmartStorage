@@ -8,13 +8,14 @@ import sys
 import image as im
 import image_container
 from track_object_state import ObjectState
+import utils
 
 
 class AddThing(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить вещь в пространство")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.selected_file = ""
 
         screen_size = QGuiApplication.primaryScreen().size()

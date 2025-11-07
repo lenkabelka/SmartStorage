@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (QWidget, QLabel, QTextEdit, QPushButton, QVBoxLayou
 from PyQt6.QtGui import QFontMetrics, QFont, QGuiApplication, QRegularExpressionValidator, QIcon, QPixmap, QImage
 from PyQt6.QtCore import Qt, QRegularExpression, pyqtSignal, QBuffer, QByteArray
 import sys
+import utils
 
 
 class AddImage(QDialog):
@@ -12,7 +13,7 @@ class AddImage(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить изображение")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.selected_file = ""
 
         # Создание виджетов

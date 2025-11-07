@@ -3,6 +3,7 @@ import connect_DB as connection
 from PyQt6.QtWidgets import QDialog, QListWidget, QListWidgetItem, QVBoxLayout, QWidget, QLabel, QSizePolicy
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import pyqtSignal, Qt
+import utils
 
 def load_all_spaces_from_DB(user_id, global_role):
     config = connection.load_config()
@@ -14,18 +15,20 @@ def load_all_spaces_from_DB(user_id, global_role):
                 if global_role == "admin":
                     # Админ видит абсолютно все пространства
                     query = """
-                        SELECT id_space, space_name, space_description
-                        FROM spaces.spaces
-                    """
+                            SELECT id_space, space_name, space_description
+                            FROM spaces.spaces
+                            ORDER BY space_name ASC
+                        """
                     cursor.execute(query)
                 else:
                     # Остальные видят только свои пространства, где им назначена локальная роль
                     query = """
-                        SELECT s.id_space, s.space_name, s.space_description
-                        FROM spaces.spaces s
-                        JOIN spaces.user_access ua ON s.id_space = ua.id_space
-                        WHERE ua.id_user = %s
-                    """
+                            SELECT s.id_space, s.space_name, s.space_description
+                            FROM spaces.spaces s
+                            JOIN spaces.user_access ua ON s.id_space = ua.id_space
+                            WHERE ua.id_user = %s
+                            ORDER BY s.space_name ASC
+                        """
                     cursor.execute(query, (user_id,))
 
                 results = cursor.fetchall()
@@ -42,7 +45,7 @@ class SpacesList(QDialog):
     def __init__(self, spaces=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Выберите пространство")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.spaces = spaces or []
 
         # Основной QListWidget

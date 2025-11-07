@@ -7,13 +7,13 @@ from PyQt6.QtCore import QRegularExpression
 import bcrypt
 import connect_DB as connection
 import user as usr
-
+import utils
 
 class LogIn(QDialog):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Войдите или зарегистрируйтесь")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
 
 
         # Валидация
@@ -37,18 +37,18 @@ class LogIn(QDialog):
                 padding: 3px;            /* отступ текста от рамки */
             }
             QPushButton {
-                border: 2px solid gray;  /* меняется при фокусе */
-                padding: 10px;            /* отступ текста от рамки */
+                border: 3px solid gray;  /* меняется при фокусе */
+                padding: 12px;            /* отступ текста от рамки */
                 border-radius: 5px;      /* скругление углов */
             }
             QPushButton:hover {
-                border: 4px solid gray;  /* меняется при фокусе */
+                border: 4px solid #35a0a3;  /* меняется при фокусе */
             }
         """)
 
         # Иконки глазика
-        self.icon_show = QIcon("icons/opened_eye.ico")
-        self.icon_hide = QIcon("icons/closed_eye.ico")
+        self.icon_show = QIcon(utils.resource_path("icons/opened_eye.ico"))
+        self.icon_hide = QIcon(utils.resource_path("icons/closed_eye.ico"))
 
         # Стек для страниц
         self.stack_layout = QStackedLayout()

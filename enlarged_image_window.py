@@ -1,13 +1,14 @@
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QLabel
 from PyQt6.QtGui import QIcon, QPixmap, QGuiApplication
 from PyQt6.QtCore import Qt, QSize
+import utils
 
 
 class EnlargedImageWindow(QWidget):
     def __init__(self, pixmap: QPixmap):
         super().__init__()
         self.setWindowTitle("Увеличенное изображение")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
 
         self.original_pixmap = pixmap
 

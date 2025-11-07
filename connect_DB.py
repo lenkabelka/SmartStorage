@@ -1,11 +1,12 @@
 import json
 import psycopg2
+import utils
 from typing import List
 from PyQt6.QtWidgets import QMessageBox
 
 
 def load_config():
-    with open('config.json', 'r') as config_file:
+    with open(utils.resource_path('config.json'), 'r') as config_file:
         return json.load(config_file)
 
 

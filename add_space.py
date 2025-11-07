@@ -1,13 +1,14 @@
 from PyQt6.QtWidgets import (QWidget, QLabel, QTextEdit, QPushButton, QVBoxLayout, QLineEdit,
                              QMessageBox, QDialog, QFileDialog, QHBoxLayout, QApplication)
 from PyQt6.QtGui import QIcon
+import utils
 
 
 class AddSpace(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавить пространство")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
 
         # Создание виджетов
         self.name_edit = QLineEdit()

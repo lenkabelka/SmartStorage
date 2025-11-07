@@ -1,5 +1,6 @@
 from PyQt6.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PyQt6.QtGui import QIcon
+import utils
 
 
 class TreeNode:
@@ -74,9 +75,9 @@ class TreeModel(QAbstractItemModel):
 
         elif role == Qt.ItemDataRole.DecorationRole:
             if item.node_type == TreeNode.TYPE_SPACE:
-                return QIcon("icons/space.png")
+                return QIcon(utils.resource_path("icons/space.png"))
             elif item.node_type == TreeNode.TYPE_THING:
-                return QIcon("icons/thing_1.jpg")
+                return QIcon(utils.resource_path("icons/thing_1.jpg"))
 
         return None
 

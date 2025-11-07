@@ -4,6 +4,7 @@ from PyQt6.QtGui import QGuiApplication, QRegularExpressionValidator, QIcon, QPi
 from PyQt6.QtCore import Qt, QRegularExpression
 from thing import Thing
 from space import Space
+import utils
 
 
 class AddProjection(QDialog):
@@ -14,7 +15,7 @@ class AddProjection(QDialog):
             self.setWindowTitle("Добавить проекцию пространства")
         elif isinstance(projection_parent, Thing):
             self.setWindowTitle("Добавить проекцию вещи")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.selected_file = ""
 
         # Создание виджетов

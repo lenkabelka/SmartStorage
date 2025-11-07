@@ -4,13 +4,14 @@ from PyQt6.QtCore import Qt
 from space import Space
 import image_container
 from track_object_state import ObjectState
+import utils
 
 
 class SpaceInformation(QWidget):
     def __init__(self, sp: Space):
         super().__init__()
         self.setWindowTitle("Информация о вещи")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
 
         screen_size = QGuiApplication.primaryScreen().size()
         screen_width = screen_size.width()

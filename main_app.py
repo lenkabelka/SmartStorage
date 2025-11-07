@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
         self.setWindowTitle("Smart Storage")
-        self.setWindowIcon(QIcon("icons/mini_logo.png"))
+        self.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         self.menu = self.menuBar()
 
         self.action_find_thing = QAction("Найти вещь", self)
@@ -182,7 +182,7 @@ class MainWidget(QWidget):
         self.wellcome_scene = QGraphicsScene()
         self.wellcome_view = zoomable_graphics_view.ZoomableGraphicsView(self.wellcome_scene) #QGraphicsView(wellcome_scene)
 
-        self.wellcome_placeholder_pixmap = QPixmap("icons/LOGO_1.png")
+        self.wellcome_placeholder_pixmap = QPixmap(utils.resource_path("icons/LOGO_1.png"))
         self.wellcome_placeholder = QGraphicsPixmapItem(self.wellcome_placeholder_pixmap)
         self.wellcome_scene.addItem(self.wellcome_placeholder)
         self.wellcome_scene.setSceneRect(self.wellcome_scene.itemsBoundingRect())
@@ -1217,9 +1217,6 @@ class MainWidget(QWidget):
                             mini_projection_to_change.update_mini_projection_name(current_projection)
 
                         if not self.is_main_scene_equal_to_mini_scene(mini_projection_to_change):
-
-                            print("Я ТУТОЧКИ!!!!")
-
                             mini_projection_to_change.update_scene(current_projection)
 
                         self.update_mini_projections_layout()
@@ -2060,7 +2057,7 @@ class MainWidget(QWidget):
 
         scroll_window = QScrollArea()
         scroll_window.setWindowTitle(f"Все вещи в пространстве {sp.name}")
-        scroll_window.setWindowIcon(QIcon("icons/mini_logo.png"))
+        scroll_window.setWindowIcon(QIcon(utils.resource_path("icons/mini_logo.png")))
         scroll_window.setWidgetResizable(True)
 
         # Контейнер для виджетов информации о вещах

@@ -3,6 +3,8 @@ from PyQt6.QtGui import QPixmap, QImage, qAlpha, QTransform
 from PyQt6.QtCore import QRect, QBuffer, QPointF, Qt
 import cv2
 import math
+import os
+import sys
 from PyQt6.QtGui import QPainterPath
 
 
@@ -230,3 +232,10 @@ def iterate_pixels_in_path(path: QPainterPath, step: int = 1):
             point = QPointF(x, y)
             if path.contains(point):
                 yield point
+
+
+def resource_path(relative_path):
+    """Возвращает корректный путь к ресурсу при запуске и из IDE, и из .exe"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
