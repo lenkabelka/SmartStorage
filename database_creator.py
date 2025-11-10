@@ -5,6 +5,7 @@ import psycopg2
 
 def load_config():
     relative_path_to_config = Path("config.json")
+    #relative_path_to_config = Path("config_backup.json")
     absolute_path_to_config = relative_path_to_config.resolve()
     with open(absolute_path_to_config, 'r', encoding='utf-8') as config_file:
         return json.load(config_file)

@@ -35,6 +35,13 @@ class TreeWidget(QTreeView):
         else:
             current_node = TreeNode(space, space.name, TreeNode.TYPE_SPACE)
 
+        # Добавляем вещи
+        if permissions:
+            for thing in sorted(getattr(space, "things", []), key=lambda t: t.name.lower()):
+                if getattr(thing, "state", None) != ObjectState.DELETED:
+                    thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
+                    current_node.add_child(thing_node)
+
         # Добавляем подпространства первого уровня
         for subspace in sorted(getattr(space, "subspaces", []), key=lambda s: s.name.lower()):
             if getattr(subspace, "state", None) != ObjectState.DELETED:
@@ -45,12 +52,12 @@ class TreeWidget(QTreeView):
                     child_node = TreeNode(subspace, subspace.name, TreeNode.TYPE_SPACE)
                 current_node.add_child(child_node)
 
-        # Добавляем вещи
-        if permissions:
-            for thing in sorted(getattr(space, "things", []), key=lambda t: t.name.lower()):
-                if getattr(thing, "state", None) != ObjectState.DELETED:
-                    thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
-                    current_node.add_child(thing_node)
+        # # Добавляем вещи
+        # if permissions:
+        #     for thing in sorted(getattr(space, "things", []), key=lambda t: t.name.lower()):
+        #         if getattr(thing, "state", None) != ObjectState.DELETED:
+        #             thing_node = TreeNode(thing, thing.name, TreeNode.TYPE_THING)
+        #             current_node.add_child(thing_node)
 
         return current_node
 
@@ -94,17 +101,21 @@ class TreeWidget(QTreeView):
                            lambda: self.app_ref.show_all_things_in_space(item.ref))
             menu.addAction("Изменить информацию о пространстве",
                            lambda: self.app_ref.change_space_information(item.ref))
+            menu.addAction("Перенести пространство в другое пространство",
+                           lambda: self.app_ref.change_parent_space_of_thing_or_space(item.ref))
             menu.addSeparator()
-            menu.addAction("Удалить пространство", lambda: self.delete_space(index))
+            menu.addAction("Удалить пространство", lambda: self.app_ref.delete_space())
         elif node_type == TreeNode.TYPE_SPACE:
             menu.addAction("Добавить проекцию для подпространства", lambda: self.add_subspace_projection(index))
             menu.addAction("Открыть подпространство как пространство", lambda: self.open_subspace(index))
             menu.addAction("Посмотреть информацию о подпространстве",
                            lambda: self.app_ref.show_space_information(item.ref))
-            menu.addAction("Посмотреть информацию о всех вещах в подпространстве",
-                           lambda: self.app_ref.show_all_things_in_space(item.ref))
             menu.addAction("Изменить информацию о подпространстве",
                            lambda: self.app_ref.change_space_information(item.ref))
+            menu.addAction("Посмотреть информацию о всех вещах в подпространстве",
+                           lambda: self.app_ref.show_all_things_in_space(item.ref))
+            menu.addAction("Перенести подпространство в другое пространство",
+                           lambda: self.app_ref.change_parent_space_of_thing_or_space(item.ref))
             menu.addSeparator()
             menu.addAction("Удалить подпространство", lambda: self.delete_subspace_from_space(index))
         elif node_type == TreeNode.TYPE_THING:
@@ -112,6 +123,8 @@ class TreeWidget(QTreeView):
             menu.addAction("Посмотреть информацию о вещи",
                            lambda: self.app_ref.show_thing_information(item.ref))
             menu.addAction("Изменить информацию о вещи", lambda: self.app_ref.change_thing_information(item.ref))
+            menu.addAction("Перенести вещь в другое пространство",
+                           lambda: self.app_ref.change_parent_space_of_thing_or_space(item.ref))
             menu.addSeparator()
             menu.addAction("Удалить вещь", lambda: self.delete_thing_from_space(index))
 
@@ -132,10 +145,6 @@ class TreeWidget(QTreeView):
 
     def open_parent_space(self):
         self.app_ref.load_parent_space_from_DB()
-
-    def delete_space(self, index: QModelIndex):
-        node = index.internalPointer()
-        self.app_ref.delete_space(node.ref)
 
     def add_space_projection(self):
         self.app_ref.add_space_projection()

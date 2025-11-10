@@ -705,6 +705,7 @@ class MainWidget(QWidget):
                             temp_dict_new_subspace_projection["y_height"],
                             reference_to_parent_space=subspace_to_add_projection
                         )
+                        new_sub_projection.mark_new()
 
                         items = self.scene.items()  # список всех QGraphicsItem
                         if items:
@@ -713,8 +714,6 @@ class MainWidget(QWidget):
                             new_sub_projection.z_pos = max_z_int + 1
                         else:
                             new_sub_projection.z_pos = int(0)
-
-                        new_sub_projection.mark_new()
 
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
                         new_sub_projection.reference_to_parent_projection = self.parent_space.current_projection
@@ -951,10 +950,6 @@ class MainWidget(QWidget):
             if add_thing_dialog.exec():
                 dict_of_new_space = add_thing_dialog.get_data()
 
-                # if not dict_of_new_space["name"]:
-                #     QMessageBox.warning(self, "Заполните обязательные поля",
-                #                         "Пожалуйста укажите название вещи!")
-                # else:
                 new_thing = thing.Thing(dict_of_new_space["name"], self.parent_space)
                 new_thing.mark_new()
 
@@ -1030,6 +1025,7 @@ class MainWidget(QWidget):
                     reference_to_parent_projection=self.parent_space.current_projection,
                     reference_to_parent_thing=thing_to_add_projection
                 )
+                new_thing_projection.mark_new()
 
                 items = self.scene.items()  # список всех QGraphicsItem
                 if items:
@@ -1039,8 +1035,6 @@ class MainWidget(QWidget):
                     new_thing_projection.z_pos = max_z_int + 1
                 else:
                     new_thing_projection.z_pos = int(0)
-
-                new_thing_projection.mark_new()
 
                 item = draggable_item.DraggablePixmapItem(
                     scaled_pixmap,
@@ -1445,8 +1439,8 @@ class MainWidget(QWidget):
                     if subprojection_to_remove.state == ObjectState.NEW:
                         self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
                     else:
-                        print(f"SUBPROJECTION_STATE: {subprojection_to_remove.state}")
-                        print(f"SUBPROJECTION_ID: {subprojection_to_remove.id_projection}")
+                        #print(f"SUBPROJECTION_STATE: {subprojection_to_remove.state}")
+                        #print(f"SUBPROJECTION_ID: {subprojection_to_remove.id_projection}")
 
                         subprojection_to_remove.mark_deleted()
 
@@ -1465,7 +1459,7 @@ class MainWidget(QWidget):
             QMessageBox.warning(
                 self,
                 "Доступ запрещён",
-                "У вас нет прав для удаления подразвертки."
+                "У вас нет прав для удаления подпроекции."
             )
             return
 
@@ -1485,11 +1479,12 @@ class MainWidget(QWidget):
                                 if subprojection_to_remove.state == ObjectState.NEW:
                                     projection.sub_projections.remove(subprojection_to_remove)
                                 else:
-                                    #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
-                                    # нельзя удалить подразвертку того пространства, к которому нет доступа
-                                    #TODO продумать этот момент
-                                    if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
-                                        continue
+                                    # #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
+                                    # # нельзя удалить подразвертку того пространства, к которому нет доступа
+                                    # #TODO продумать этот момент
+                                    #  (можно, так как подразвертки относятся только к текущему пространству)
+                                    # if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
+                                    #     continue
 
                                     subprojection_to_remove.mark_deleted()
 
@@ -1592,50 +1587,55 @@ class MainWidget(QWidget):
     # ACTION
     def delete_space(self):
 
-        # Проверка прав доступа
-        if not self.access_manager.can_edit(self.parent_space):
-            QMessageBox.warning(
-                self,
-                "Доступ запрещён",
-                "У вас нет прав для удаления пространства."
-            )
-            return
+        try:
+            # Проверка прав доступа
+            if not self.access_manager.can_edit(self.parent_space):
+                QMessageBox.warning(
+                    self,
+                    "Доступ запрещён",
+                    "У вас нет прав для удаления пространства."
+                )
+                return
 
-        if self.parent_space:
-            if self.parent_space.state == ObjectState.NEW:
+            if self.parent_space is not None:
+                if self.parent_space.state == ObjectState.NEW:
+                    self.parent_space = None
+                else:
+                    self.parent_space.mark_deleted()
+                    if self.parent_space.projections:
+                        for proj in self.parent_space.projections:
+                            proj.mark_deleted()
+                            if proj.sub_projections:
+                                for subproj in proj.sub_projections:
+                                    subproj.mark_deleted()
+                    if self.parent_space.subspaces:
+                        for sub in self.parent_space.subspaces:
+                            sub.mark_deleted()
+                    if self.parent_space.things:
+                        for item in self.parent_space.things:
+                            item.mark_deleted()
+                    if self.parent_space.space_images:
+                        for image in self.parent_space.space_images:
+                            image.mark_deleted()
+
+                self.clear_layout(self.layout_images_of_space)
+                self.scene.clear()
+                self.placeholder_for_projection_1 = None
+                self.placeholder_for_projection_2 = None
+                self.mini_projections_list.clear()
+                self.update_mini_projections_layout()
+                self.update_tree_view()
+                self.space_changed.emit()
+                self.set_buttons_disabled_or_enabled()
+                #self.set_placeholders_on_main_scene()
+                self.save_space_to_DB()
                 self.parent_space = None
-            else:
-                self.parent_space.mark_deleted()
-                if self.parent_space.projections:
-                    for proj in self.parent_space.projections:
-                        proj.mark_deleted()
-                        if proj.sub_projections:
-                            for subproj in proj.sub_projections:
-                                subproj.mark_deleted()
-                if self.parent_space.subspaces:
-                    for sub in self.parent_space.subspaces:
-                        sub.mark_deleted()
-                if self.parent_space.things:
-                    for item in self.parent_space.things:
-                        item.mark_deleted()
-                if self.parent_space.space_images:
-                    for image in self.parent_space.space_images:
-                        image.mark_deleted()
 
-            self.clear_layout(self.layout_images_of_space)
-            self.scene.clear()
-            self.placeholder_for_projection_1 = None
-            self.placeholder_for_projection_2 = None
-            self.mini_projections_list.clear()
-            self.update_mini_projections_layout()
-            self.update_tree_view()
-            self.space_changed.emit()
-            self.set_buttons_disabled_or_enabled()
-            #self.set_placeholders_on_main_scene()
-            self.save_space_to_DB()
+        except Exception as e:
+            print(e)
 
 
-    def save_space_to_DB(self):
+    def save_space_to_DB(self, schow_message=True):
         # Проверка прав
         if not self.access_manager.can_edit(self.parent_space):
             QMessageBox.warning(
@@ -1662,7 +1662,7 @@ class MainWidget(QWidget):
         new_spaces = self._collect_new_spaces(self.parent_space)
 
         # Сохраняем пространство и все подпространства
-        self.parent_space.save_space()
+        self.parent_space.save_space(schow_message)
 
         # Добавляем права editor для всех новых пространств
         self._assign_editor_role_to_new_spaces(new_spaces)
@@ -1721,8 +1721,10 @@ class MainWidget(QWidget):
                     self,
                     "Сохранить текущее пространство",
                     "Текущее пространство не сохранено!\nХотите сохранить его?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel
                 )
 
                 if reply == QMessageBox.StandardButton.Yes:
@@ -1735,57 +1737,66 @@ class MainWidget(QWidget):
                             "У вас нет прав для сохранения этого пространства."
                         )
                         return
-
                     self.save_space_to_DB()
+                    self.parent_space = space_to_open
+                    self.load_space_from_DB(space_to_open.id_space)
+
                 elif reply == QMessageBox.StandardButton.No:
-                    # если я не сохраняю текущее пространство, то открываемое подпространтсво не сохраняется
-                    # как подпространство пространства, т.е. оно автоматически становится топовым пространством
-                    # после сохранения в базу данных, соответсвенно, его подразвертки для разверток пространтства,
-                    # из которого открывается подпространство, необходимо удалить *** смотри следующий комментарий
+                    # если я не сохраняю изменения текущего пространства
+                    # и при этом в качестве изменений текущего пространства
+                    # также были добавлены подразвертки открываемого подпространства,
+                    # то надо удалить эти подразвертки в projections открываемого
+                    # подпространства, иначе они сохранятся в базу
+                    # (если подпространство будет в дальнейшем сохранено),
+                    # как его развертки без ссылки на родительскую развертку
+                    # и потом при открытии этого подпространтсва из базы они будут
+                    # открываться как родительские развертки, так как
+                    # в базе id_parent_projection будет null и см *** в следующем комментарии
                     for proj in self.parent_space.projections:
                         subprojections_to_remove = [
                             sub for sub in proj.sub_projections
-                            if sub.reference_to_parent_projection == proj and sub.reference_to_parent_space == space_to_open
+                            if sub.reference_to_parent_projection == proj
+                               and sub.reference_to_parent_space == space_to_open
+                               and sub.state == ObjectState.NEW
                         ]
                         if subprojections_to_remove:
                             for projection in subprojections_to_remove:
                                 space_to_open.projections.remove(projection)
 
+                    if space_to_open.state == ObjectState.NEW:
+                        self.parent_space = space_to_open
+                        space_to_open.id_parent_space = None
+                        # если подпространство новое, то у него не может быть ни подразверток,
+                        # ни даже разверток, так как *** они были удалены
+                        self.mini_projections_list.clear()
+                        self.update_main_scene(set_position=False)
+                        self.update_tree_view()
+                        self.update_mini_projections_layout()
+                        self.update_images_layout()
 
-            if space_to_open.state == ObjectState.NEW:
+                    elif space_to_open.state == ObjectState.UNMODIFIED:
+                        self.load_space_from_DB(space_to_open.id_space)
 
-                self.parent_space = space_to_open
-                # *** если подпространство новое, то у него не может быть ни подразверток, ни даже разверток, так как они были удалены
-                self.mini_projections_list.clear()
-                self.update_main_scene()
-                self.update_tree_view()
-                self.update_mini_projections_layout()
+                    elif space_to_open.state == ObjectState.MODIFIED:
+                        reply = QMessageBox.question(self, "Подпространство было изменено",
+                                            "Вы изменили это пространство, но эти "
+                                            "изменения ещё не были сохранены. "
+                                            "Хотите сохранить эти изменения?",
+                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                            QMessageBox.StandardButton.Yes
+                        )
 
+                        if reply == QMessageBox.StandardButton.Yes:
+                            space_to_open.save_space()
+                            self.load_space_from_DB(space_to_open.id_space)
+                        elif reply == QMessageBox.StandardButton.No:
+                            self.load_space_from_DB(space_to_open.id_space)
 
-            elif space_to_open.state == ObjectState.UNMODIFIED:
+                elif reply == QMessageBox.StandardButton.Cancel:
+                    return
+
+            else:
                 self.load_space_from_DB(space_to_open.id_space)
-
-            elif space_to_open.state == ObjectState.MODIFIED:
-                reply = QMessageBox.question(self, "Подпространство было изменено",
-                                    "Вы изменили это пространство, но эти "
-                                    "изменения ещё не были сохранены. "
-                                    "Хотите сохранить эти изменения?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.Yes
-                )
-
-                if reply == QMessageBox.StandardButton.Yes:
-                    space_to_open.save_space()
-                    self.load_space_from_DB(space_to_open.id_space)
-                elif reply == QMessageBox.StandardButton.No:
-                    self.load_space_from_DB(space_to_open.id_space)
-
-            self.update_tree_view()
-            self.update_main_scene(set_position=True)
-            self.fill_mini_projections_list(self.parent_space.projections)
-            for proj in self.parent_space.projections:
-                self.save_or_update_mini_projection(proj, check_permissions=False)
-            self.update_images_layout()
 
         except Exception as e:
             print(e)
@@ -1802,9 +1813,6 @@ class MainWidget(QWidget):
                 )
                 print(f"new: {new_mini_projection}")
                 self.mini_projections_list.append(new_mini_projection)
-
-
-
 
 
     def load_space_from_DB(self, id_space, thing_to_show=None):
@@ -1972,7 +1980,7 @@ class MainWidget(QWidget):
             QMessageBox.warning(self, "Нет пространств", "В базе данных пока нет ни одного пространства!")
             return
 
-        spaces_list = all_spaces_in_DB.SpacesList(spaces_in_DB)
+        spaces_list = all_spaces_in_DB.SpacesList(spaces=spaces_in_DB)
 
         def on_selected(row):
             print(f"Выбранная строка: {row}")
@@ -2092,6 +2100,94 @@ class MainWidget(QWidget):
                         #print(f"----projection: {projection}")
                         return projection
         return None
+
+
+    def change_parent_space_of_thing_or_space(self, item_to_move):
+        """
+        Функция реализует перенос пространства или вещи в другое пространство
+        (т.е. изменяет родительское пространство вещи или подпространства)
+        """
+        try:
+            spaces_in_DB = None
+            if isinstance(item_to_move, thing.Thing):
+                spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(self.user.id, self.user.role)
+                sp = next((s for s in spaces_in_DB if s[0] == item_to_move.reference_to_parent_space.id_space), None)
+                if sp:
+                    spaces_in_DB.remove(sp)
+            elif isinstance(item_to_move, space.Space):
+                spaces_in_DB = all_spaces_in_DB.load_all_non_subspaces_from_DB(self.user.id, self.user.role, item_to_move.id_space)
+
+            if spaces_in_DB is None:
+                QMessageBox.warning(self, "Нет пространств", "В базе данных пока нет ни одного пространства для переноса!")
+                return
+
+            if not self.is_current_space_saved():
+                if isinstance(item_to_move, space.Space):
+                    QMessageBox.warning(self,
+                                        "Пространство не сохранено",
+                                        "Для переноса его подпространства, пожалуйста, "
+                                        "сохраните пространство!")
+                    return
+                elif isinstance(item_to_move, thing.Thing):
+                    QMessageBox.warning(self,
+                                        "Пространство не сохранено",
+                                        "Для переноса его вещи, пожалуйста, "
+                                        "сохраните пространство!")
+                    return
+
+            spaces_list = all_spaces_in_DB.SpacesList(show_space_description=False, spaces=spaces_in_DB)
+
+            def on_selected(row):
+                print(f"Выбранная строка: {row}")
+
+                # получаю id_space выбранного пространства
+                id_space = spaces_in_DB[row][0]
+
+                # Удаляем подразвёртки перемещаемого подпространства (вещи) с развёрток текущего пространства
+                # (если переносим само пространство, то достаточно изменить его id_parent_space)
+                if item_to_move != self.parent_space:
+                    if self.parent_space and self.parent_space.projections:
+                        for proj in self.parent_space.projections:
+                            subprojections_to_remove = [
+                                pr for pr in proj.sub_projections
+                                if pr.reference_to_parent_projection == proj
+                                   and
+                                   (pr.reference_to_parent_space == item_to_move
+                                    or pr.reference_to_parent_thing == item_to_move)
+                            ]
+                            for pr in subprojections_to_remove:
+                                if pr in proj.sub_projections:
+                                    if pr.state == ObjectState.NEW:
+                                        proj.sub_projections.remove(pr)
+                                    else:
+                                        pr.mark_deleted()
+
+                self.update_main_scene(set_position=True)
+                if self.parent_space and self.parent_space.projections:
+                    for proj in self.parent_space.projections:
+                        self.save_or_update_mini_projection(proj)
+                item_to_move.id_parent_space = id_space
+                self.save_space_to_DB(schow_message=False)
+
+                if item_to_move != self.parent_space:
+                    if isinstance(item_to_move, space.Space):
+                        self.parent_space.subspaces.remove(item_to_move)
+                    elif isinstance(item_to_move, thing.Thing):
+                        self.parent_space.things.remove(item_to_move)
+
+                self.update_tree_view()
+                self.show_full_structure_of_space()
+
+                print(f"id_space: {id_space}")
+
+            spaces_list.spaceDoubleClicked.connect(on_selected)
+
+            if spaces_list.exec():
+                print("Диалог закрыт с accept")
+            else:
+                print("Диалог закрыт без выбора")
+        except Exception as e:
+            print(e)
 
 
     def move_draggable_to_another_z_position(self, draggable_to_move, parent_name_of_reference_subprojection):
@@ -2439,9 +2535,9 @@ class MainWidget(QWidget):
                             # необходимо при открытии мини-развертки на главное сцене
                             if set_position:
                                 if sub.x_pos and sub.y_pos:
-                                    print(f"!!!-X_new:{sub.x_pos}")
-                                    print(f"!!!-Y_new:{sub.y_pos}")
-                                    print(f"!!!-Z_new:{sub.z_pos}")
+                                    # print(f"!!!-X_new:{sub.x_pos}")
+                                    # print(f"!!!-Y_new:{sub.y_pos}")
+                                    # print(f"!!!-Z_new:{sub.z_pos}")
                                     sub.scaled_projection_pixmap.setPos(sub.x_pos, sub.y_pos)
                             else:
                                 # теперь подпроекции будут появляться в середине сцены

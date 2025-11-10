@@ -90,6 +90,7 @@ ipython_config.py
 __pycache__/
 
 #Config
+config_backup.json
 config.json
 
 #Other

@@ -13,14 +13,13 @@ class Thing(track_object_state.Trackable):
     reference_to_parent_space: Optional["Space"]
 
     description: str = None  # DB
-    #image: QImage = None # DB
     thing_images: list[Optional[im.SpaceImage]] = field(default_factory=list)
     id_thing: Optional[int] = None  # DB
     id_parent_space: Optional[int] = None  # DB
 
 
     def __post_init__(self):
-        self._db_fields = {'id_thing', 'name', 'description'}
+        self._db_fields = {'name', 'description', 'id_thing', 'id_parent_space'}
         super().__post_init__()
 
 

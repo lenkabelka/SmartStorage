@@ -25,7 +25,7 @@ class Space(track_object_state.Trackable):
 
 
     def __post_init__(self):
-        self._db_fields = {'id_space', 'name', 'description'}
+        self._db_fields = {'id_space', 'name', 'description', 'id_parent_space'}
         super().__post_init__()
 
 
@@ -50,19 +50,39 @@ class Space(track_object_state.Trackable):
         print(f"{self.name} space inserted")
 
 
+    # def update(self, cursor):
+    #     if self.id_space is None:
+    #         raise ValueError("Невозможно обновить: id_space отсутствует")
+    #
+    #     query = """
+    #         UPDATE spaces.spaces
+    #         SET space_name = %s, space_description = %s
+    #         WHERE id_space = %s
+    #     """
+    #     values = (self.name, self.description, self.id_space)
+    #     cursor.execute(query, values)
+    #     self.reset_state()
+    #     print(f"{self.name} space updated")
+
     def update(self, cursor):
+        """
+        Обновляет запись о пространстве в таблице spaces.spaces.
+        """
         if self.id_space is None:
             raise ValueError("Невозможно обновить: id_space отсутствует")
 
         query = """
             UPDATE spaces.spaces
-            SET space_name = %s, space_description = %s
+            SET space_name = %s,
+                space_description = %s,
+                id_parent_space = %s
             WHERE id_space = %s
         """
-        values = (self.name, self.description, self.id_space)
+        values = (self.name, self.description, self.id_parent_space, self.id_space)
+
         cursor.execute(query, values)
         self.reset_state()
-        print(f"{self.name} space updated")
+        print(f"Space '{self.name}' updated (id_space={self.id_space})")
 
 
     def delete(self, cursor):
@@ -75,7 +95,7 @@ class Space(track_object_state.Trackable):
         print(f"{self.name} space deleted")
 
 
-    def save_space(self):
+    def save_space(self, schow_message=True):
         config = connection.load_config()
         conn = connection.db_connect(config)
 
@@ -144,7 +164,8 @@ class Space(track_object_state.Trackable):
                 if getattr(self, "state", None) == ObjectState.DELETED:
                     self.show_message("Внимание", "Пространство удалено.")
                 else:
-                    self.show_message("Успешно", "Пространство сохранено.")
+                    if schow_message:
+                        self.show_message("Успешно", "Пространство сохранено.")
 
         except Exception as e:
             self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}", icon=QMessageBox.Icon.Critical)
