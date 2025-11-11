@@ -2641,23 +2641,18 @@ class MainWidget(QWidget):
                 if isinstance(item, QGraphicsPixmapItem):
                     item.setGraphicsEffect(None)
 
-            def focus_and_highlight(target_item):
-                # Устанавливаем фокус и подсветку на выбранный
-                #target_item.setFlag(QGraphicsPixmapItem.GraphicsItemFlag.ItemIsFocusable)
-                self.view.setFocus()
-                target_item.setFocus()
-
+            def highlight_draggable(target_draggable):
                 effect = QGraphicsDropShadowEffect()
                 effect.setBlurRadius(15)
                 effect.setColor(QColor("red"))
                 effect.setOffset(0, 0)
-                target_item.setGraphicsEffect(effect)
+                target_draggable.setGraphicsEffect(effect)
 
             #draggable_pixmap_item = None
             if self.parent_space.current_projection:
                 if self.parent_space.current_projection.sub_projections:
 
-                    item_on_scene = None
+                    draggable_on_scene = None
 
                     if isinstance(clicked_ref, thing.Thing):
 
@@ -2677,11 +2672,11 @@ class MainWidget(QWidget):
                                                          if subprojection.reference_to_parent_thing == clicked_ref), None)
 
                         if subprojection:
-                            item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                            draggable_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
                                                   if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                            #print(f"ITEM ON SCENE: {item_on_scene}")
+                            #print(f"ITEM ON SCENE: {draggable_on_scene}")
 
-                            #focus_and_highlight(item_on_scene)
+                            #highlight_draggable(draggable_on_scene)
 
                     else:
                         subprojection = next((subprojection for subprojection
@@ -2690,12 +2685,12 @@ class MainWidget(QWidget):
 
 
                         if subprojection:
-                            item_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
+                            draggable_on_scene = next((draggable_pixmap_item for draggable_pixmap_item in self.scene.items()
                                                   if draggable_pixmap_item == subprojection.scaled_projection_pixmap), None)
-                            #print(f"ITEM ON SCENE: {item_on_scene}")
+                            #print(f"ITEM ON SCENE: {draggable_on_scene}")
 
-                    if item_on_scene:
-                        focus_and_highlight(item_on_scene)
+                    if draggable_on_scene:
+                        highlight_draggable(draggable_on_scene)
         except Exception as e:
             print(e)
 

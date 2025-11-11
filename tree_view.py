@@ -177,7 +177,8 @@ class TreeWidget(QTreeView):
         if node and node.node_type == TreeNode.TYPE_THING:
             self.app_ref.delete_thing(node.ref)
 
-    def mouseDoubleClickEvent(self, event):
+
+    def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             pos = event.position().toPoint()
             index = self.indexAt(pos)
@@ -189,7 +190,35 @@ class TreeWidget(QTreeView):
                         self.app_ref.handle_node_clicked(node.ref)
                         self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
 
+        super().mousePressEvent(event)
+
+
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            super().keyPressEvent(event)
+            # выбранный элемент
+            index = self.currentIndex()
+            if index.isValid():
+                node = index.internalPointer()
+                if node and node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
+                    self.app_ref.handle_node_clicked(node.ref)
+                    self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+        else:
+            super().keyPressEvent(event)  # для остальных клавиш
+
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            index = self.indexAt(pos)
+            if index.isValid():
+                node = index.internalPointer()
+                parent_index = index.parent()
+                if parent_index.isValid():
+                    if node.node_type == TreeNode.TYPE_SPACE:
+                        self.app_ref.open_subspace_as_space(node.ref)
         super().mouseDoubleClickEvent(event)
+
 
     def highlight_node(self, thing_or_space):
         index = self.find_index_by_ref(thing_or_space)
