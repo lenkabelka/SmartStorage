@@ -107,8 +107,9 @@ class TreeWidgetForSearch(QTreeView):
 
         if node_type == TreeNode.TYPE_SPACE:
             menu.addAction(
-                "Открыть пространство для редактирования",
-                lambda: self.app_ref.load_space_from_DB(item.ref.id_space)
+                "Открыть пространство",
+                #lambda: self.app_ref.load_space_from_DB(item.ref.id_space)
+                lambda: self.open_space(index)
             )
             menu.addAction(
                 "Посмотреть информацию о пространстве",
@@ -128,6 +129,14 @@ class TreeWidgetForSearch(QTreeView):
             )
 
         menu.exec(self.viewport().mapToGlobal(position))
+
+    def open_space(self, index: QModelIndex):
+        node = index.internalPointer()
+        if not self.app_ref.access_manager.can_view(node.ref.id_space):
+            return
+        self.app_ref.save_current_space()
+        self.app_ref.load_space_from_DB(node.ref.id_space)
+
 
     def show_thing_in_space(self, index: QModelIndex):
         node = index.internalPointer()

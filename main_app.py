@@ -1815,6 +1815,32 @@ class MainWidget(QWidget):
                 self.mini_projections_list.append(new_mini_projection)
 
 
+    def save_current_space(self):
+        if not self.is_current_space_saved():
+            reply = QMessageBox.question(
+                self,
+                "Сохранить текущее пространство",
+                "Текущее пространство не сохранено!\nХотите сохранить его?",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Yes,
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+
+                # Проверка прав
+                if not self.access_manager.can_edit(self.parent_space):
+                    QMessageBox.warning(
+                        self,
+                        "Доступ запрещён",
+                        "У вас нет прав для сохранения этого пространства."
+                    )
+                    return
+                self.save_space_to_DB()
+            if reply == QMessageBox.StandardButton.No:
+                return
+
+
     def load_space_from_DB(self, id_space, thing_to_show=None):
         try:
             loaded_space = space.load_space_by_id(id_space)
@@ -1854,7 +1880,10 @@ class MainWidget(QWidget):
                                 (space_item for space_item in self.parent_space.subspaces
                                  if space_item.id_space == subproj.id_parent_space), None)
 
+                subprojection = None
                 if thing_to_show is not None:
+                    # выбираем как главную развёртку ту, на которой есть подразвертка вещи,
+                    # которую пользователь хочет увидеть в пространтсве
                     for proj in self.parent_space.projections:
                         if proj.sub_projections:
                             subprojection = next(
@@ -1871,7 +1900,8 @@ class MainWidget(QWidget):
                                 #print(f"subprojection: {subprojection}")
                                 self.parent_space.current_projection = proj
                                 break
-                else:
+
+                if subprojection is None:
                     # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
                     # если подразвёрток ни у одной развертки нет, то первую в списке projections
                     self.parent_space.current_projection = max(self.parent_space.projections,
@@ -1887,7 +1917,14 @@ class MainWidget(QWidget):
                 for proj in self.parent_space.projections:
                     self.save_or_update_mini_projection(proj, check_permissions=False)
 
-                if thing_to_show is not None:
+                # TODO если пользователь хотел посмотреть вещь в пространстве,
+                #  а ни одной развертки этой вещи нет в пространсте, то лучше вообще не открывать пространство,
+                #  а просто вывести сообщение.
+                if thing_to_show is not None and subprojection is None:
+                    QMessageBox.information(self, "Вещь без проекции",
+                                            f"Для вещи {thing_to_show.name} в этом пространстве нет ни одной проекции.")
+
+                if thing_to_show is not None and subprojection is not None:
                     self.highlight_subprojections_on_mini_projections(thing_to_highlight=thing_to_show)
 
             self.space_changed.emit()
@@ -2108,6 +2145,14 @@ class MainWidget(QWidget):
         (т.е. изменяет родительское пространство вещи или подпространства)
         """
         try:
+            # Проверка прав
+            if not self.access_manager.can_edit(self.parent_space):
+                QMessageBox.warning(
+                    self,
+                    "Доступ запрещён",
+                    "Вы не можете перенести вещь!\nУ вас нет прав для редактирования этого пространства."
+                )
+
             spaces_in_DB = None
             if isinstance(item_to_move, thing.Thing):
                 spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(self.user.id, self.user.role)
@@ -2142,6 +2187,20 @@ class MainWidget(QWidget):
 
                 # получаю id_space выбранного пространства
                 id_space = spaces_in_DB[row][0]
+
+                # создадим копию пространтсва: space.Space(name=spaces_in_DB[row][2], id_space=id_space
+                # с тем же id, что у пространста, в которое пользователь хочет перенести подпространства или вещь,
+                # только для проверки прав пользователя
+
+                # Проверка прав
+                if not self.access_manager.can_edit(space.Space(name=spaces_in_DB[row][2], id_space=id_space)):
+                    QMessageBox.warning(
+                        self,
+                        "Доступ запрещён",
+                        f"Вы не можете перенести вещь в пространтсво '{spaces_in_DB[row][2]}'!\n"
+                        f"У вас нет прав для редактирования пространства '{spaces_in_DB[row][2]}'."
+                    )
+                    return
 
                 # Удаляем подразвёртки перемещаемого подпространства (вещи) с развёрток текущего пространства
                 # (если переносим само пространство, то достаточно изменить его id_parent_space)
