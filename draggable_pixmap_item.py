@@ -116,7 +116,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                     if self.app_ref.parent_space.current_projection.sub_projections:
                         for item in self.app_ref.parent_space.current_projection.sub_projections:
                             parent = item.reference_to_parent_space or item.reference_to_parent_thing
-                            if parent is not None:
+                            if parent is not None and item.scaled_projection_pixmap != self:
                                 combo.addItem(parent.name)
 
                 # Добавляем COMBO в layout (без Label, как ты и хочешь)

@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
         """)
 
         file_menu = self.menu.addMenu("&Файл")
-        about_menu = self.menu.addMenu("&О программе")
+        #about_menu = self.menu.addMenu("&О программе")
         file_menu.addAction(self.action_find_thing)
         file_menu.addAction(self.action_create_new_space)
         file_menu.addAction(self.action_open_space)
