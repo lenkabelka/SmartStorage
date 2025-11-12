@@ -54,6 +54,8 @@ class Trackable(ABC):
         self._state = ObjectState.UNMODIFIED
         self._original_values = {f: getattr(self, f) for f in self._db_fields}
 
+    def set_state(self, state_to_set):
+        self._state = state_to_set
 
     def save(self, cursor):
         match self._state:

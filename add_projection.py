@@ -29,6 +29,7 @@ class AddProjection(QDialog):
         checkbox_label = QLabel("Соотношение сторон изображения "
                                 "в px соответствует реальному соотношению сторон проекции:")
         self.checkbox = QCheckBox()
+        self.checkbox.setChecked(True)
         checkbox_layout.addWidget(checkbox_label)
         checkbox_layout.addWidget(self.checkbox)
 

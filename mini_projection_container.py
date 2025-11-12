@@ -10,6 +10,9 @@ class ProjectionContainer(QWidget):
         super().__init__()
 
         self.app_ref = app
+
+        # -------------- необходимо для открытия развертки на главной сцене:
+        # делаем "снимок" состояния развёртки в момент её сохранения на мини проекцию
         self.saved_projection = projection_to_save
 
         self.saved_projection_state = projection_to_save.save_state()
@@ -17,6 +20,9 @@ class ProjectionContainer(QWidget):
         self.sub_projections_list = None
         if projection_to_save.sub_projections:
             self.sub_projections_list = projection_to_save.sub_projections
+            for subproj in self.sub_projections_list:
+                subproj.saved_projection_state = subproj.save_state()
+        # ---------------------------------------------------------------------------
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -113,7 +119,18 @@ class ProjectionContainer(QWidget):
 
     def update_scene(self, projection_to_change):
         try:
+            # -------------- необходимо для открытия развертки на главной сцене:
+            # делаем "снимок" состояния развёртки в момент её сохранения на мини проекцию
+            self.saved_projection = projection_to_change
+
             self.saved_projection_state = projection_to_change.save_state()
+
+            self.sub_projections_list = None
+            if projection_to_change.sub_projections:
+                self.sub_projections_list = projection_to_change.sub_projections
+                for subproj in self.sub_projections_list:
+                    subproj.saved_projection_state = subproj.save_state()
+            # --------------------------------------------------------------------------
 
             self.scene.clear()
             self.sub_projections_list = None

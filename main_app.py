@@ -743,6 +743,7 @@ class MainWidget(QWidget):
                                                                         # при добавлении новой подразвертки
                                                                         # необходимо ей установить флаг возможности её
                                                                         # перемещения в зависимости от прав пользователя
+                        print(f"----------------{new_sub_projection.state}")
 
                         break  # успех — выходим из цикла
             else:
@@ -1357,6 +1358,25 @@ class MainWidget(QWidget):
         и её отображения на главной сцене приложения.
         """
 
+        if not self.is_current_projection_saved():
+            reply = QMessageBox.question(
+                self,
+                "Сохранить текущую проекцию",
+                "Текущая проекция не сохранена!\nХотите сохранить её?",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                # Проверка прав будет в функции save_or_update_mini_projection
+                self.save_or_update_mini_projection(self.parent_space.current_projection, check_permissions=True)
+            elif reply == QMessageBox.StandardButton.No:
+                pass
+            elif reply == QMessageBox.StandardButton.Cancel:
+                return
+
         mini_projection_to_set_on_scene = next((mini for mini in self.mini_projections_list if mini == mini_projection),
                                          None)
         if mini_projection_to_set_on_scene:
@@ -1383,7 +1403,15 @@ class MainWidget(QWidget):
 
 
             if projection:
-                projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state)
+                # if projection.sub_projections:
+                #     for pr in projection.sub_projections:
+                #         print(f"----------------------------------------------------: {pr.state}")
+
+                projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state, projection.state)
+
+                # if projection.sub_projections:
+                #     for pr in projection.sub_projections:
+                #         print(f"----------------------------------------------------: {pr.state}")
 
                 self.parent_space.current_projection = projection
 
