@@ -6,6 +6,7 @@ import math
 import os
 import sys
 from PyQt6.QtGui import QPainterPath
+from PyQt6.QtWidgets import QMessageBox
 
 
 def crop_transparent_edges(image: QImage) -> QImage:
@@ -109,19 +110,30 @@ def get_scaled_pixmap(image: QImage,
 
 
 def get_scaled_cropped_pixmap(image, real_projection_width, real_projection_height):
-    scaled_image = calculate_new_image_size(
-        image,
-        real_projection_width,
-        real_projection_height
-    )
+    """
+    Масштабирует и обрезает изображение под реальные размеры проекции.
+    Возвращает QPixmap или None в случае ошибки.
+    """
+    try:
+        scaled_image = calculate_new_image_size(
+            image,
+            real_projection_width,
+            real_projection_height
+        )
 
-    scaled_cropped_pixmap = get_scaled_pixmap(
-        image,
-        scaled_image.width(),
-        scaled_image.height()
-    )
+        scaled_cropped_pixmap = get_scaled_pixmap(
+            image,
+            scaled_image.width(),
+            scaled_image.height()
+        )
 
-    return scaled_cropped_pixmap
+        return scaled_cropped_pixmap
+
+    except Exception as e:
+        print(f"Ошибка в get_scaled_cropped_pixmap: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 def pixmap_to_bytes(pixmap: QPixmap) -> bytes:
@@ -156,29 +168,34 @@ def get_contours(pixmap: QPixmap):
 
 
 def get_path(contours, hierarchy):
+    """Создаёт QPainterPath из контуров"""
+    try:
+        path = QPainterPath()
+        path.setFillRule(Qt.FillRule.OddEvenFill)
 
-    path = QPainterPath()
-    path.setFillRule(Qt.FillRule.OddEvenFill)
+        if hierarchy is not None:
+            for i, contour in enumerate(contours):
+                # start a new subpath
+                sub_path = QPainterPath()
 
-    if hierarchy is not None:
-        for i, contour in enumerate(contours):
-            # start a new subpath
-            sub_path = QPainterPath()
+                if len(contour) == 0:
+                    continue
 
-            if len(contour) == 0:
-                continue
+                first_point = contour[0][0]
+                sub_path.moveTo(QPointF(first_point[0], first_point[1]))
 
-            first_point = contour[0][0]
-            sub_path.moveTo(QPointF(first_point[0], first_point[1]))
+                for point in contour[1:]:
+                    x, y = point[0]
+                    sub_path.lineTo(QPointF(x, y))
 
-            for point in contour[1:]:
-                x, y = point[0]
-                sub_path.lineTo(QPointF(x, y))
-
-            sub_path.closeSubpath()
-            path.addPath(sub_path)
+                sub_path.closeSubpath()
+                path.addPath(sub_path)
 
         return path
+
+    except Exception as e:
+        print(f"Ошибка в get_path: {e}")
+        return None
 
 
 def allow_movement(path_parent, path_child, new_x, new_y):
@@ -193,14 +210,18 @@ def allow_movement(path_parent, path_child, new_x, new_y):
 
 
 def pixmap_to_rgba(pixmap: QPixmap):
-    image = pixmap.toImage().convertToFormat(QImage.Format.Format_RGBA8888)
-    width = image.width()
-    height = image.height()
-    ptr = image.bits()
-    ptr.setsize(image.sizeInBytes())  # PyQt6
-    arr = np.array(ptr, dtype=np.uint8).reshape((height, width, 4))
-
+    try:
+        image = pixmap.toImage().convertToFormat(QImage.Format.Format_RGBA8888)
+        width = image.width()
+        height = image.height()
+        ptr = image.bits()
+        ptr.setsize(image.sizeInBytes())  # PyQt6
+        arr = np.array(ptr, dtype=np.uint8).reshape((height, width, 4))
+    except Exception as e:
+        print(e)
+        return None
     return arr
+
 
 
 def clear_layout(layout):

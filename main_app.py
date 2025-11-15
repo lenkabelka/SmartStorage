@@ -515,11 +515,21 @@ class MainWidget(QWidget):
                         else:
                             original_image = temp_dict_new_space_projection["image"]
 
-                            scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
-                                temp_dict_new_space_projection["image"],
-                                temp_dict_new_space_projection["x_width"],
-                                temp_dict_new_space_projection["y_height"]
-                            )
+                            try:
+                                scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
+                                    temp_dict_new_space_projection["image"],
+                                    temp_dict_new_space_projection["x_width"],
+                                    temp_dict_new_space_projection["y_height"]
+                                )
+                            except Exception as e:
+                                QMessageBox.critical(
+                                    self,
+                                    "Ошибка при создании элемента",
+                                    "Не удалось создать графический элемент для пространства.\n"
+                                    "Проверьте корректность изображения проекции пространства."
+                                )
+                                print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                                return  # объект не создан
 
                             self.set_x_and_y_scales(
                                 scaled_cropped_pixmap,
@@ -543,6 +553,7 @@ class MainWidget(QWidget):
 
                             self.parent_space.current_projection = new_projection
                             self.parent_space.current_projection.z_pos = -1
+
                             self.update_main_scene()
 
                     # --- Замена существующей картинки ---
@@ -551,11 +562,22 @@ class MainWidget(QWidget):
                         temp_dict_new_space_projection = add_projection_dialog.get_data()
                         original_image = temp_dict_new_space_projection["image"]
 
-                        scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
-                            temp_dict_new_space_projection["image"],
-                            temp_dict_new_space_projection["x_width"],
-                            temp_dict_new_space_projection["y_height"]
-                        )
+                        try:
+                            scaled_cropped_pixmap = utils.get_scaled_cropped_pixmap(
+                                temp_dict_new_space_projection["image"],
+                                temp_dict_new_space_projection["x_width"],
+                                temp_dict_new_space_projection["y_height"]
+                            )
+                        except Exception as e:
+                            QMessageBox.critical(
+                                self,
+                                "Ошибка при создании элемента",
+                                "Не удалось создать графический элемент для пространства.\n"
+                                "Проверьте корректность изображения проекции пространства."
+                            )
+                            print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                            return  # объект не создан
+
                         self.set_x_and_y_scales(
                             scaled_cropped_pixmap,
                             temp_dict_new_space_projection["x_width"],
@@ -591,11 +613,22 @@ class MainWidget(QWidget):
                                 self.update_subprojections_position_on_space_projection_change(
                                     old_scaled_pixmap, self.parent_space.current_projection
                                 )
-                        self.update_main_scene(set_position=position)
+                        #self.update_main_scene(set_position=position)
+                        try:
+                            for subproj in self.parent_space.current_projection.sub_projections:
+                                subproj.scaled_projection_pixmap.update_path(
+                                    self.parent_space.current_projection.scaled_projection_pixmap)
+                        except Exception as e:
+                            QMessageBox.critical(
+                                self,
+                                "Ошибка при создании графического элемента",
+                                "Не удалось создать графический элемент для проекции пространства.\n"
+                                "Проверьте корректность изображения проекции."
+                            )
+                            print(f"Ошибка при обновлении QPainterPath: {e}")
+                            return  # выходим — объект не создан
 
-                        for subproj in self.parent_space.current_projection.sub_projections:
-                            subproj.scaled_projection_pixmap.update_path(
-                                self.parent_space.current_projection.scaled_projection_pixmap)
+                        self.update_main_scene(set_position=position)
 
                         print(f"STATE: {self.parent_space.current_projection.state}")
                     break
@@ -717,11 +750,20 @@ class MainWidget(QWidget):
 
                         # родитель подразвертки это развертка, которая на данный момент отображается как background
                         new_sub_projection.reference_to_parent_projection = self.parent_space.current_projection
-
-                        item = draggable_item.DraggablePixmapItem(pixmap,
-                                                                  self,
-                                                                  self.parent_space.current_projection.scaled_projection_pixmap,
-                                                                  parent=subspace_to_add_projection)
+                        try:
+                            item = draggable_item.DraggablePixmapItem(pixmap,
+                                                                      self,
+                                                                      self.parent_space.current_projection.scaled_projection_pixmap,
+                                                                      parent=subspace_to_add_projection)
+                        except Exception as e:
+                            QMessageBox.critical(
+                                self,
+                                "Ошибка при создании элемента",
+                                "Не удалось создать графический элемент для подразвёртки.\n"
+                                "Проверьте корректность изображения проекции."
+                            )
+                            print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                            return  # выходим — объект не создан
 
                         new_sub_projection.scaled_projection_pixmap = item
 
@@ -805,13 +847,22 @@ class MainWidget(QWidget):
                             int(round(self.x_scale * data["x_width"])),
                             int(round(self.y_scale * data["y_height"]))
                         )
-
-                        item = draggable_item.DraggablePixmapItem(
-                            pixmap,
-                            self,
-                            self.parent_space.current_projection.scaled_projection_pixmap,
-                            parent=subprojection.reference_to_parent_space or subprojection.reference_to_parent_thing
-                        )
+                        try:
+                            item = draggable_item.DraggablePixmapItem(
+                                pixmap,
+                                self,
+                                self.parent_space.current_projection.scaled_projection_pixmap,
+                                parent=subprojection.reference_to_parent_space or subprojection.reference_to_parent_thing
+                            )
+                        except Exception as e:
+                            QMessageBox.critical(
+                                self,
+                                "Ошибка при создании элемента",
+                                "Не удалось создать графический элемент для подразвёртки.\n"
+                                "Проверьте корректность изображения проекции."
+                            )
+                            print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                            return  # выходим — объект не создан
 
                         item.update_path()
 
@@ -1005,66 +1056,78 @@ class MainWidget(QWidget):
         add_thing_projection_dialog = add_projection.AddProjection(projection_parent=thing_to_add_projection)
 
         while True:
-            if add_thing_projection_dialog.exec():
-                temp_dict_new_thing_projection = add_thing_projection_dialog.get_data()
+            try:
+                if add_thing_projection_dialog.exec():
+                    temp_dict_new_thing_projection = add_thing_projection_dialog.get_data()
 
-                original_image = temp_dict_new_thing_projection["image"]
+                    original_image = temp_dict_new_thing_projection["image"]
 
-                scaled_pixmap = utils.get_scaled_pixmap(
-                    temp_dict_new_thing_projection["image"],
-                    int(round(self.x_scale * temp_dict_new_thing_projection["x_width"])),
-                    int(round(self.y_scale * temp_dict_new_thing_projection["y_height"])),
-                )
+                    scaled_pixmap = utils.get_scaled_pixmap(
+                        temp_dict_new_thing_projection["image"],
+                        int(round(self.x_scale * temp_dict_new_thing_projection["x_width"])),
+                        int(round(self.y_scale * temp_dict_new_thing_projection["y_height"])),
+                    )
 
-                new_thing_projection = pr.Projection(
-                    temp_dict_new_thing_projection["name"],
-                    original_image,
-                    scaled_pixmap,
-                    temp_dict_new_thing_projection["x_width"],
-                    temp_dict_new_thing_projection["y_height"],
-                    # родитель подразвертки это развертка, которая на данный момент отображается как background
-                    reference_to_parent_projection=self.parent_space.current_projection,
-                    reference_to_parent_thing=thing_to_add_projection
-                )
-                new_thing_projection.mark_new()
+                    new_thing_projection = pr.Projection(
+                        temp_dict_new_thing_projection["name"],
+                        original_image,
+                        scaled_pixmap,
+                        temp_dict_new_thing_projection["x_width"],
+                        temp_dict_new_thing_projection["y_height"],
+                        # родитель подразвертки это развертка, которая на данный момент отображается как background
+                        reference_to_parent_projection=self.parent_space.current_projection,
+                        reference_to_parent_thing=thing_to_add_projection
+                    )
+                    new_thing_projection.mark_new()
 
-                items = self.scene.items()  # список всех QGraphicsItem
-                if items:
-                    max_item = max(items, key=lambda i: i.zValue())
-                    #print(f"max_item: {max_item}")
-                    max_z_int = int(max_item.zValue())
-                    new_thing_projection.z_pos = max_z_int + 1
-                else:
-                    new_thing_projection.z_pos = int(0)
+                    items = self.scene.items()  # список всех QGraphicsItem
+                    if items:
+                        max_item = max(items, key=lambda i: i.zValue())
+                        #print(f"max_item: {max_item}")
+                        max_z_int = int(max_item.zValue())
+                        new_thing_projection.z_pos = max_z_int + 1
+                    else:
+                        new_thing_projection.z_pos = int(0)
 
-                item = draggable_item.DraggablePixmapItem(
-                    scaled_pixmap,
-                    self,
-                    self.parent_space.current_projection.scaled_projection_pixmap,
-                    parent=thing_to_add_projection
-                )
+                    try:
+                        item = draggable_item.DraggablePixmapItem(
+                            scaled_pixmap,
+                            self,
+                            self.parent_space.current_projection.scaled_projection_pixmap,
+                            parent=thing_to_add_projection
+                        )
+                    except Exception as e:
+                        QMessageBox.critical(
+                            self,
+                            "Ошибка при создании элемента",
+                            "Не удалось создать графический элемент для подразвёртки.\n"
+                            "Проверьте корректность изображения проекции."
+                        )
+                        print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                        return  # выходим — объект не создан
 
-                new_thing_projection.scaled_projection_pixmap = item
+                    new_thing_projection.scaled_projection_pixmap = item
 
-                if temp_dict_new_thing_projection["description"]:
-                    new_thing_projection.projection_description = temp_dict_new_thing_projection["description"]
+                    if temp_dict_new_thing_projection["description"]:
+                        new_thing_projection.projection_description = temp_dict_new_thing_projection["description"]
 
-                self.parent_space.current_projection.sub_projections.append(new_thing_projection)
+                    self.parent_space.current_projection.sub_projections.append(new_thing_projection)
 
-                # теперь подпроекции будут появляться в середине сцены
-                center = self.scene.sceneRect().center()
-                item_rect = item.boundingRect()
-                offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
-                item.setPos(center - offset)
-                item.setZValue(new_thing_projection.z_pos)
-                self.scene.addItem(item)
-                self.scene.update_items_movable_flag(item_to_update=item)
-                                                        # при добавлении новой подразвертки
-                                                        # необходимо ей установить флаг возможности её
-                                                        # перемещения в зависимости от прав пользователя
+                    # теперь подпроекции будут появляться в середине сцены
+                    center = self.scene.sceneRect().center()
+                    item_rect = item.boundingRect()
+                    offset = QPointF(item_rect.width() / 2, item_rect.height() / 2)
+                    item.setPos(center - offset)
+                    item.setZValue(new_thing_projection.z_pos)
+                    self.scene.addItem(item)
+                    self.scene.update_items_movable_flag(item_to_update=item)
+                                                            # при добавлении новой подразвертки
+                                                            # необходимо ей установить флаг возможности её
+                                                            # перемещения в зависимости от прав пользователя
 
-                break  # успех — выходим из цикла
-
+                    break  # успех — выходим из цикла
+            except Exception as e:
+                print(e)
             else:
                 break  # пользователь нажал "Отмена" — выходим
 
@@ -1212,6 +1275,7 @@ class MainWidget(QWidget):
                             mini_projection_to_change.update_mini_projection_name(current_projection)
 
                         if not self.is_main_scene_equal_to_mini_scene(mini_projection_to_change):
+                            print("11111111111111111111111111111111111111111111111111")
                             mini_projection_to_change.update_scene(current_projection)
 
                         self.update_mini_projections_layout()
@@ -1403,15 +1467,15 @@ class MainWidget(QWidget):
 
 
             if projection:
-                # if projection.sub_projections:
-                #     for pr in projection.sub_projections:
-                #         print(f"----------------------------------------------------: {pr.state}")
+                if projection.sub_projections:
+                    for pr in projection.sub_projections:
+                        print(f"----------------------------------------------------: {pr.state}")
 
                 projection.restore_state(mini_projection_to_set_on_scene.saved_projection_state, projection.state)
 
-                # if projection.sub_projections:
-                #     for pr in projection.sub_projections:
-                #         print(f"----------------------------------------------------: {pr.state}")
+                if projection.sub_projections:
+                    for pr in projection.sub_projections:
+                        print(f"----------------------------------------------------: {pr.state}")
 
                 self.parent_space.current_projection = projection
 
@@ -1425,131 +1489,237 @@ class MainWidget(QWidget):
                 self.update_mini_projections_layout()
 
 
-    def delete_one_subprojection(self, draggable_item_pointer):
+    # def delete_one_subprojection(self, draggable_item_pointer):
+    #
+    #
+    #     def get_parent_of_subprojection(draggable):
+    #         if self.parent_space.current_projection.sub_projections:
+    #
+    #             subprojection = next((sub for sub in self.parent_space.current_projection.sub_projections
+    #                                             if sub.scaled_projection_pixmap == draggable), None)
+    #
+    #             if subprojection:
+    #                 parent_of_subprojection = subprojection.reference_to_parent_space or subprojection.reference_to_parent_thing
+    #                 return parent_of_subprojection
+    #         return None
+    #
+    #
+    #     if not self.access_manager.can_edit(self.parent_space):
+    #         QMessageBox.warning(
+    #             self,
+    #             "Доступ запрещён",
+    #             "У вас нет прав для удаления подразвертки."
+    #         )
+    #         return
+    #     else:
+    #         parent = get_parent_of_subprojection(draggable_item_pointer)
+    #         if isinstance(parent, space.Space):
+    #             if not self.access_manager.can_edit(parent):
+    #                 QMessageBox.warning(
+    #                     self,
+    #                     "Доступ запрещён",
+    #                     "У вас нет прав для удаления подразвертки этого подпространства."
+    #                 )
+    #                 return
+    #
+    #     # удаление одной подразвертки подпространства или вещи происходит всегда на текущей развёртке пространства
+    #     if self.parent_space.current_projection:
+    #         if self.parent_space.current_projection.sub_projections:
+    #
+    #             subprojection_to_remove = next((sub for sub in self.parent_space.current_projection.sub_projections
+    #                                             if sub.scaled_projection_pixmap == draggable_item_pointer), None)
+    #             if subprojection_to_remove:
+    #                 if subprojection_to_remove.state == ObjectState.NEW:
+    #                     self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
+    #                 else:
+    #                     #print(f"SUBPROJECTION_STATE: {subprojection_to_remove.state}")
+    #                     #print(f"SUBPROJECTION_ID: {subprojection_to_remove.id_projection}")
+    #
+    #                     subprojection_to_remove.mark_deleted()
+    #
+    #
+    #                 # мне нужно удалить лишь один draggable. Нет смысла перерисовывать всю сцену.
+    #                 self.scene.removeItem(draggable_item_pointer)
+    #                 # self.set_subprojection_position_from_its_scene_position() # чтобы другие подразвертки не сдвигались,
+    #                 #                                   # изначально у них сохраненная позиция та, что в БД
+    #                 # self.update_main_scene(set_position=True)
 
+    #new
+    def delete_one_subprojection(self, draggable):
+        """
+        Удаляет одну под-проекцию, отображённую на главной сцене через item draggable.
+        """
+        try:
+            current_proj = self.parent_space.current_projection
+            if not current_proj:
+                print("1")
+                return
 
-        def get_parent_of_subprojection(draggable):
-            if self.parent_space.current_projection.sub_projections:
+            subprojs = current_proj.sub_projections
+            if not subprojs:
+                print("2")
+                return
 
-                subprojection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                                if sub.scaled_projection_pixmap == draggable), None)
-
-                if subprojection:
-                    parent_of_subprojection = subprojection.reference_to_parent_space or subprojection.reference_to_parent_thing
-                    return parent_of_subprojection
-            return None
-
-        if not self.access_manager.can_edit(self.parent_space):
-            QMessageBox.warning(
-                self,
-                "Доступ запрещён",
-                "У вас нет прав для удаления подразвертки."
+            # Ищем под-проекцию по parent
+            subprojection_to_remove = next(
+                (sub for sub in subprojs
+                 if sub.scaled_projection_pixmap == draggable),
+                None
             )
-            return
-        else:
-            parent = get_parent_of_subprojection(draggable_item_pointer)
-            if isinstance(parent, space.Space):
-                if not self.access_manager.can_edit(parent):
-                    QMessageBox.warning(
-                        self,
-                        "Доступ запрещён",
-                        "У вас нет прав для удаления подразвертки этого подпространства."
-                    )
-                    return
 
-        # удаление одной подразвертки подпространства или вещи происходит всегда на текущей развёртке пространства
-        if self.parent_space.current_projection:
-            if self.parent_space.current_projection.sub_projections:
+            print(draggable)
+            for sub in subprojs:
+                print(sub.scaled_projection_pixmap)
 
-                subprojection_to_remove = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                                if sub.scaled_projection_pixmap == draggable_item_pointer), None)
+            if not subprojection_to_remove:
+                print(f"subprojection_to_remove: {subprojection_to_remove}")
+                return
+
+            # Удаляем или помечаем как удалённую
+            if subprojection_to_remove.state == ObjectState.NEW:
+                subprojs.remove(subprojection_to_remove)
+            else:
+                subprojection_to_remove.mark_deleted()
+
+            #self.set_subprojection_position_from_its_scene_position()
+            print(f"draggable: {draggable}")
+            self.scene.removeItem(draggable)
+
+        except Exception as e:
+            print(e)
+
+
+
+    def find_parent_of_subprojection_by_its_scaled_projection_pixmap_on_projection(self, draggable_on_projection, projection):
+        subprojection_parent = None
+        if projection.sub_projections:
+            subprojection = next((subprojection for subprojection
+                                  in projection.sub_projections
+                                  if subprojection.scaled_projection_pixmap == draggable_on_projection), None)
+            if subprojection:
+                subprojection_parent = (subprojection.reference_to_parent_space
+                                    or subprojection.reference_to_parent_thing)
+        return subprojection_parent
+
+
+    #new
+    def delete_all_subprojections(self, draggable=None, draggable_parent=None):
+        if draggable_parent is None:
+            if self.parent_space.current_projection:
+                draggable_parent = self.find_parent_of_subprojection_by_its_scaled_projection_pixmap_on_projection(
+                    draggable,
+                    self.parent_space.current_projection
+                )
+
+
+        if self.mini_projections_list:
+            for mini in self.mini_projections_list:
+                if mini.saved_projection == self.parent_space.current_projection:
+                    subprojection = next((subprojection for subprojection in self.parent_space.current_projection.sub_projections
+                                          if subprojection.reference_to_parent_space == draggable_parent
+                                          or subprojection.reference_to_parent_thing == draggable_parent), None)
+                    if subprojection:
+                        draggable = next((draggable for draggable in self.scene.items() if subprojection.scaled_projection_pixmap == draggable), None)
+                        if draggable:
+                            self.scene.removeItem(draggable)
+                            if subprojection.state == ObjectState.NEW:
+                                self.parent_space.current_projection.sub_projections.remove(subprojection)
+                            else:
+                                subprojection.mark_deleted()
+
+                        mini.self.saved_projection_state.get("sub_projections")
+
+                subprojection_to_remove = next((subprojection for subprojection in mini.saved_projection.sub_projections
+                                                if subprojection.reference_to_parent_thing == draggable_parent
+                                                or subprojection.reference_to_parent_space == draggable_parent), None)
+
                 if subprojection_to_remove:
                     if subprojection_to_remove.state == ObjectState.NEW:
-                        self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove)
+                        mini.saved_projection.sub_projections.remove(subprojection_to_remove)
                     else:
-                        #print(f"SUBPROJECTION_STATE: {subprojection_to_remove.state}")
-                        #print(f"SUBPROJECTION_ID: {subprojection_to_remove.id_projection}")
-
                         subprojection_to_remove.mark_deleted()
 
+                mini.saved_projection.save_state()
 
-                    # мне нужно удалить лишь один draggable. Нет смысла перерисовывать всю сцену.
-                    self.scene.removeItem(draggable_item_pointer)
-                    # self.set_subprojection_position_from_its_scene_position() # чтобы другие подразвертки не сдвигались,
-                    #                                   # изначально у них сохраненная позиция та, что в БД
-                    # self.update_main_scene(set_position=True)
+                item_copy_to_remove = next(item_copy for item_copy in mini.scene.items()
+                                           if item_copy.parent == draggable_parent)
+                if item_copy_to_remove:
+                    print(f"item_copy_to_remove: {item_copy_to_remove}")
+                    mini.scene.removeItem(item_copy_to_remove)
 
+        # 3) Удаляем саму под-проекцию с главной сцены
+        #self.scene.removeItem(draggable)
 
-    def delete_all_subprojections(self, draggable_item_pointer):
-
-        # Проверка прав доступа
-        if not self.access_manager.can_edit(self.parent_space):
-            QMessageBox.warning(
-                self,
-                "Доступ запрещён",
-                "У вас нет прав для удаления подпроекции."
-            )
-            return
-
-        if self.parent_space.current_projection:
-            if self.parent_space.current_projection.sub_projections:
-                subprojection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                      if sub.scaled_projection_pixmap == draggable_item_pointer), None)
-
-                if subprojection:
-                    if subprojection.reference_to_parent_space:
-                        parent_of_subprojection = subprojection.reference_to_parent_space
-
-                        for projection in self.parent_space.projections:
-                            subprojection_to_remove = next((sub for sub in projection.sub_projections
-                                                            if sub.reference_to_parent_space == parent_of_subprojection), None)
-                            if subprojection_to_remove:
-                                if subprojection_to_remove.state == ObjectState.NEW:
-                                    projection.sub_projections.remove(subprojection_to_remove)
-                                else:
-                                    # #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
-                                    # # нельзя удалить подразвертку того пространства, к которому нет доступа
-                                    # #TODO продумать этот момент
-                                    #  (можно, так как подразвертки относятся только к текущему пространству)
-                                    # if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
-                                    #     continue
-
-                                    subprojection_to_remove.mark_deleted()
-
-                    elif subprojection.reference_to_parent_thing:
-                        parent_of_subprojection = subprojection.reference_to_parent_thing
-
-                        for projection in self.parent_space.projections:
-                            subprojection_to_remove = next((sub for sub in projection.sub_projections
-                                                            if sub.reference_to_parent_thing == parent_of_subprojection), None)
-                            if subprojection_to_remove:
-                                if subprojection_to_remove.state == ObjectState.NEW:
-                                    projection.sub_projections.remove(subprojection_to_remove)
-                                else:
-                                    subprojection_to_remove.mark_deleted()
-
-                    # Тут может быть два сценария:
-                    # 1. Если текущая развертка была сохранена в мини развертку,
-                    # то она была добавлена в projections у parent_space -> в данном случае при удалении подразвертки
-                    # из развертки у parent_space, она автоматически будет удалена из current_projection.
-                    # 2. В случае, если current_projection не была сохранена в мини сцены (она не была добавлена
-                    # в projections у parent_space), то подразвертка не удалится в current_projection
-                    # и её надо удалить дополнительно из current_projection
-
-                    subprojection_to_remove_in_current_projection \
-                        = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                if sub == subprojection), None)
-                    if subprojection_to_remove_in_current_projection:
-                        self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove_in_current_projection)
-
-            # мне нужно удалить лишь один draggable. Нет смысла перерисовывать всю сцену.
-            self.scene.removeItem(draggable_item_pointer)
-
-            # self.set_subprojection_position_from_its_scene_position()  # чтобы другие подразвертки не сдвигались,
-            # # изначально у них сохраненная позиция та, что в БД
-            # self.update_main_scene(set_position=True)
-            for proj in self.parent_space.projections:
-                self.save_or_update_mini_projection(proj, check_permissions=False)
+    # def delete_all_subprojections(self, draggable_item_pointer):
+    #
+    #     # Проверка прав доступа
+    #     if not self.access_manager.can_edit(self.parent_space):
+    #         QMessageBox.warning(
+    #             self,
+    #             "Доступ запрещён",
+    #             "У вас нет прав для удаления подпроекции."
+    #         )
+    #         return
+    #
+    #     if self.parent_space.current_projection:
+    #         if self.parent_space.current_projection.sub_projections:
+    #             subprojection = next((sub for sub in self.parent_space.current_projection.sub_projections
+    #                                   if sub.scaled_projection_pixmap == draggable_item_pointer), None)
+    #
+    #             if subprojection:
+    #                 if subprojection.reference_to_parent_space:
+    #                     parent_of_subprojection = subprojection.reference_to_parent_space
+    #
+    #                     for projection in self.parent_space.projections:
+    #                         subprojection_to_remove = next((sub for sub in projection.sub_projections
+    #                                                         if sub.reference_to_parent_space == parent_of_subprojection), None)
+    #                         if subprojection_to_remove:
+    #                             if subprojection_to_remove.state == ObjectState.NEW:
+    #                                 projection.sub_projections.remove(subprojection_to_remove)
+    #                             else:
+    #                                 # #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
+    #                                 # # нельзя удалить подразвертку того пространства, к которому нет доступа
+    #                                 # #TODO продумать этот момент
+    #                                 #  (можно, так как подразвертки относятся только к текущему пространству)
+    #                                 # if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
+    #                                 #     continue
+    #
+    #                                 subprojection_to_remove.mark_deleted()
+    #
+    #                 elif subprojection.reference_to_parent_thing:
+    #                     parent_of_subprojection = subprojection.reference_to_parent_thing
+    #
+    #                     for projection in self.parent_space.projections:
+    #                         subprojection_to_remove = next((sub for sub in projection.sub_projections
+    #                                                         if sub.reference_to_parent_thing == parent_of_subprojection), None)
+    #                         if subprojection_to_remove:
+    #                             if subprojection_to_remove.state == ObjectState.NEW:
+    #                                 projection.sub_projections.remove(subprojection_to_remove)
+    #                             else:
+    #                                 subprojection_to_remove.mark_deleted()
+    #
+    #                 # Тут может быть два сценария:
+    #                 # 1. Если текущая развертка была сохранена в мини развертку,
+    #                 # то она была добавлена в projections у parent_space -> в данном случае при удалении подразвертки
+    #                 # из развертки у parent_space, она автоматически будет удалена из current_projection.
+    #                 # 2. В случае, если current_projection не была сохранена в мини сцены (она не была добавлена
+    #                 # в projections у parent_space), то подразвертка не удалится в current_projection
+    #                 # и её надо удалить дополнительно из current_projection
+    #
+    #                 subprojection_to_remove_in_current_projection \
+    #                     = next((sub for sub in self.parent_space.current_projection.sub_projections
+    #                             if sub == subprojection), None)
+    #                 if subprojection_to_remove_in_current_projection:
+    #                     self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove_in_current_projection)
+    #
+    #         # мне нужно удалить лишь один draggable. Нет смысла перерисовывать всю сцену.
+    #         self.scene.removeItem(draggable_item_pointer)
+    #
+    #         # self.set_subprojection_position_from_its_scene_position()  # чтобы другие подразвертки не сдвигались,
+    #         # # изначально у них сохраненная позиция та, что в БД
+    #         # self.update_main_scene(set_position=True)
+    #         for proj in self.parent_space.projections:
+    #             self.save_or_update_mini_projection(proj, check_permissions=False)
 
 
     # ACTION
@@ -1571,13 +1741,15 @@ class MainWidget(QWidget):
             else:
                 thing_to_remove.mark_deleted()
 
-            if self.parent_space.current_projection:
-                if self.parent_space.current_projection.sub_projections:
-                    sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                   if sub.reference_to_parent_thing == thing_to_remove), None)
+                self.delete_all_subprojections(draggable_parent=thing_to_remove)
 
-                    if sub_projection:
-                        self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+            # if self.parent_space.current_projection:
+            #     if self.parent_space.current_projection.sub_projections:
+            #         sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
+            #                        if sub.reference_to_parent_thing == thing_to_remove), None)
+            #
+            #         if sub_projection:
+            #             self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
 
             self.update_tree_view()
 
@@ -1601,13 +1773,15 @@ class MainWidget(QWidget):
             else:
                 subspace_to_remove.mark_deleted()
 
-            if self.parent_space.current_projection:
-                if self.parent_space.current_projection.sub_projections:
-                    sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-                                   if sub.reference_to_parent_space == subspace_to_remove), None)
+            self.delete_all_subprojections(draggable_parent=subspace_to_remove)
 
-                    if sub_projection:
-                        self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+            # if self.parent_space.current_projection:
+            #     if self.parent_space.current_projection.sub_projections:
+            #         sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
+            #                        if sub.reference_to_parent_space == subspace_to_remove), None)
+            #
+            #         if sub_projection:
+            #             self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
 
             self.update_tree_view()
 
@@ -1692,8 +1866,17 @@ class MainWidget(QWidget):
         # Сохраняем пространство и все подпространства
         self.parent_space.save_space(schow_message)
 
-        # Добавляем права editor для всех новых пространств
-        self._assign_editor_role_to_new_spaces(new_spaces)
+        try:
+            # Добавляем права editor для всех новых пространств
+            if new_spaces:
+                self._assign_editor_role_to_new_spaces(new_spaces)
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Ошибка",
+                f"Не удалось добавить права редактора для новых пространств!\nОбратитесь к администратору!"
+            )
+            print(f"Ошибка при назначении ролей редактора: {e}")
 
         # Обновляем дерево
         self.show_full_structure_of_space()
@@ -1715,10 +1898,21 @@ class MainWidget(QWidget):
 
         config = connect_DB.load_config()
         conn = connect_DB.db_connect(config)
+
         try:
             with conn:
                 with conn.cursor() as cursor:
+                    # проверка, есть ли такой пользователь в базе
+                    cursor.execute("SELECT 1 FROM spaces.users WHERE id_user = %s", (self.user.id,))
+                    if cursor.fetchone() is None:
+                        raise ValueError(f"Пользователь с id {self.user.id} не найден в базе")
+
                     for sp in spaces:
+                        # проверка, есть ли такое пространство в базе
+                        cursor.execute("SELECT 1 FROM spaces.spaces WHERE id_space = %s", (sp.id_space,))
+                        if cursor.fetchone() is None:
+                            raise ValueError(f"Пространство с id {sp.id_space} не найдено в базе")
+
                         cursor.execute(
                             """
                             INSERT INTO spaces.user_access (id_user, id_space, role)
@@ -1732,9 +1926,7 @@ class MainWidget(QWidget):
 
 
     def open_subspace_as_space(self, space_to_open: space.Space):
-
         try:
-
             # Проверка прав
             if not self.access_manager.can_view(space_to_open):
                 QMessageBox.warning(
@@ -2068,7 +2260,6 @@ class MainWidget(QWidget):
 
 
     def show_full_structure_of_space(self):
-
         """
         Отображает полную иерархическую структуру текущего пространства.
 
@@ -2083,22 +2274,31 @@ class MainWidget(QWidget):
         """
 
         if self.parent_space.state != ObjectState.NEW:
+            try:
+                if self.parent_space.id_parent_space:
+                    id_top_space = space.get_top_space_id(self.parent_space.id_parent_space)
+                else:
+                    id_top_space = self.parent_space.id_space
+            except Exception as e:
+                print(f"Не удалось получить верхнее пространство для parent_space {self.parent_space.id_space}: {e}")
+                QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить полную структуру пространства: {e}")
+                return  # Прерываем дальнейшее выполнение функции
 
-            if self.parent_space.id_parent_space:
-                id_top_space = space.get_top_space_id(self.parent_space.id_parent_space)
-            else:
-                id_top_space = self.parent_space.id_space
-
-            top_space = space.load_space_by_id(id_top_space)
-
-            self.tree_view_of_full_space_structure.update_tree(top_space)
-            self.tree_view_of_full_space_structure.show()
+            try:
+                top_space = space.load_space_by_id(id_top_space)
+                self.tree_view_of_full_space_structure.update_tree(top_space)
+                self.tree_view_of_full_space_structure.show()
+            except Exception as e:
+                print(f"Ошибка при загрузке или отображении структуры top_space {id_top_space}: {e}")
+                QMessageBox.warning(self, "Ошибка", f"Не удалось отобразить структуру пространства: {e}")
 
         else:
-            QMessageBox.warning(self, "Новое пространство", "Это пространство новое, его структура "
-                                                            "уже показана полностью в дереве справа! "
-                                                            "Сохраните это пространство, чтобы увидеть его "
-                                                            "положение относительно других пространств.")
+            QMessageBox.warning(
+                self,
+                "Новое пространство",
+                "Это пространство новое, его структура уже показана полностью в дереве справа! "
+                "Сохраните это пространство, чтобы увидеть его положение относительно других пространств."
+            )
 
 
     def show_thing_information(self, thing_to_show_information):
@@ -2509,6 +2709,8 @@ class MainWidget(QWidget):
         items_mini = sorted(mini.scene.items(), key=sort_key)
 
         if len(items_main) != len(items_mini):
+            print(len(items_main))
+            print(len(items_mini))
             print("новые элементы")
             return False
 
@@ -2597,7 +2799,7 @@ class MainWidget(QWidget):
 
                 if self.parent_space.current_projection.sub_projections:
                     for sub in self.parent_space.current_projection.sub_projections:
-                        if sub.state is not ObjectState.DELETED:
+                        if sub.state != ObjectState.DELETED:
                             parent = None
                             if sub.reference_to_parent_thing:
                                 parent = sub.reference_to_parent_thing
@@ -2611,11 +2813,21 @@ class MainWidget(QWidget):
                                 int(round(self.y_scale * sub.projection_height))
                             )
                             sub.original_pixmap = pixmap
-                            sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
-                                pixmap,
-                                self,
-                                self.parent_space.current_projection.scaled_projection_pixmap,
-                                parent=parent)
+                            try:
+                                sub.scaled_projection_pixmap = draggable_item.DraggablePixmapItem(
+                                    pixmap,
+                                    self,
+                                    self.parent_space.current_projection.scaled_projection_pixmap,
+                                    parent=parent)
+                            except Exception as e:
+                                QMessageBox.critical(
+                                    self,
+                                    "Ошибка при создании элемента",
+                                    "Не удалось создать графический элемент для подразвёртки.\n"
+                                    "Проверьте корректность изображения проекции."
+                                )
+                                print(f"Ошибка при создании DraggablePixmapItem: {e}")
+                                continue  # объект не создан
                             if sub.z_pos is not None:
                                 sub.scaled_projection_pixmap.setZValue(sub.z_pos)
 

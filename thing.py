@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import track_object_state
 import image as im
+from space import Space
 
 
 @dataclass
@@ -55,27 +56,44 @@ class Thing(track_object_state.Trackable):
 
 
     def update(self, cursor):
-        if self.id_thing is None:
-            raise ValueError("Невозможно обновить: id_thing отсутствует")
+        try:
+            if self.id_thing is None:
+                raise ValueError("Невозможно обновить: id_thing отсутствует")
 
-        query = """
-            UPDATE spaces.things
-            SET thing_name = %s, thing_description = %s, id_parent_space = %s
-            WHERE id_thing = %s
-        """
-        values = (self.name, self.description, self.id_parent_space, self.id_thing)
-        cursor.execute(query, values)
-        self.reset_state()
+            query = """
+                UPDATE spaces.things
+                SET thing_name = %s, thing_description = %s, id_parent_space = %s
+                WHERE id_thing = %s
+            """
+            values = (self.name, self.description, self.id_parent_space, self.id_thing)
+            cursor.execute(query, values)
+
+            if cursor.rowcount == 0:
+                print(f"Вещь с ID {self.id_thing} не найдена, обновление не выполнено")
+            else:
+                self.reset_state()
+                print(f"Вещь с ID {self.id_thing} успешно обновлена")
+
+        except Exception as e:
+            print(f"Ошибка при обновлении вещи с ID {self.id_thing}: {e}")
 
 
     def delete(self, cursor):
-        if self.id_thing is None:
-            raise ValueError("Невозможно удалить: id_thing отсутствует")
+        try:
+            if self.id_thing is None:
+                raise ValueError("Невозможно удалить: id_thing отсутствует")
 
-        query = "DELETE FROM spaces.things WHERE id_thing = %s"
-        values = (self.id_thing,)
-        cursor.execute(query, values)
-        print(f"Вещь с ID {self.id_thing} удалена")
+            query = "DELETE FROM spaces.things WHERE id_thing = %s"
+            values = (self.id_thing,)
+            cursor.execute(query, values)
+
+            if cursor.rowcount == 0:
+                print(f"Вещь с ID {self.id_thing} не найдена, удаление не выполнено")
+            else:
+                print(f"Вещь с ID {self.id_thing} успешно удалена")
+
+        except Exception as e:
+            print(f"Ошибка при удалении вещи с ID {self.id_thing}: {e}")
 
 
 def load_space_things(space, cursor) -> list[Thing]:

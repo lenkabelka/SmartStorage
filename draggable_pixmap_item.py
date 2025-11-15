@@ -1,12 +1,14 @@
-from PyQt6.QtWidgets import(
+from PyQt6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsItem,
-    QGraphicsColorizeEffect,
+    QGraphicsColorizeEffect, QMessageBox,
     QMenu, QWidget, QHBoxLayout, QVBoxLayout,
-    QLabel, QComboBox, QWidgetAction
+    QLabel, QComboBox, QWidgetAction, QDialog
 )
 from PyQt6.QtGui import QColor
 from PyQt6.QtCore import Qt, QPointF
+from pyexpat.errors import messages
+
 import utils as utils
 import math
 
@@ -40,10 +42,15 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
         self.item_id = id(self)
 
-        self.background_pixmap = background_pixmap_item.pixmap()
+        self.background_pixmap = None
+        self.path_background = None
+        self.path_subprojection = None
+        self.update_path(background_pixmap_item)
 
-        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        # self.background_pixmap = background_pixmap_item.pixmap()
+        #
+        # self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+        # self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
 
         # нужно для проверки столкновения с прозрачной областью, смотри функцию itemChange
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
@@ -52,15 +59,29 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
 
 
     def update_path(self, new_background_pixmap_item=None):
-        #print(f"old_background: {self.background_pixmap}")
-        if new_background_pixmap_item is not None:
-            self.background_pixmap = new_background_pixmap_item.pixmap()
-        #print(f"new_background: {self.background_pixmap}")
+        try:
+            #print(f"old_background: {self.background_pixmap}")
+            if new_background_pixmap_item is not None:
+                self.background_pixmap = new_background_pixmap_item.pixmap()
+            #print(f"new_background: {self.background_pixmap}")
 
-        # контур развертки
-        self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
-        # контур подразвертки
-        self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+            # контур развертки
+            self.path_background = utils.get_path(utils.get_contours(self.background_pixmap)[0], utils.get_contours(self.background_pixmap)[1])
+            # контур подразвертки
+            self.path_subprojection = utils.get_path(utils.get_contours(self.original_pixmap)[0], utils.get_contours(self.original_pixmap)[1])
+        except Exception as e:
+            QMessageBox.critical(
+                self.app_ref,
+                "Ошибка",
+                "Загружаемая картинка не соответствует требованиям!\n"
+                "Проверьте формат, размер или прозрачность изображения."
+            )
+            print(f"Ошибка в update_path: {e}")
+
+            class InvalidImageError(Exception):
+                """Ошибка: загруженная картинка не соответствует требованиям."""
+                pass
+            raise InvalidImageError("Ошибка обработки изображения") from e
 
 
     def mousePressEvent(self, event):

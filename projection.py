@@ -158,6 +158,7 @@ class Projection(track_object_state.Trackable):
         msg.setIcon(icon)
         msg.exec()
 
+
     def insert(self, cursor):
         query = """
             INSERT INTO spaces.projections (
@@ -195,6 +196,7 @@ class Projection(track_object_state.Trackable):
         self.reset_state()
         print(f"Проекция добавлена с ID: {self.id_projection}")
 
+
     def update(self, cursor):
         if self.id_projection is None:
             raise ValueError("Невозможно обновить: id_projection отсутствует")
@@ -224,9 +226,15 @@ class Projection(track_object_state.Trackable):
             self.projection_height,
             self.id_projection
         )
+
         cursor.execute(query, values)
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"Проекция с ID {self.id_projection} не найдена в базе")
+
         self.reset_state()
         print(f"Проекция с ID {self.id_projection} обновлена")
+
 
     def delete(self, cursor):
         if self.id_projection is None:
@@ -235,6 +243,10 @@ class Projection(track_object_state.Trackable):
         query = "DELETE FROM spaces.projections WHERE id_projection = %s"
         values = (self.id_projection,)
         cursor.execute(query, values)
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"Проекция с ID {self.id_projection} не найдена в базе")
+
         print(f"Проекция с ID {self.id_projection} удалена")
 
 

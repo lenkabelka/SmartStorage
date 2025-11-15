@@ -29,7 +29,7 @@ class Space(track_object_state.Trackable):
         super().__post_init__()
 
 
-    def show_message(self, title: str, message: str, icon=QMessageBox.Icon.Information):
+    def show_message(self, title: str, message: str, icon=QMessageBox.Icon.Critical):
         msg = QMessageBox()
         msg.setWindowTitle(title)
         msg.setText(message)
@@ -38,31 +38,20 @@ class Space(track_object_state.Trackable):
 
 
     def insert(self, cursor):
-        query = """
-            INSERT INTO spaces.spaces (id_parent_space, space_name, space_description)
-            VALUES (%s, %s, %s)
-            RETURNING id_space;
-        """
-        values = (self.id_parent_space, self.name, self.description)
-        cursor.execute(query, values)
-        self.id_space = cursor.fetchone()[0]
-        self.reset_state()
-        print(f"{self.name} space inserted")
+        try:
+            query = """
+                INSERT INTO spaces.spaces (id_parent_space, space_name, space_description)
+                VALUES (%s, %s, %s)
+                RETURNING id_space;
+            """
+            values = (self.id_parent_space, self.name, self.description)
+            cursor.execute(query, values)
+            self.id_space = cursor.fetchone()[0]
+            self.reset_state()
+            print(f"{self.name} space inserted")
+        except Exception as e:
+            raise ValueError(f"Ошибка при вставке пространства '{self.name}': {e}")
 
-
-    # def update(self, cursor):
-    #     if self.id_space is None:
-    #         raise ValueError("Невозможно обновить: id_space отсутствует")
-    #
-    #     query = """
-    #         UPDATE spaces.spaces
-    #         SET space_name = %s, space_description = %s
-    #         WHERE id_space = %s
-    #     """
-    #     values = (self.name, self.description, self.id_space)
-    #     cursor.execute(query, values)
-    #     self.reset_state()
-    #     print(f"{self.name} space updated")
 
     def update(self, cursor):
         """
@@ -81,6 +70,10 @@ class Space(track_object_state.Trackable):
         values = (self.name, self.description, self.id_parent_space, self.id_space)
 
         cursor.execute(query, values)
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"Пространство с id_space={self.id_space} не найдено в базе")
+
         self.reset_state()
         print(f"Space '{self.name}' updated (id_space={self.id_space})")
 
@@ -92,6 +85,10 @@ class Space(track_object_state.Trackable):
         query = "DELETE FROM spaces.spaces WHERE id_space = %s"
         values = (self.id_space,)
         cursor.execute(query, values)
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"Пространство с id_space={self.id_space} не найдено в базе")
+
         print(f"{self.name} space deleted")
 
 
@@ -168,7 +165,8 @@ class Space(track_object_state.Trackable):
                         self.show_message("Успешно", "Пространство сохранено.")
 
         except Exception as e:
-            self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}", icon=QMessageBox.Icon.Critical)
+            self.show_message("Ошибка", f"Сохранение не удалось: {str(e)}",
+                              icon=QMessageBox.Icon.Critical)
 
 
 def load_space_by_id(id_space: int) -> Space:
@@ -244,9 +242,6 @@ def load_space_subspaces(id_space: int, cursor) -> list[Space]:
 def get_top_space_id(starting_parent_id):
     """
     Итеративно находит самый верхний ancestor space, у которого id_parent_space IS NULL.
-
-    :param starting_parent_id: id пространства, от которого начинается поиск
-    :return: id самого верхнего пространства (root)
     """
     config = connection.load_config()
     conn = connection.db_connect(config)

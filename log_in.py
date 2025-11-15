@@ -66,10 +66,10 @@ class LogIn(QDialog):
         layout = QVBoxLayout()
         self.login_view.setLayout(layout)
 
-        self.login_login = QLineEdit()
+        self.login_login = QLineEdit("Konstantin")
         self.login_login.setPlaceholderText("Имя пользователя")
 
-        self.password_login = QLineEdit()
+        self.password_login = QLineEdit("kuzmin")
         self.password_login.setPlaceholderText("Пароль")
         self.password_login.setEchoMode(QLineEdit.EchoMode.Password)
 
