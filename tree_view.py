@@ -88,10 +88,12 @@ class TreeWidget(QTreeView):
         menu = QMenu(self)
 
         if is_root:
-            if self.app_ref.parent_space.current_projection is None:
-                menu.addAction("Добавить проекцию пространства", lambda: self.add_space_projection())
+            if self.app_ref.main_projection is None:
+                add_new_projection = True
+                menu.addAction("Добавить проекцию пространства", lambda: self.add_space_projection(add_new_projection))
             else:
-                menu.addAction("Изменить проекцию пространства", lambda: self.add_space_projection())
+                add_new_projection = False
+                menu.addAction("Изменить проекцию пространства", lambda: self.add_space_projection(add_new_projection))
             menu.addAction("Открыть родительское пространство", lambda: self.open_parent_space())
             menu.addAction("Добавить подпространство", lambda: self.add_subspace())
             menu.addAction("Добавить вещь", lambda: self.add_thing())
@@ -146,8 +148,8 @@ class TreeWidget(QTreeView):
     def open_parent_space(self):
         self.app_ref.load_parent_space_from_DB()
 
-    def add_space_projection(self):
-        self.app_ref.add_space_projection()
+    def add_space_projection(self, add_new_projection):
+        self.app_ref.add_space_projection(add_new_projection=add_new_projection)
 
     def add_subspace(self):
         self.app_ref.add_subspace()

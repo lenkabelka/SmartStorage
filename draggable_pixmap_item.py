@@ -153,7 +153,7 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 selected_action = menu.exec(event.screenPos())
 
                 if selected_action == set_above_other_subprojection:
-                    self.app_ref.find_projection(self)
+                    self.app_ref.find_subprojection(self)
                     self.app_ref.move_draggable_to_another_z_position(self, combo.currentText())
 
                 elif selected_action == change_information_action:

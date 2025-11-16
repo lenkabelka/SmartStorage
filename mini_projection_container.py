@@ -11,22 +11,8 @@ class ProjectionContainer(QWidget):
 
         self.app_ref = app
 
-        # -------------- необходимо для открытия развертки на главной сцене:
-        # делаем "снимок" состояния развёртки в момент её сохранения на мини проекцию
         self.saved_projection = projection_to_save
-
-        self.saved_projection_state = projection_to_save.save_state()
-        print(f"1------------{self.saved_projection_state}")
-
-        self.sub_projections_list = self.saved_projection_state.get("sub_projections")
-        print(f"2------------{self.sub_projections_list}")
-
-        # self.sub_projections_list = None
-        # if projection_to_save.sub_projections:
-        #     self.sub_projections_list = projection_to_save.sub_projections
-        #     for subproj in self.sub_projections_list:
-        #         subproj.saved_projection_state = subproj.save_state()
-        # ---------------------------------------------------------------------------
+        self.projection = projection_to_save.copy()
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -34,47 +20,28 @@ class ProjectionContainer(QWidget):
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
 
-        self.projection_name = self.saved_projection.projection_name
-
-        self.label = QLabel(self.projection_name)
+        self.label = QLabel(self.projection.projection_name)
         layout.addWidget(self.label)
         layout.addWidget(self.view)
+        self.background_item = None
 
-        # Копия current_projection:
-        self.background_item = QGraphicsPixmapItem(self.saved_projection.original_pixmap)
-        self.background_item.parent = (self.saved_projection.reference_to_parent_thing
-                                       or self.saved_projection.reference_to_parent_space)
-        self.scene.addItem(self.background_item)
+        if self.projection.scaled_projection_pixmap:
+            self.background_item = self.projection.scaled_projection_pixmap
+            self.scene.addItem(self.background_item)
+            #self.background_item.setPos(self.projection.x_pos, self.projection.y_pos)
+            #print(self.projection.x_pos, self.projection.y_pos)
+            self.background_item.setZValue(self.projection.z_pos)
+            print(self.projection.z_pos)
 
-        if self.sub_projections_list:
-            for sub in self.sub_projections_list:
-                if sub.get("state") != ObjectState.DELETED:
-                    item_copy = QGraphicsPixmapItem(sub.get("original_pixmap"))
-                    item_copy.setPos(sub.get("x_pos"), sub.get("y_pos"))
-                    item_copy.setZValue(sub.get("z_pos"))
 
-                    if sub.get("reference_to_parent_space"):
-                        item_copy.parent = sub.get("reference_to_parent_space")  # чтобы потом найти её на всех сценах и подсветить
-                    else:
-                        item_copy.parent = sub.get("reference_to_parent_thing") # чтобы потом найти вешь на всех сценах и подсветить
-
-        # if self.sub_projections_list:
-        #     for sub in self.sub_projections_list:
-        #         if sub.state != ObjectState.DELETED:
-        #             item_copy = QGraphicsPixmapItem(sub.original_pixmap)
-        #             item_copy.setPos(sub.x_pos, sub.y_pos)
-        #             item_copy.setZValue(sub.z_pos)
-        #
-        #             if sub.reference_to_parent_space:
-        #                 item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
-        #             else:
-        #                 item_copy.parent = sub.reference_to_parent_thing
-        #                 item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вешь на всех сценах и подсветить
-
-                    self.scene.addItem(item_copy)
-
-        min_z = min((item.zValue() for item in self.scene.items()), default=0)
-        self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+        if self.projection.sub_projections:
+            for sub in self.projection.sub_projections:
+                if not sub.scaled_projection_pixmap:
+                    continue
+                item = sub.scaled_projection_pixmap
+                self.scene.addItem(item)
+                item.setPos(sub.x_pos, sub.y_pos)
+                item.setZValue(sub.z_pos)
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -131,72 +98,26 @@ class ProjectionContainer(QWidget):
             self.view.fitInView(self.background_item, Qt.AspectRatioMode.KeepAspectRatio)
 
 
-    def update_mini_projection_name(self, projection_to_change):
-        self.label.setText(projection_to_change.projection_name)
-
-
     def update_scene(self, projection_to_change):
         try:
-            # -------------- необходимо для открытия развертки на главной сцене:
-            # делаем "снимок" состояния развёртки в момент её сохранения на мини проекцию
-            self.saved_projection = projection_to_change
-            #self.projection_name = projection_to_change.projection_name
-
-            self.saved_projection_state = projection_to_change.save_state()
-            print(f"---1------------{self.saved_projection_state}")
-
-            self.sub_projections_list = self.saved_projection_state.get("sub_projections")
-            print(f"---2------------{self.sub_projections_list}")
-            # self.sub_projections_list = None
-            # if projection_to_change.sub_projections:
-            #     self.sub_projections_list = projection_to_change.sub_projections
-            #     for subproj in self.sub_projections_list:
-            #         subproj.saved_projection_state = subproj.save_state()
-            # --------------------------------------------------------------------------
-
             self.scene.clear()
-            #self.sub_projections_list = None
-            #if projection_to_change.sub_projections:
-            #    self.sub_projections_list = projection_to_change.sub_projections
 
-            self.background_item = QGraphicsPixmapItem(projection_to_change.original_pixmap)
-            self.scene.addItem(self.background_item)
+            self.projection = projection_to_change.copy()
 
-            if self.sub_projections_list:
-                for sub in self.sub_projections_list:
-                    if sub.get("state") != ObjectState.DELETED:
-                        print("----------sub")
-                        item_copy = QGraphicsPixmapItem(sub.get("original_pixmap"))
-                        item_copy.setPos(sub.get("x_pos"), sub.get("y_pos"))
-                        item_copy.setZValue(sub.get("z_pos"))
+            if self.projection.scaled_projection_pixmap:
+                self.background_item = self.projection.scaled_projection_pixmap
+                self.scene.addItem(self.background_item)
+                #self.background_item.setPos(self.projection.x_pos, self.projection.y_pos)
+                self.background_item.setZValue(self.projection.z_pos)
 
-                        if sub.get("reference_to_parent_space"):
-                            item_copy.parent = sub.get(
-                                "reference_to_parent_space")  # чтобы потом найти её на всех сценах и подсветить
-                        else:
-                            item_copy.parent = sub.get(
-                                "reference_to_parent_thing")  # чтобы потом найти вешь на всех сценах и подсветить
-
-                        print("3333333333333333333333333333333333")
-                        self.scene.addItem(item_copy)
-
-            # if self.sub_projections_list:
-            #     for sub in self.sub_projections_list:
-            #         if sub.state != ObjectState.DELETED:
-            #             item_copy = QGraphicsPixmapItem(sub.original_pixmap)
-            #             item_copy.setPos(sub.x_pos, sub.y_pos)
-            #             item_copy.setZValue(sub.z_pos)
-            #
-            #             if sub.reference_to_parent_space:
-            #                 item_copy.parent = sub.reference_to_parent_space  # чтобы потом найти её на всех сценах и подсветить
-            #             else:
-            #                 item_copy.parent = sub.reference_to_parent_thing
-            #                 item_copy.thing_id = sub.reference_to_parent_thing.id_thing  # чтобы потом найти вещь на всех сценах и подсветить
-
-
-
-            min_z = min((item.zValue() for item in self.scene.items()), default=0)
-            self.background_item.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+            if self.projection.sub_projections:
+                for sub in self.projection.sub_projections:
+                    if not sub.scaled_projection_pixmap:
+                        continue
+                    item = sub.scaled_projection_pixmap
+                    self.scene.addItem(item)
+                    item.setPos(sub.x_pos, sub.y_pos)
+                    item.setZValue(sub.z_pos)
 
             self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
             self.view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)

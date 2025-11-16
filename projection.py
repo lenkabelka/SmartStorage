@@ -58,6 +58,66 @@ class Projection(track_object_state.Trackable):
         super().__post_init__()
 
 
+    def copy(self, with_subprojections: bool = True) -> "Projection":
+        """
+        - IDs не сбрасываем
+        - QImage/QPixmap передаём по ссылке
+        - scaled_projection_pixmap создаём заново (именно это отображается на мини сцене)
+        """
+
+        # --- scaled pixmap item ---
+        new_pixmap_item = QGraphicsPixmapItem(self.original_pixmap)
+
+        # --- создаём копию самой развёртки ---
+        new_proj = Projection(
+            projection_name=self.projection_name,
+            projection_image=self.projection_image,  # ссылка
+            original_pixmap=self.original_pixmap,  # ссылка
+            projection_width=self.projection_width,
+            projection_height=self.projection_height,
+            projection_description=self.projection_description,
+            x_pos=self.x_pos,
+            y_pos=self.y_pos,
+            z_pos=self.z_pos,
+
+            # ID НЕ СБРАСЫВАЕМ
+            id_projection=self.id_projection,
+            id_parent_projection=self.id_parent_projection,
+            id_parent_space=self.id_parent_space,
+            id_parent_thing=self.id_parent_thing,
+
+            scaled_projection_pixmap=new_pixmap_item,  # новый item
+
+            reference_to_parent_space=self.reference_to_parent_space,
+            reference_to_parent_thing=self.reference_to_parent_thing,
+            reference_to_parent_projection=self.reference_to_parent_projection,
+        )
+
+        new_proj._state = self._state  # копируем state
+        new_proj._original_values = dict(self._original_values)  # копируем оригинальные значения
+        new_proj._db_fields = set(self._db_fields)  # копируем поля БД
+        new_proj._non_db_fields = set(self._non_db_fields)  # если есть
+
+        # 4. Рекурсивно копируем sub_projections
+        if with_subprojections:
+            new_proj.sub_projections = []
+            for sub in self.sub_projections:
+                sub_copy = sub.copy(with_subprojections=False)
+
+                # Устанавливаем правильного родителя
+                sub_copy.reference_to_parent_projection = new_proj
+
+                # Корректируем tracking-состояние и значения
+                sub_copy._state = sub._state
+                sub_copy._original_values = dict(sub._original_values)
+                sub_copy._db_fields = set(sub._db_fields)
+                sub_copy._non_db_fields = set(sub_copy._non_db_fields)  # если есть
+
+                new_proj.sub_projections.append(sub_copy)
+
+        return new_proj
+
+
     # --- сохранение состояния ---
     def save_state(self) -> dict:
         """Сохраняет текущее состояние проекции в словарь (безопасно для None)."""
