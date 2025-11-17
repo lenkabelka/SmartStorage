@@ -36,7 +36,7 @@ class ProjectionContainer(QWidget):
 
         if self.projection.sub_projections:
             for sub in self.projection.sub_projections:
-                if not sub.scaled_projection_pixmap:
+                if not sub.scaled_projection_pixmap or sub.state == ObjectState.DELETED:
                     continue
                 item = sub.scaled_projection_pixmap
                 self.scene.addItem(item)
@@ -112,7 +112,7 @@ class ProjectionContainer(QWidget):
 
             if self.projection.sub_projections:
                 for sub in self.projection.sub_projections:
-                    if not sub.scaled_projection_pixmap:
+                    if not sub.scaled_projection_pixmap or sub.state == ObjectState.DELETED:
                         continue
                     item = sub.scaled_projection_pixmap
                     self.scene.addItem(item)

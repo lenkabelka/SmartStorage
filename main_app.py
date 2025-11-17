@@ -1291,8 +1291,8 @@ class MainWidget(QWidget):
             print(e)
 
 
-    def delete_mini_projection(self, mini_projection):
-
+    def delete_mini_projection(self, mini):
+        #try:
         # Проверка прав доступа
         if not self.access_manager.can_edit(self.parent_space):
             QMessageBox.warning(
@@ -1302,68 +1302,23 @@ class MainWidget(QWidget):
             )
             return
 
-        mini_projection_to_remove = next((mini for mini in self.mini_projections_list if mini == mini_projection),
-                                         None)
-        if mini_projection_to_remove:
+        if mini:
 
-            if self.mini_projections_list and self.mini_projections_list[0] == mini_projection_to_remove:
-                reply = QMessageBox.question(
-                    self,
-                    "Удаление проекции пространства",
-                    "Удаление этой мини проекции также\nудалит текщую проекцию пространства!\nВсё равно удалить мини проекцию?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.Yes
-                )
-
-                if reply == QMessageBox.StandardButton.Yes:
-                    projection = next((projection for projection in self.parent_space.projections
-                                       if projection == mini_projection_to_remove.saved_projection), None)
-
-                    if projection == self.parent_space.current_projection:
-                        self.parent_space.current_projection = None
-                        self.scene.clear()
-                        self.set_placeholders_on_main_scene()
-
-                    if projection:
-                        # сначала удаляем подразвёртки удаляемой развёртки
-                        if projection.sub_projections is not None:
-                            for sub in projection.sub_projections:
-                                if sub.state == ObjectState.NEW:
-                                    projection.sub_projections.remove(sub)
-                                else:
-                                    sub.mark_deleted()
-                        # удаляем саму развёртку
-                        if projection.state == ObjectState.NEW:
-                            self.parent_space.projections.remove(projection)
-                        else:
-                            projection.mark_deleted()
-
-                    self.mini_projections_list.remove(mini_projection_to_remove)
-                    self.update_mini_projections_layout()
-
-                elif reply == QMessageBox.StandardButton.No:
-                    return
-
+            if mini.projection.state == ObjectState.NEW:
+                self.parent_space.projections.remove(mini.projection)
+                self.mini_projections_list.remove(mini)
             else:
-                projection = next((projection for projection in self.parent_space.projections
-                                   if projection == mini_projection_to_remove.saved_projection), None)
+                if mini.projection.sub_projections:
+                    for sub in mini.projection.sub_projections:
+                        sub.mark_deleted()
+                mini.projection.mark_deleted()
 
-                if projection:
-                    # сначала удаляем подразвёртки удаляемой развёртки
-                    if projection.sub_projections is not None:
-                        for sub in projection.sub_projections:
-                            if sub.state == ObjectState.NEW:
-                                projection.sub_projections.remove(sub)
-                            else:
-                                sub.mark_deleted()
-                    # удаляем саму развёртку
-                    if projection.state == ObjectState.NEW:
-                        self.parent_space.projections.remove(projection)
-                    else:
-                        projection.mark_deleted()
+            self.update_mini_projections_layout()
 
-                self.mini_projections_list.remove(mini_projection_to_remove)
-                self.update_mini_projections_layout()
+        # except Exception as e:
+        #     print(e)
+        #     import traceback
+        #     traceback.print_exc()
 
 
     def update_subprojections_position_on_space_projection_change(self, old_scaled_pixmap, projection):
@@ -2589,25 +2544,32 @@ class MainWidget(QWidget):
 
 
     def update_mini_projections_layout(self):
-        try:
-            utils.clear_layout(self.layout_projections_of_space)
+        #try:
+        utils.clear_layout(self.layout_projections_of_space)
 
-            # current_projection = next((mini_projection for mini_projection in self.mini_projections_list
-            #                            if mini_projection.saved_projection == self.parent_space.current_projection), None)
-            #
-            # # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
-            # if current_projection:
-            #     self.mini_projections_list.remove(current_projection)
-            #     self.mini_projections_list.insert(0, current_projection)
+        # current_projection = next((mini_projection for mini_projection in self.mini_projections_list
+        #                            if mini_projection.saved_projection == self.parent_space.current_projection), None)
+        #
+        # # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
+        # if current_projection:
+        #     self.mini_projections_list.remove(current_projection)
+        #     self.mini_projections_list.insert(0, current_projection)
 
-            for widget in self.mini_projections_list:
-                if widget.saved_projection.state != ObjectState.DELETED:
-                    self.layout_projections_of_space.addWidget(widget)
-            # чтобы миниразвертки прижимались к верхнему краю
-            self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
+        print(self.mini_projections_list)
 
-        except Exception as e:
-            print(e)
+        #if self.mini_projections_list:
+        for widget in self.mini_projections_list:
+            print("1")
+            if widget.saved_projection.state != ObjectState.DELETED:
+                print("2")
+                self.layout_projections_of_space.addWidget(widget)
+                print("3")
+        # чтобы миниразвертки прижимались к верхнему краю
+        self.layout_projections_of_space.setAlignment(Qt.AlignmentFlag.AlignTop)
+        print("4")
+
+        # except Exception as e:
+        #     print(e)
 
 
     # def is_current_projection_saved(self):
