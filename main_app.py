@@ -1502,7 +1502,7 @@ class MainWidget(QWidget):
         Удаляет одну под-проекцию, отображённую на главной сцене через item draggable.
         """
         try:
-            current_proj = self.parent_space.current_projection
+            current_proj = self.main_projection
             if not current_proj:
                 print("1")
                 return
@@ -1541,137 +1541,71 @@ class MainWidget(QWidget):
             print(e)
 
 
-
-    def find_parent_of_subprojection_by_its_scaled_projection_pixmap_on_projection(self, draggable_on_projection, projection):
-        subprojection_parent = None
-        if projection.sub_projections:
-            subprojection = next((subprojection for subprojection
-                                  in projection.sub_projections
-                                  if subprojection.scaled_projection_pixmap == draggable_on_projection), None)
-            if subprojection:
-                subprojection_parent = (subprojection.reference_to_parent_space
-                                        or subprojection.reference_to_parent_thing)
-        return subprojection_parent
-
-
-    #new
     def delete_all_subprojections(self, draggable=None, draggable_parent=None):
-        if draggable_parent is None:
-            if self.parent_space.current_projection:
-                draggable_parent = self.find_parent_of_subprojection_by_its_scaled_projection_pixmap_on_projection(
-                    draggable,
-                    self.parent_space.current_projection
+        try:
+            # Если вообще нечего удалять — выходим
+            if draggable is None and draggable_parent is None:
+                return
+
+            # Если не передали draggable_parent — берём из draggable.parent
+            if draggable_parent is None:
+                draggable_parent = draggable.parent
+
+            # 1) Удаляем в main_projection
+            if self.main_projection is not None and self.main_projection.sub_projections:
+                if draggable is None:
+                    sub_of_draggable = next((sub for sub in self.main_projection.sub_projections
+                                             if sub.reference_to_parent_space == draggable_parent
+                                             or sub.reference_to_parent_thing == draggable_parent), None)
+                    if sub_of_draggable is not None:
+                        self.delete_one_subprojection(sub_of_draggable.scaled_projection_pixmap)
+
+            # 2) Удаляем в мини-развёртках
+            if not self.mini_projections_list:
+                return
+
+            for mini in self.mini_projections_list:
+
+                if mini is None or mini.projection is None:
+                    continue
+
+                subs = mini.projection.sub_projections
+                if not subs:
+                    continue
+
+                sub_to_remove = next(
+                    (
+                        sub for sub in subs
+                        if sub.reference_to_parent_thing == draggable_parent
+                           or sub.reference_to_parent_space == draggable_parent
+                    ),
+                    None
                 )
 
+                if sub_to_remove is None:
+                    continue
 
-        if self.mini_projections_list:
-            for mini in self.mini_projections_list:
-                if mini.saved_projection == self.parent_space.current_projection:
-                    subprojection = next((subprojection for subprojection in self.parent_space.current_projection.sub_projections
-                                          if subprojection.reference_to_parent_space == draggable_parent
-                                          or subprojection.reference_to_parent_thing == draggable_parent), None)
-                    if subprojection:
-                        draggable = next((draggable for draggable in self.scene.items() if subprojection.scaled_projection_pixmap == draggable), None)
-                        if draggable:
-                            self.scene.removeItem(draggable)
-                            if subprojection.state == ObjectState.NEW:
-                                self.parent_space.current_projection.sub_projections.remove(subprojection)
-                            else:
-                                subprojection.mark_deleted()
+                # удаляем с мини сцены
+                mini.scene.removeItem(sub_to_remove.scaled_projection_pixmap)
 
-                        mini.self.saved_projection_state.get("sub_projections")
+                # NEW → полностью удаляем
+                if sub_to_remove.state == ObjectState.NEW:
+                    try:
+                        subs.remove(sub_to_remove)
+                    except ValueError:
+                        pass
 
-                subprojection_to_remove = next((subprojection for subprojection in mini.saved_projection.sub_projections
-                                                if subprojection.reference_to_parent_thing == draggable_parent
-                                                or subprojection.reference_to_parent_space == draggable_parent), None)
+                # EXISTING → помечаем как DELETED
+                else:
+                    sub_to_remove.mark_deleted()
 
-                if subprojection_to_remove:
-                    if subprojection_to_remove.state == ObjectState.NEW:
-                        mini.saved_projection.sub_projections.remove(subprojection_to_remove)
-                    else:
-                        subprojection_to_remove.mark_deleted()
+            # 3) Обновляем мини-виджеты
+            self.update_mini_projections_layout()
 
-                mini.saved_projection.save_state()
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
 
-                item_copy_to_remove = next(item_copy for item_copy in mini.scene.items()
-                                           if item_copy.parent == draggable_parent)
-                if item_copy_to_remove:
-                    print(f"item_copy_to_remove: {item_copy_to_remove}")
-                    mini.scene.removeItem(item_copy_to_remove)
-
-        # 3) Удаляем саму под-проекцию с главной сцены
-        #self.scene.removeItem(draggable)
-
-    # def delete_all_subprojections(self, draggable_item_pointer):
-    #
-    #     # Проверка прав доступа
-    #     if not self.access_manager.can_edit(self.parent_space):
-    #         QMessageBox.warning(
-    #             self,
-    #             "Доступ запрещён",
-    #             "У вас нет прав для удаления подпроекции."
-    #         )
-    #         return
-    #
-    #     if self.parent_space.current_projection:
-    #         if self.parent_space.current_projection.sub_projections:
-    #             subprojection = next((sub for sub in self.parent_space.current_projection.sub_projections
-    #                                   if sub.scaled_projection_pixmap == draggable_item_pointer), None)
-    #
-    #             if subprojection:
-    #                 if subprojection.reference_to_parent_space:
-    #                     parent_of_subprojection = subprojection.reference_to_parent_space
-    #
-    #                     for projection in self.parent_space.projections:
-    #                         subprojection_to_remove = next((sub for sub in projection.sub_projections
-    #                                                         if sub.reference_to_parent_space == parent_of_subprojection), None)
-    #                         if subprojection_to_remove:
-    #                             if subprojection_to_remove.state == ObjectState.NEW:
-    #                                 projection.sub_projections.remove(subprojection_to_remove)
-    #                             else:
-    #                                 # #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! --- проверка прав ---
-    #                                 # # нельзя удалить подразвертку того пространства, к которому нет доступа
-    #                                 # #TODO продумать этот момент
-    #                                 #  (можно, так как подразвертки относятся только к текущему пространству)
-    #                                 # if not self.access_manager.can_edit(subprojection_to_remove.reference_to_parent_space):
-    #                                 #     continue
-    #
-    #                                 subprojection_to_remove.mark_deleted()
-    #
-    #                 elif subprojection.reference_to_parent_thing:
-    #                     parent_of_subprojection = subprojection.reference_to_parent_thing
-    #
-    #                     for projection in self.parent_space.projections:
-    #                         subprojection_to_remove = next((sub for sub in projection.sub_projections
-    #                                                         if sub.reference_to_parent_thing == parent_of_subprojection), None)
-    #                         if subprojection_to_remove:
-    #                             if subprojection_to_remove.state == ObjectState.NEW:
-    #                                 projection.sub_projections.remove(subprojection_to_remove)
-    #                             else:
-    #                                 subprojection_to_remove.mark_deleted()
-    #
-    #                 # Тут может быть два сценария:
-    #                 # 1. Если текущая развертка была сохранена в мини развертку,
-    #                 # то она была добавлена в projections у parent_space -> в данном случае при удалении подразвертки
-    #                 # из развертки у parent_space, она автоматически будет удалена из current_projection.
-    #                 # 2. В случае, если current_projection не была сохранена в мини сцены (она не была добавлена
-    #                 # в projections у parent_space), то подразвертка не удалится в current_projection
-    #                 # и её надо удалить дополнительно из current_projection
-    #
-    #                 subprojection_to_remove_in_current_projection \
-    #                     = next((sub for sub in self.parent_space.current_projection.sub_projections
-    #                             if sub == subprojection), None)
-    #                 if subprojection_to_remove_in_current_projection:
-    #                     self.parent_space.current_projection.sub_projections.remove(subprojection_to_remove_in_current_projection)
-    #
-    #         # мне нужно удалить лишь один draggable. Нет смысла перерисовывать всю сцену.
-    #         self.scene.removeItem(draggable_item_pointer)
-    #
-    #         # self.set_subprojection_position_from_its_scene_position()  # чтобы другие подразвертки не сдвигались,
-    #         # # изначально у них сохраненная позиция та, что в БД
-    #         # self.update_main_scene(set_position=True)
-    #         for proj in self.parent_space.projections:
-    #             self.save_or_update_mini_projection(proj, check_permissions=False)
 
 
     # ACTION
@@ -1693,15 +1627,7 @@ class MainWidget(QWidget):
             else:
                 thing_to_remove.mark_deleted()
 
-                self.delete_all_subprojections(draggable_parent=thing_to_remove)
-
-            # if self.parent_space.current_projection:
-            #     if self.parent_space.current_projection.sub_projections:
-            #         sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-            #                        if sub.reference_to_parent_thing == thing_to_remove), None)
-            #
-            #         if sub_projection:
-            #             self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
+            self.delete_all_subprojections(draggable_parent=thing_to_remove)
 
             self.update_tree_view()
 
@@ -1726,14 +1652,6 @@ class MainWidget(QWidget):
                 subspace_to_remove.mark_deleted()
 
             self.delete_all_subprojections(draggable_parent=subspace_to_remove)
-
-            # if self.parent_space.current_projection:
-            #     if self.parent_space.current_projection.sub_projections:
-            #         sub_projection = next((sub for sub in self.parent_space.current_projection.sub_projections
-            #                        if sub.reference_to_parent_space == subspace_to_remove), None)
-            #
-            #         if sub_projection:
-            #             self.delete_all_subprojections(sub_projection.scaled_projection_pixmap)
 
             self.update_tree_view()
 
