@@ -187,10 +187,15 @@ class TreeWidget(QTreeView):
             if index.isValid():
                 node = index.internalPointer()
                 parent_index = index.parent()
+
                 if parent_index.isValid():
+                    # Узел с родителем - подсвечиваем
                     if node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
                         self.app_ref.handle_node_clicked(node.ref)
                         self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+                else:
+                    # Верхний уровень - очищаем подсветку
+                    self.app_ref.clear_highlights_on_main_and_mini_scenes()
 
         super().mousePressEvent(event)
 
@@ -202,9 +207,16 @@ class TreeWidget(QTreeView):
             index = self.currentIndex()
             if index.isValid():
                 node = index.internalPointer()
-                if node and node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
-                    self.app_ref.handle_node_clicked(node.ref)
-                    self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+                parent_index = index.parent()
+
+                if parent_index.isValid():
+                    # Узел с родителем - подсвечиваем
+                    if node and node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
+                        self.app_ref.handle_node_clicked(node.ref)
+                        self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+                else:
+                    # Верхний уровень - очищаем подсветку
+                    self.app_ref.clear_highlights_on_main_and_mini_scenes()
         else:
             super().keyPressEvent(event)  # для остальных клавиш
 
@@ -216,6 +228,8 @@ class TreeWidget(QTreeView):
             if index.isValid():
                 node = index.internalPointer()
                 parent_index = index.parent()
+                if index.isValid():
+                    self.app_ref.clear_highlights_on_main_and_mini_scenes()
                 if parent_index.isValid():
                     if node.node_type == TreeNode.TYPE_SPACE:
                         self.app_ref.open_subspace_as_space(node.ref)
@@ -227,6 +241,6 @@ class TreeWidget(QTreeView):
         if index.isValid():
             self.setCurrentIndex(index)
             self.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)
-            self.setFocus()
+            #self.setFocus()
         else:
             print(f"Не удалось найти элемент с ref = {thing_or_space}")

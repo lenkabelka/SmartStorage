@@ -2422,32 +2422,79 @@ class MainWidget(QWidget):
             self.save_current_projection_button.setEnabled(True)
 
 
+    def clear_highlights_on_main_and_mini_scenes(self):
+        self.scene.clear_highlights()
+        if self.mini_projections_list is not None:
+            for mini in self.mini_projections_list:
+                mini.clear_highlights()
+
+
     def highlight_subprojections_on_mini_projections(self, parent=None, thing_to_highlight=None):
-        for mini_projection in self.mini_projections_list:
-            # Всегда очищаем старые выделения
-            mini_projection.clear_highlights()
-
-            subprojection_to_highlight = None
-
-            if thing_to_highlight is not None:
-                #print("thing_to_highlight is not None")
-                subprojection_to_highlight = next(
-                    (item for item in mini_projection.scene.items()
-                     if isinstance(item, QGraphicsPixmapItem)
-                     and getattr(item, "thing_id", None) == thing_to_highlight.id_thing),
+        try:
+            if self.main_projection is not None and parent is not None:
+                self.scene.clear_highlights()
+                # ходим стрелками или выбираем мышью в дереве справа подпространство или вещь
+                # или одинарный клик мышью на draggable на главной сцене
+                subprojection_to_highlight_on_main_scene = next(
+                    (sub for sub in self.main_projection.sub_projections if self.main_projection.sub_projections
+                     and (getattr(sub, "reference_to_parent_space", None) == parent
+                          or getattr(sub, "reference_to_parent_thing", None) == parent)),
                     None
                 )
+                if subprojection_to_highlight_on_main_scene:
+                    self.scene.focus_and_highlight(subprojection_to_highlight_on_main_scene.scaled_projection_pixmap)
 
-            if parent is not None:
-                # Ищем item, чей .parent соответствует переданному parent
-                subprojection_to_highlight = next(
-                    (item for item in mini_projection.scene.items()
-                     if isinstance(item, QGraphicsPixmapItem) and getattr(item, "parent", None) == parent),
-                    None
-                )
 
-            if subprojection_to_highlight:
-                mini_projection.highlight(subprojection_to_highlight)
+            if self.mini_projections_list is not None:
+                for mini in self.mini_projections_list:
+                    # Всегда очищаем старые выделения
+                    mini.clear_highlights()
+
+                    subprojection_to_highlight = None
+
+                    if parent is not None:
+                        # ходим стрелками или выбираем мышью в дереве справа подпространство или вещь
+                        subprojection_to_highlight = next(
+                            (sub for sub in mini.projection.sub_projections if mini.projection.sub_projections
+                             and (getattr(sub, "reference_to_parent_space", None) == parent
+                                  or getattr(sub, "reference_to_parent_thing", None) == parent)),
+                            None
+                        )
+
+                    if subprojection_to_highlight:
+                        mini.highlight(subprojection_to_highlight.scaled_projection_pixmap)
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
+
+
+    # def highlight_subprojections_on_mini_projections(self, parent=None, thing_to_highlight=None):
+    #     for mini_projection in self.mini_projections_list:
+    #         # Всегда очищаем старые выделения
+    #         mini_projection.clear_highlights()
+    #
+    #         subprojection_to_highlight = None
+    #
+    #         if thing_to_highlight is not None:
+    #             # показать вещь в пространстве (вызов контекстного меню в дереве)
+    #             subprojection_to_highlight = next(
+    #                 (item for item in mini_projection.scene.items()
+    #                  if isinstance(item, QGraphicsPixmapItem)
+    #                  and getattr(item, "thing_id", None) == thing_to_highlight.id_thing),
+    #                 None
+    #             )
+    #
+    #         if parent is not None:
+    #
+    #             # Ищем item, чей .parent соответствует переданному parent
+    #             subprojection_to_highlight = next(
+    #                 (item for item in mini_projection.scene.items()
+    #                  if isinstance(item, QGraphicsPixmapItem) and getattr(item, "parent", None) == parent),
+    #                 None
+    #             )
+    #
+    #         if subprojection_to_highlight:
+    #             mini_projection.highlight(subprojection_to_highlight)
 
 
     def set_subprojection_position_from_its_scene_position(self, x=True, y=True, z=True, scaled=None):
