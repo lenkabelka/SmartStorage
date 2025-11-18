@@ -1892,19 +1892,6 @@ class MainWidget(QWidget):
             print(e)
 
 
-    def fill_mini_projections_list(self, space_projections: list):
-        self.mini_projections_list.clear()
-        for proj in space_projections:
-            if proj.state != ObjectState.DELETED:
-                new_mini_projection = container.ProjectionContainer(
-                    proj,
-                    self#,
-                    #self.container_projections_of_space
-                )
-                print(f"new: {new_mini_projection}")
-                self.mini_projections_list.append(new_mini_projection)
-
-
     def save_current_space(self):
         if not self.is_current_space_saved():
             reply = QMessageBox.question(
@@ -2362,14 +2349,14 @@ class MainWidget(QWidget):
 
         # Находим перемещаемый subprojection
         subprojection_to_move = next(
-            (sub for sub in self.parent_space.current_projection.sub_projections
+            (sub for sub in self.main_projection.sub_projections
              if sub.scaled_projection_pixmap == draggable_to_move),
             None
         )
 
         # Находим reference_subprojection по имени связанного родителя
         reference_subprojection = next(
-            (sub for sub in self.parent_space.current_projection.sub_projections
+            (sub for sub in self.main_projection.sub_projections
              if ((sub.reference_to_parent_space is not None and
                   sub.reference_to_parent_space.name == parent_name_of_reference_subprojection)
                  or
@@ -2382,19 +2369,19 @@ class MainWidget(QWidget):
             print("Ошибка: один из подэлементов не найден.")
             return
 
-        if not (self.parent_space and self.parent_space.current_projection and
-                self.parent_space.current_projection.sub_projections):
+        if not (self.parent_space and self.main_projection and
+                self.main_projection.sub_projections):
             print("Ошибка: текущая проекция или список подэлементов отсутствует.")
             return
 
         # Сортируем по текущему z_pos
-        self.parent_space.current_projection.sub_projections.sort(
+        self.main_projection.sub_projections.sort(
             key=lambda sub: sub.z_pos
         )
 
         try:
-            index_1 = self.parent_space.current_projection.sub_projections.index(subprojection_to_move)
-            index_2 = self.parent_space.current_projection.sub_projections.index(reference_subprojection)
+            index_1 = self.main_projection.sub_projections.index(subprojection_to_move)
+            index_2 = self.main_projection.sub_projections.index(reference_subprojection)
         except ValueError:
             print("Ошибка: элементы не найдены в отсортированном списке.")
             return
@@ -2405,15 +2392,15 @@ class MainWidget(QWidget):
 
         if index_1 < index_2:
             subprojection_to_move.z_pos = reference_subprojection.z_pos
-            for subprojection in self.parent_space.current_projection.sub_projections[index_1 + 1 : index_2 + 1]:
+            for subprojection in self.main_projection.sub_projections[index_1 + 1 : index_2 + 1]:
                 subprojection.z_pos -= 1.0
 
         else: # index_2 < index_1
             subprojection_to_move.z_pos = reference_subprojection.z_pos + 1
-            for subprojection in self.parent_space.current_projection.sub_projections[index_2 + 1 : index_1]:
+            for subprojection in self.main_projection.sub_projections[index_2 + 1 : index_1]:
                 subprojection.z_pos += 1.0
 
-        for sub in self.parent_space.current_projection.sub_projections:
+        for sub in self.main_projection.sub_projections:
             print(f"{sub.projection_name}: {sub.z_pos}")
 
         self.set_subprojection_position_from_its_scene_position(z=False) # z не надо брать со сцены,

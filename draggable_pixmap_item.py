@@ -133,9 +133,9 @@ class DraggablePixmapItem(QGraphicsPixmapItem):
                 combo = QComboBox()
 
                 # Заполняем ComboBox
-                if self.app_ref.parent_space is not None and self.app_ref.parent_space.current_projection is not None:
-                    if self.app_ref.parent_space.current_projection.sub_projections:
-                        for item in self.app_ref.parent_space.current_projection.sub_projections:
+                if self.app_ref.parent_space is not None and self.app_ref.main_projection is not None:
+                    if self.app_ref.main_projection.sub_projections:
+                        for item in self.app_ref.main_projection.sub_projections:
                             parent = item.reference_to_parent_space or item.reference_to_parent_thing
                             if parent is not None and item.scaled_projection_pixmap != self:
                                 combo.addItem(parent.name)
