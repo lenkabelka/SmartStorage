@@ -1289,28 +1289,43 @@ class MainWidget(QWidget):
                     #self.set_subprojection_position_from_its_scene_position()
 
                     # Если мини проекция уже сохранена, то, если нужно, обновляем её вид
-                    mini_projection_to_change = next((mini for mini in self.mini_projections_list if
-                                                      mini.saved_projection == projection_to_save_or_update), None)
+                    mini_projection_to_change = next(
+                        (mini for mini in self.mini_projections_list
+                         if mini.saved_projection == projection_to_save_or_update),
+                        None
+                    )
+
                     print(f"MINI_TO_CHANGE: {mini_projection_to_change}")
 
                     if mini_projection_to_change:
+
                         print("Обновление")
-                        print(id(mini_projection_to_change.projection))
-                        old_mini_pr_in_space_projections = next(mini_projection for mini_projection
-                                                                in self.parent_space.projections
-                                                                if mini_projection == mini_projection_to_change.projection)
-                        if old_mini_pr_in_space_projections:
-                            self.parent_space.projections.remove(old_mini_pr_in_space_projections)
+                        print("OLD projection id:", id(mini_projection_to_change.projection))
 
-                        self.set_subprojection_position_from_its_scene_position()#scaled=mini_projection_to_change.projection.scaled_projection_pixmap)
+                        # Аккуратно ищем старую проекцию внутри parent_space.projections
+                        old_projection = next(
+                            (pr for pr in self.parent_space.projections
+                             if pr is mini_projection_to_change.projection),
+                            None
+                        )
 
+                        if old_projection is not None:
+                            self.parent_space.projections.remove(old_projection)
+                        else:
+                            print("Старой проекции не найдено в parent_space.projections!")
+
+                        # Обновляем позицию
+                        self.set_subprojection_position_from_its_scene_position()
+
+                        # Обновляем мини-сцену
                         mini_projection_to_change.update_scene(projection_to_save_or_update)
 
+                        # Добавляем новую/обновлённую проекцию обратно
                         self.parent_space.projections.append(mini_projection_to_change.projection)
 
-                        print(id(mini_projection_to_change.projection))
-                        print(id(self.parent_space.projections[0]))
+                        print("NEW projection id:", id(mini_projection_to_change.projection))
 
+                        # Обновляем расположение мини-проекций
                         self.update_mini_projections_layout()
 
                     # Если мини проекция не сохранена, то сохраняем её
@@ -1550,15 +1565,16 @@ class MainWidget(QWidget):
             # Если не передали draggable_parent — берём из draggable.parent
             if draggable_parent is None:
                 draggable_parent = draggable.parent
+                print(f"draggable_parent: {draggable_parent}")
 
             # 1) Удаляем в main_projection
             if self.main_projection is not None and self.main_projection.sub_projections:
-                if draggable is None:
-                    sub_of_draggable = next((sub for sub in self.main_projection.sub_projections
-                                             if sub.reference_to_parent_space == draggable_parent
-                                             or sub.reference_to_parent_thing == draggable_parent), None)
-                    if sub_of_draggable is not None:
-                        self.delete_one_subprojection(sub_of_draggable.scaled_projection_pixmap)
+                #if draggable is None:
+                sub_of_draggable = next((sub for sub in self.main_projection.sub_projections
+                                         if sub.reference_to_parent_space is draggable_parent
+                                         or sub.reference_to_parent_thing is draggable_parent), None)
+                if sub_of_draggable is not None:
+                    self.delete_one_subprojection(sub_of_draggable.scaled_projection_pixmap)
 
             # 2) Удаляем в мини-развёртках
             if not self.mini_projections_list:
@@ -1576,8 +1592,8 @@ class MainWidget(QWidget):
                 sub_to_remove = next(
                     (
                         sub for sub in subs
-                        if sub.reference_to_parent_thing == draggable_parent
-                           or sub.reference_to_parent_space == draggable_parent
+                        if sub.reference_to_parent_thing is draggable_parent
+                           or sub.reference_to_parent_space is draggable_parent
                     ),
                     None
                 )
@@ -1707,49 +1723,59 @@ class MainWidget(QWidget):
             print(e)
 
 
-    def save_space_to_DB(self, schow_message=True):
-        # Проверка прав
+    def save_space_to_DB(self, show_message=True):
+        # 1. Проверка прав
         if not self.access_manager.can_edit(self.parent_space):
             QMessageBox.warning(
                 self,
                 "Доступ запрещён",
                 "У вас нет прав для сохранения пространства."
             )
-            return
+            return False
 
-        # Сохраняем текущую мини-развертку, если она ещё не сохранена
-        #if self.mini_projections_list:
         if not self.is_current_projection_saved():
             reply = QMessageBox.question(
                 self,
-                "Сохранить текущую развертку",
-                "Текущая развертка не сохранена!\nХотите сохранить текущую развертку?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                "Сохранение проекции",
+                "Изменения проекции не сохранены!\nХотите их сохранить?",
                 QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel
             )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.save_or_update_mini_projection(self.parent_space.current_projection, check_permissions=False)
 
-        # Фиксируем, какие пространства новые до сохранения
+            if reply == QMessageBox.StandardButton.Yes:
+                self.save_or_update_mini_projection(
+                    self.main_projection,
+                    check_permissions=False
+                )
+            elif reply == QMessageBox.StandardButton.Cancel:
+                return False
+
+        # Фиксация новых пространств (до сохранения)
         new_spaces = self._collect_new_spaces(self.parent_space)
 
-        # Сохраняем пространство и все подпространства
-        self.parent_space.save_space(schow_message)
+        # Сохранение пространства
+        self.parent_space.save_space(show_message)
 
+        # Назначение ролей
         try:
-            # Добавляем права editor для всех новых пространств
             if new_spaces:
                 self._assign_editor_role_to_new_spaces(new_spaces)
         except Exception as e:
             QMessageBox.warning(
                 self,
                 "Ошибка",
-                f"Не удалось добавить права редактора для новых пространств!\nОбратитесь к администратору!"
+                "Не удалось добавить права редактора для новых пространств!\n"
+                "Обратитесь к администратору!"
             )
             print(f"Ошибка при назначении ролей редактора: {e}")
+            return False
 
-        # Обновляем дерево
+        # Обновление дерева
         self.show_full_structure_of_space()
+
+        return True
 
 
     def _collect_new_spaces(self, sp):
@@ -1829,6 +1855,7 @@ class MainWidget(QWidget):
                         return
                     self.save_space_to_DB()
                     self.parent_space = space_to_open
+                    self.main_projection = None
                     self.load_space_from_DB(space_to_open.id_space)
 
                 elif reply == QMessageBox.StandardButton.No:
@@ -1854,6 +1881,7 @@ class MainWidget(QWidget):
                                 space_to_open.projections.remove(projection)
 
                     if space_to_open.state == ObjectState.NEW:
+                        self.main_projection = None
                         self.parent_space = space_to_open
                         space_to_open.id_parent_space = None
                         # если подпространство новое, то у него не может быть ни подразверток,
@@ -1893,29 +1921,60 @@ class MainWidget(QWidget):
 
 
     def save_current_space(self):
-        if not self.is_current_space_saved():
-            reply = QMessageBox.question(
-                self,
-                "Сохранить текущее пространство",
-                "Текущее пространство не сохранено!\nХотите сохранить его?",
-                QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
-                | QMessageBox.StandardButton.Yes,
+        """
+        Проверяет, сохранено ли текущее пространство, и при необходимости
+        запрашивает у пользователя, нужно ли его сохранить.
+
+        :return: bool
+            True  — можно открывать другое пространство.
+            False — операция отменена.
+        """
+        open_space = True
+
+        # Если сохранено — можно открывать новое пространство
+        if self.is_current_space_saved():
+            return True
+
+        # Если НЕ сохранено — спрашиваем
+        reply = QMessageBox.question(
+            self,
+            "Сохранить текущее пространство",
+            "Текущее пространство не сохранено!\nХотите сохранить его?",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+
+            # Проверка прав
+            if not self.access_manager.can_edit(self.parent_space):
+                question = QMessageBox.question(
+                    self,
+                    "Доступ запрещён",
+                    "У вас нет прав для сохранения этого пространства.\n"
+                    "Всё равно открыть другое пространство?",
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No
+                    | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel
                 )
+                if question == QMessageBox.StandardButton.Yes:
+                    return True
+                return False
 
-            if reply == QMessageBox.StandardButton.Yes:
+            # Сохраняем и разрешаем открыть другое пространство
+            self.save_space_to_DB()
+            return True
 
-                # Проверка прав
-                if not self.access_manager.can_edit(self.parent_space):
-                    QMessageBox.warning(
-                        self,
-                        "Доступ запрещён",
-                        "У вас нет прав для сохранения этого пространства."
-                    )
-                    return
-                self.save_space_to_DB()
-            if reply == QMessageBox.StandardButton.No:
-                return
+        if reply == QMessageBox.StandardButton.No:
+            return True
+
+        if reply == QMessageBox.StandardButton.Cancel:
+            return False
+
+        return False
 
 
     def load_space_from_DB(self, id_space, thing_to_show=None):
@@ -1932,17 +1991,33 @@ class MainWidget(QWidget):
                 self.current_index = 1
                 self.stack_widget.setCurrentIndex(self.current_index)
 
+            self.main_projection = None
+            self.x_scale = None
+            self.y_scale = None
             if self.mini_projections_list:
                 self.mini_projections_list.clear()
-                self.update_mini_projections_layout()
 
             self.update_tree_view()
             self.update_images_layout()
 
             if not self.parent_space.projections:
+                self.update_mini_projections_layout()
                 self.update_main_scene()
-
             else:
+
+                for proj in self.parent_space.projections:
+                    if proj.sub_projections:
+                        for sub in proj.sub_projections:
+                            sub.scaled_projection_pixmap = QGraphicsPixmapItem(sub.original_pixmap)
+
+                    new_mini_projection = container.ProjectionContainer(
+                        proj,
+                        self,
+                        copy=False
+                    )
+
+                    self.mini_projections_list.append(new_mini_projection)
+                self.update_mini_projections_layout()
 
                 for proj in self.parent_space.projections:
                     for subproj in proj.sub_projections:
@@ -1957,52 +2032,58 @@ class MainWidget(QWidget):
                                 (space_item for space_item in self.parent_space.subspaces
                                  if space_item.id_space == subproj.id_parent_space), None)
 
-                subprojection = None
-                if thing_to_show is not None:
-                    # выбираем как главную развёртку ту, на которой есть подразвертка вещи,
-                    # которую пользователь хочет увидеть в пространтсве
-                    for proj in self.parent_space.projections:
-                        if proj.sub_projections:
-                            subprojection = next(
-                                (
-                                    subprojection
-                                    for subprojection in proj.sub_projections
-                                    if getattr(subprojection.reference_to_parent_thing, "id_thing",
-                                               None) == thing_to_show.id_thing
-                                ),
-                                None
-                            )
+                    subprojection = None
+                    if thing_to_show is not None:
+                        # выбираем как главную развёртку ту, на которой есть подразвертка вещи,
+                        # которую пользователь хочет увидеть в пространтсве
+                        for proj in self.parent_space.projections:
+                            if proj.sub_projections:
+                                subprojection = next(
+                                    (
+                                        subprojection
+                                        for subprojection in proj.sub_projections
+                                        if getattr(subprojection.reference_to_parent_thing, "id_thing",
+                                                   None) == thing_to_show.id_thing
+                                    ),
+                                    None
+                                )
 
-                            if subprojection is not None:
-                                #print(f"subprojection: {subprojection}")
-                                self.parent_space.current_projection = proj
-                                break
+                                if subprojection is not None:
+                                    mini_for_main_scene = next((mini for mini in self.mini_projections_list
+                                                                if mini.projection is proj), None)
+                                    # устанавливаем мини на главную сцену
+                                    self.set_mini_projection_on_main_scene(mini_for_main_scene)
+                                    break
 
-                if subprojection is None:
-                    # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
-                    # если подразвёрток ни у одной развертки нет, то первую в списке projections
-                    self.parent_space.current_projection = max(self.parent_space.projections,
-                                                               key=lambda p: len(p.sub_projections))
+                    if subprojection is None:
+                        # выбираем как главную развёртку ту, у которой самое большое количество подразверток или,
+                        # если подразвёрток ни у одной развертки нет, то первую в списке projections
+                        projection_for_main_scene = max(self.parent_space.projections,
+                                                   key=lambda p: len(p.sub_projections))
+                        mini_for_main_scene = next((mini for mini in self.mini_projections_list
+                                                    if mini.projection is projection_for_main_scene), None)
+                        if mini_for_main_scene is not None:
+                            self.set_mini_projection_on_main_scene(mini_for_main_scene)
 
-                self.x_scale = (self.parent_space.current_projection.original_pixmap.width()
-                                / self.parent_space.current_projection.projection_width)
-                self.y_scale = (self.parent_space.current_projection.original_pixmap.height()
-                                / self.parent_space.current_projection.projection_height)
 
-                self.update_main_scene(True)
+                    top_mini = next((mini for mini in self.mini_projections_list
+                                     if mini.saved_projection == self.main_projection), None)
+                    if top_mini is not None:
+                        i = next((i for i, obj in enumerate(self.mini_projections_list) if
+                                 obj.saved_projection == self.main_projection), None)
+                        if i is not None:
+                            self.mini_projections_list.insert(0, self.mini_projections_list.pop(i))
 
-                for proj in self.parent_space.projections:
-                    self.save_or_update_mini_projection(proj, check_permissions=False)
 
-                # TODO если пользователь хотел посмотреть вещь в пространстве,
-                #  а ни одной развертки этой вещи нет в пространсте, то лучше вообще не открывать пространство,
-                #  а просто вывести сообщение.
-                if thing_to_show is not None and subprojection is None:
-                    QMessageBox.information(self, "Вещь без проекции",
-                                            f"Для вещи {thing_to_show.name} в этом пространстве нет ни одной проекции.")
+                    # TODO если пользователь хотел посмотреть вещь в пространстве,
+                    #  а ни одной развертки этой вещи нет в пространсте, то лучше вообще не открывать пространство,
+                    #  а просто вывести сообщение.
+                    if thing_to_show is not None and subprojection is None:
+                        QMessageBox.information(self, "Вещь без проекции",
+                                                f"Для вещи {thing_to_show.name} в этом пространстве нет ни одной проекции.")
 
-                if thing_to_show is not None and subprojection is not None:
-                    self.highlight_subprojections_on_mini_projections(thing_to_highlight=thing_to_show)
+                    if thing_to_show is not None and subprojection is not None:
+                        self.highlight_subprojections_on_mini_projections(thing_to_highlight=thing_to_show)
 
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
@@ -2012,6 +2093,7 @@ class MainWidget(QWidget):
 
         except Exception as e:
             print(e)
+            traceback.print_exc()
 
 
     def load_parent_space_from_DB(self):
@@ -2288,29 +2370,14 @@ class MainWidget(QWidget):
 
                 # Удаляем подразвёртки перемещаемого подпространства (вещи) с развёрток текущего пространства
                 # (если переносим само пространство, то достаточно изменить его id_parent_space)
-                if item_to_move != self.parent_space:
-                    if self.parent_space and self.parent_space.projections:
-                        for proj in self.parent_space.projections:
-                            subprojections_to_remove = [
-                                pr for pr in proj.sub_projections
-                                if pr.reference_to_parent_projection == proj
-                                   and
-                                   (pr.reference_to_parent_space == item_to_move
-                                    or pr.reference_to_parent_thing == item_to_move)
-                            ]
-                            for pr in subprojections_to_remove:
-                                if pr in proj.sub_projections:
-                                    if pr.state == ObjectState.NEW:
-                                        proj.sub_projections.remove(pr)
-                                    else:
-                                        pr.mark_deleted()
+                self.delete_all_subprojections(draggable_parent=item_to_move)
 
-                self.update_main_scene(set_position=True)
-                if self.parent_space and self.parent_space.projections:
-                    for proj in self.parent_space.projections:
-                        self.save_or_update_mini_projection(proj)
                 item_to_move.id_parent_space = id_space
-                self.save_space_to_DB(schow_message=False)
+
+                if self.main_projection:
+                    self.save_or_update_mini_projection(self.main_projection)
+
+                self.save_space_to_DB(show_message=False)
 
                 if item_to_move != self.parent_space:
                     if isinstance(item_to_move, space.Space):
@@ -2431,6 +2498,9 @@ class MainWidget(QWidget):
 
     def highlight_subprojections_on_mini_projections(self, parent=None, thing_to_highlight=None):
         try:
+            if thing_to_highlight is not None:
+                parent = thing_to_highlight
+
             if self.main_projection is not None and parent is not None:
                 self.scene.clear_highlights()
                 # ходим стрелками или выбираем мышью в дереве справа подпространство или вещь
@@ -2545,14 +2615,6 @@ class MainWidget(QWidget):
         #try:
         utils.clear_layout(self.layout_projections_of_space)
 
-        # current_projection = next((mini_projection for mini_projection in self.mini_projections_list
-        #                            if mini_projection.saved_projection == self.parent_space.current_projection), None)
-        #
-        # # то, что отображено на главной сцене в виджете мини сцен будет на самом верху
-        # if current_projection:
-        #     self.mini_projections_list.remove(current_projection)
-        #     self.mini_projections_list.insert(0, current_projection)
-
         print(self.mini_projections_list)
 
         #if self.mini_projections_list:
@@ -2568,19 +2630,6 @@ class MainWidget(QWidget):
 
         # except Exception as e:
         #     print(e)
-
-
-    # def is_current_projection_saved(self):
-    #     if self.placeholder_for_projection_1 is not None and self.placeholder_for_projection_2 is not None:
-    #         return True
-    #     else:
-    #         mini_projection = next((mini for mini in self.mini_projections_list
-    #                          if mini.saved_projection == self.parent_space.current_projection), None)
-    #         if mini_projection:
-    #             is_main_scene_equal_to_mini_scene = self.is_main_scene_equal_to_mini_scene(mini_projection)
-    #             return is_main_scene_equal_to_mini_scene
-    #         else:
-    #             return False
 
 
     def is_current_projection_saved(self):

@@ -132,10 +132,14 @@ class TreeWidgetForSearch(QTreeView):
 
     def open_space(self, index: QModelIndex):
         node = index.internalPointer()
+        # для пользователя этот случай должен выглядеть, как "Пространство без доступа"
         if not self.app_ref.access_manager.can_view(node.ref.id_space):
             return
-        self.app_ref.save_current_space()
-        self.app_ref.load_space_from_DB(node.ref.id_space)
+        open_space = self.app_ref.save_current_space()
+        if open_space:
+            self.app_ref.load_space_from_DB(node.ref.id_space)
+        else:
+            return
 
 
     def show_thing_in_space(self, index: QModelIndex):

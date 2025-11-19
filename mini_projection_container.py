@@ -6,13 +6,16 @@ from track_object_state import ObjectState
 
 
 class ProjectionContainer(QWidget):
-    def __init__(self, projection_to_save, app):
+    def __init__(self, projection_to_save, app, copy=True):
         super().__init__()
 
         self.app_ref = app
 
         self.saved_projection = projection_to_save
-        self.projection = projection_to_save.copy()
+        if not copy:
+            self.projection = projection_to_save
+        else:
+            self.projection = projection_to_save.copy()
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
