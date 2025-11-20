@@ -74,8 +74,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.action_delete_space)
 
         screen = QApplication.primaryScreen().geometry()
-        coef_width = 0.9
-        coef_height = 0.9
+        coef_width = 0.6
+        coef_height = 0.6
         window_width = int(screen.width() * coef_width)
         window_height = int(screen.height() * coef_height)
         self.resize(window_width, window_height)
@@ -185,8 +185,9 @@ class MainWidget(QWidget):
         self.wellcome_scene = QGraphicsScene()
         self.wellcome_view = zoomable_graphics_view.ZoomableGraphicsView(self.wellcome_scene) #QGraphicsView(wellcome_scene)
 
-        self.wellcome_placeholder_pixmap = QPixmap(utils.resource_path("icons/LOGO_1.png"))
+        self.wellcome_placeholder_pixmap = QPixmap(utils.resource_path("icons/LOGO_1_new.png"))
         self.wellcome_placeholder = QGraphicsPixmapItem(self.wellcome_placeholder_pixmap)
+        self.wellcome_placeholder.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
         self.wellcome_scene.addItem(self.wellcome_placeholder)
         self.wellcome_scene.setSceneRect(self.wellcome_scene.itemsBoundingRect())
 
@@ -1302,12 +1303,10 @@ class MainWidget(QWidget):
                         print("Обновление")
                         print("OLD projection id:", id(mini_projection_to_change.projection))
 
-                        if (
-                                mini_projection_to_change.saved_projection == self.main_projection
-                                and self.is_main_scene_equal_to_mini_scene(mini_projection_to_change)
-                        ):
-                            print("Эта развёртка уже сохранена и её текущее состояние соответствует сохраненному!")
-                            return
+                        # # TODO
+                        # if self.is_current_projection_saved():
+                        #     print("Эта развёртка уже сохранена и её текущее состояние соответствует сохраненному!")
+                        #     return
 
                         # Ищем старую проекцию внутри parent_space.projections
                         old_projection = next(
@@ -1503,13 +1502,10 @@ class MainWidget(QWidget):
                                                     if mini == mini_projection), None)
 
             if mini_projection_to_set_on_scene:
-
-                if (
-                        mini_projection_to_set_on_scene.saved_projection == self.main_projection
-                        and self.is_main_scene_equal_to_mini_scene(mini_projection_to_set_on_scene)
-                ):
-                    print("Эта развёртка уже на главной сцене!")
-                    return
+                # # TODO
+                # if self.main_projection is not None and self.is_current_projection_saved():
+                #     print("Эта развёртка уже на главной сцене!")
+                #     return
 
                 print(f"parent_space.projections: {self.parent_space.projections}")
                 self.main_projection = mini_projection_to_set_on_scene.projection.copy()
@@ -1637,7 +1633,6 @@ class MainWidget(QWidget):
         except Exception as e:
             print(e)
             traceback.print_exc()
-
 
 
     # ACTION
