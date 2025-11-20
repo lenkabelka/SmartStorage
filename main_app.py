@@ -1302,7 +1302,14 @@ class MainWidget(QWidget):
                         print("Обновление")
                         print("OLD projection id:", id(mini_projection_to_change.projection))
 
-                        # Аккуратно ищем старую проекцию внутри parent_space.projections
+                        if (
+                                mini_projection_to_change.saved_projection == self.main_projection
+                                and self.is_main_scene_equal_to_mini_scene(mini_projection_to_change)
+                        ):
+                            print("Эта развёртка уже сохранена и её текущее состояние соответствует сохраненному!")
+                            return
+
+                        # Ищем старую проекцию внутри parent_space.projections
                         old_projection = next(
                             (pr for pr in self.parent_space.projections
                              if pr is mini_projection_to_change.projection),
@@ -1494,7 +1501,16 @@ class MainWidget(QWidget):
 
             mini_projection_to_set_on_scene = next((mini for mini in self.mini_projections_list
                                                     if mini == mini_projection), None)
+
             if mini_projection_to_set_on_scene:
+
+                if (
+                        mini_projection_to_set_on_scene.saved_projection == self.main_projection
+                        and self.is_main_scene_equal_to_mini_scene(mini_projection_to_set_on_scene)
+                ):
+                    print("Эта развёртка уже на главной сцене!")
+                    return
+
                 print(f"parent_space.projections: {self.parent_space.projections}")
                 self.main_projection = mini_projection_to_set_on_scene.projection.copy()
 
@@ -2322,13 +2338,21 @@ class MainWidget(QWidget):
             spaces_in_DB = None
             if isinstance(item_to_move, thing.Thing):
                 spaces_in_DB = all_spaces_in_DB.load_all_spaces_from_DB(self.user.id, self.user.role)
+                # нет смысла переносить вещь в пространство, в котором она уже находится
                 sp = next((s for s in spaces_in_DB if s[0] == item_to_move.reference_to_parent_space.id_space), None)
                 if sp:
                     spaces_in_DB.remove(sp)
             elif isinstance(item_to_move, space.Space):
+                # так как пространство нельзя перенести в какое-либо из его подпространств,
+                # то load_all_non_subspaces_from_DB возвращает список всех пространств,
+                # исключая подпространства item_to_move
                 spaces_in_DB = all_spaces_in_DB.load_all_non_subspaces_from_DB(self.user.id, self.user.role, item_to_move.id_space)
+                # также нет смысла переносить подпространство в пространство, в котором оно уже находится
+                sp = next((s for s in spaces_in_DB if s[0] == item_to_move.id_parent_space), None)
+                if sp:
+                    spaces_in_DB.remove(sp)
 
-            if spaces_in_DB is None:
+            if not spaces_in_DB: # если None или если пустой список
                 QMessageBox.warning(self, "Нет пространств", "В базе данных пока нет ни одного пространства для переноса!")
                 return
 
@@ -2828,8 +2852,9 @@ class MainWidget(QWidget):
                 self.placeholder_for_projection_2 = None
 
             if self.main_projection is not None:
-                self.main_projection.scaled_projection_pixmap \
-                    = QGraphicsPixmapItem(self.main_projection.original_pixmap)
+                if self.main_projection.scaled_projection_pixmap is None:
+                    self.main_projection.scaled_projection_pixmap \
+                        = QGraphicsPixmapItem(self.main_projection.original_pixmap)
                 # min_z = min((item.zValue() for item in self.scene.items()), default=0)
                 # self.main_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
                 self.main_projection.scaled_projection_pixmap.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
