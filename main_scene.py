@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QGraphicsScene, QGraphicsDropShadowEffect, QGraphicsPixmapItem, QGraphicsItem
-from PyQt6.QtGui import QColor
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QGraphicsScene, QGraphicsDropShadowEffect, QGraphicsPixmapItem, QGraphicsItem, QGraphicsRectItem, QGraphicsColorizeEffect
+from PyQt6.QtGui import QColor, QPen
+from PyQt6.QtCore import pyqtSignal, Qt
 from draggable_pixmap_item import DraggablePixmapItem
 
 class MainScene(QGraphicsScene):
@@ -11,30 +11,34 @@ class MainScene(QGraphicsScene):
         super().__init__(*args, **kwargs)
         self.app_ref = app_ref
 
+        self.current_highlight = None
 
     def mousePressEvent(self, event):
         item = self.itemAt(event.scenePos(), self.views()[0].transform())
 
+        #super().mousePressEvent(event)
+
         if type(item) == DraggablePixmapItem:
             self.draggable_item_click.emit(item.parent)
+            self.focus_and_highlight(item)
             super().mousePressEvent(event)
             #self.focus_and_highlight(item)
             try:
                 # тут item это объект типа DraggablePixmapItem,
                 # у него есть аттрибут parent (вещь Thing или подпространство Space)
-                self.app_ref.highlight_subprojections_on_mini_projections(item.parent)
+                self.app_ref.highlight_subprojections(item.parent)
             except Exception as e:
                 print(f"Ошибка при вызове highlight_subprojections: {e}")
 
         elif type(item) == QGraphicsPixmapItem:
             # Это фон — убираем подсветку
             self.clear_highlights()
-            self.app_ref.highlight_subprojections_on_mini_projections(None)
+            self.app_ref.highlight_subprojections(None)
 
         else:
             # Клик по пустому месту — тоже убираем подсветку
             self.clear_highlights()
-            self.app_ref.highlight_subprojections_on_mini_projections(None)
+            self.app_ref.highlight_subprojections(None)
 
 
 

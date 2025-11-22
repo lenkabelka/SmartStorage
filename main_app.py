@@ -886,12 +886,17 @@ class MainWidget(QWidget):
                         int(round(self.y_scale * data["y_height"]))
                     )
                     try:
+                        proj = QGraphicsPixmapItem(self.main_projection.original_pixmap)
+
                         item = draggable_item.DraggablePixmapItem(
                             pixmap,
                             self,
-                            self.main_projection.scaled_projection_pixmap,
+                            proj,
                             parent=subprojection.reference_to_parent_space or subprojection.reference_to_parent_thing
                         )
+
+                        self.main_projection.scaled_projection_pixmap = proj
+
                     except Exception as e:
                         QMessageBox.critical(
                             self,
@@ -924,13 +929,11 @@ class MainWidget(QWidget):
                         subprojection.projection_width = data["x_width"]
                         subprojection.projection_height = data["y_height"]
                         subprojection.projection_image = data["image"]
-                        item.setPos(subprojection.x_pos, subprojection.y_pos)
+
                         subprojection.original_pixmap = pixmap
                         subprojection.scaled_projection_pixmap = item
-                        self.scene.removeItem(draggable)
-
-                        self.scene.addItem(item)
-                        self.scene.update_items_movable_flag()
+                        self.set_subprojection_position_from_its_scene_position()
+                        self.update_main_scene(set_position=True)
                         break
                     else:
                         new_position = None
@@ -951,12 +954,12 @@ class MainWidget(QWidget):
                             subprojection.projection_width = data["x_width"]
                             subprojection.projection_height = data["y_height"]
                             subprojection.projection_image = data["image"]
+                            subprojection.original_pixmap = pixmap
                             subprojection.scaled_projection_pixmap = item
-                            item.setPos(new_position)
-                            self.scene.removeItem(draggable)
-                            # TODO сохранять подсветку
-                            self.scene.addItem(item)
-                            self.scene.update_items_movable_flag()
+                            self.set_subprojection_position_from_its_scene_position()
+                            subprojection.x_pos = new_position.x()
+                            subprojection.y_pos = new_position.y()
+                            self.update_main_scene(set_position=True)
 
                             break
             else:
@@ -1350,6 +1353,9 @@ class MainWidget(QWidget):
                             self#,
                             #self.container_projections_of_space
                         )
+
+                        print(f"AAAAAAAAA---------{new_mini_projection.projection.reference_to_parent_space 
+                              or new_mini_projection.projection.reference_to_parent_thing}")
 
                         #if self.main_projection.state == ObjectState.NEW:
                         self.parent_space.projections.append(new_mini_projection.projection)
@@ -1992,6 +1998,9 @@ class MainWidget(QWidget):
 
     def load_space_from_DB(self, id_space, thing_to_show=None):
         try:
+
+            print(f"ВЕЩЬ ................. {id(thing_to_show)}")
+
             loaded_space = space.load_space_by_id(id_space)
             # Проверка прав
             if loaded_space is not None:
@@ -2029,6 +2038,10 @@ class MainWidget(QWidget):
                         copy=False
                     )
 
+                    for s in new_mini_projection.projection.sub_projections:
+                        print(f"!!!!!!!!!!!------------ {s.reference_to_parent_space 
+                                              or s.reference_to_parent_thing}")
+
                     self.mini_projections_list.append(new_mini_projection)
                 self.update_mini_projections_layout()
 
@@ -2065,7 +2078,16 @@ class MainWidget(QWidget):
                                     mini_for_main_scene = next((mini for mini in self.mini_projections_list
                                                                 if mini.projection is proj), None)
                                     # устанавливаем мини на главную сцену
+                                    print("ДЛЯ МИНИ СЦЕНЫ!")
+                                    for s in mini_for_main_scene.projection.sub_projections:
+                                        print(id(s.reference_to_parent_space or s.reference_to_parent_thing))
+
                                     self.set_mini_projection_on_main_scene(mini_for_main_scene)
+
+                                    print("ДЛЯ ГЛАВНОЙ СЦЕНЫ!")
+                                    for s in self.main_projection.sub_projections:
+                                        print(id(s.reference_to_parent_space or s.reference_to_parent_thing))
+
                                     break
 
                     if subprojection is None:
@@ -2096,13 +2118,14 @@ class MainWidget(QWidget):
                                                 f"Для вещи {thing_to_show.name} в этом пространстве нет ни одной проекции.")
 
                     if thing_to_show is not None and subprojection is not None:
-                        self.highlight_subprojections_on_mini_projections(thing_to_highlight=thing_to_show)
+                        self.highlight_subprojections(thing_to_highlight=thing_to_show)
 
             self.space_changed.emit()
             self.set_buttons_disabled_or_enabled()
 
-            if thing_to_show is not None:
-                self.handle_node_clicked(thing_to_show)
+            # if thing_to_show is not None:
+            #     self.tree.highlight_node(thing_to_show)
+            #     #self.handle_node_clicked(thing_to_show)
 
         except Exception as e:
             print(e)
@@ -2517,21 +2540,36 @@ class MainWidget(QWidget):
                 mini.clear_highlights()
 
 
-    def highlight_subprojections_on_mini_projections(self, parent=None, thing_to_highlight=None):
+    def highlight_subprojections(self, parent=None, thing_to_highlight=None):
         try:
             if thing_to_highlight is not None:
                 parent = thing_to_highlight
+                print(f"---!!! {parent}")
 
             if self.main_projection is not None and parent is not None:
+
+                if self.main_projection.sub_projections:
+                    for s in self.main_projection.sub_projections:
+                        print(f"------{parent == s.reference_to_parent_space or s.reference_to_parent_thing}")
+                        print(id(parent))
+                        print(id(s.reference_to_parent_space or s.reference_to_parent_thing))
+
                 self.scene.clear_highlights()
                 # ходим стрелками или выбираем мышью в дереве справа подпространство или вещь
                 # или одинарный клик мышью на draggable на главной сцене
                 subprojection_to_highlight_on_main_scene = next(
                     (sub for sub in self.main_projection.sub_projections if self.main_projection.sub_projections
                      and (getattr(sub, "reference_to_parent_space", None) == parent
-                          or getattr(sub, "reference_to_parent_thing", None) == parent)),
+                          or getattr(sub, "reference_to_parent_thing", None) == parent
+                          or (
+                                  getattr(sub, "id_parent_thing", None) == getattr(parent, "id_thing", None)
+                                  and getattr(sub, "id_parent_thing", None) is not None)
+
+                     )
+                     ),
                     None
                 )
+                print(subprojection_to_highlight_on_main_scene)
                 if subprojection_to_highlight_on_main_scene:
                     self.scene.focus_and_highlight(subprojection_to_highlight_on_main_scene.scaled_projection_pixmap)
 
@@ -2548,7 +2586,17 @@ class MainWidget(QWidget):
                         subprojection_to_highlight = next(
                             (sub for sub in mini.projection.sub_projections if mini.projection.sub_projections
                              and (getattr(sub, "reference_to_parent_space", None) == parent
-                                  or getattr(sub, "reference_to_parent_thing", None) == parent)),
+                                  or getattr(sub, "reference_to_parent_thing", None) == parent
+                                  or (
+
+                                        # если пользователь нажимает "Посмотреть вещь в пространстве"
+                                      # из дополнительного дерева с полной структурой пространства,
+                                      # то происходит загрузка верхнего пространства для self.parent_space,
+                                      # т.е. все экземпляры Space и т.д. будут созданы и они не те же экземпляры,
+                                      # что для дерева справа, поэтому reference_to_parent_thing другой и
+                                      # поэтому подсветка возможна только по id
+                                          getattr(sub, "id_parent_thing", None) == getattr(parent, "id_thing", None)
+                                  and getattr(sub, "id_parent_thing", None) is not None))),
                             None
                         )
 
@@ -2961,8 +3009,8 @@ class MainWidget(QWidget):
                 target_draggable.setGraphicsEffect(effect)
 
             #draggable_pixmap_item = None
-            if self.parent_space.current_projection:
-                if self.parent_space.current_projection.sub_projections:
+            if self.main_projection:
+                if self.main_projection.sub_projections:
 
                     draggable_on_scene = None
 
@@ -2972,7 +3020,7 @@ class MainWidget(QWidget):
                             subprojection = next(
                                 (
                                     subprojection
-                                    for subprojection in self.parent_space.current_projection.sub_projections
+                                    for subprojection in self.main_projection.sub_projections
                                     if getattr(subprojection.reference_to_parent_thing, "id_thing",
                                                None) == clicked_ref.id_thing
                                 ),
@@ -2980,7 +3028,7 @@ class MainWidget(QWidget):
                             )
                         else:
                             subprojection = next((subprojection for subprojection
-                                                  in self.parent_space.current_projection.sub_projections
+                                                  in self.main_projection.sub_projections
                                                   if subprojection.reference_to_parent_thing == clicked_ref), None)
 
                         if subprojection:
@@ -2992,7 +3040,7 @@ class MainWidget(QWidget):
 
                     else:
                         subprojection = next((subprojection for subprojection
-                                              in self.parent_space.current_projection.sub_projections
+                                              in self.main_projection.sub_projections
                                               if subprojection.reference_to_parent_space == clicked_ref), None)
 
 

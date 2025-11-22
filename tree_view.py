@@ -192,7 +192,7 @@ class TreeWidget(QTreeView):
                     # Узел с родителем - подсвечиваем
                     if node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
                         self.app_ref.handle_node_clicked(node.ref)
-                        self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+                        self.app_ref.highlight_subprojections(node.ref)
                 else:
                     # Верхний уровень - очищаем подсветку
                     self.app_ref.clear_highlights_on_main_and_mini_scenes()
@@ -213,7 +213,7 @@ class TreeWidget(QTreeView):
                     # Узел с родителем - подсвечиваем
                     if node and node.node_type in (TreeNode.TYPE_SPACE, TreeNode.TYPE_THING):
                         self.app_ref.handle_node_clicked(node.ref)
-                        self.app_ref.highlight_subprojections_on_mini_projections(node.ref)
+                        self.app_ref.highlight_subprojections(node.ref)
                 else:
                     # Верхний уровень - очищаем подсветку
                     self.app_ref.clear_highlights_on_main_and_mini_scenes()

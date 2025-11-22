@@ -267,7 +267,7 @@ class Projection(track_object_state.Trackable):
                 self.sub_projections.remove(sub_projection)
 
 
-def load_space_projections(space_in_DB, cursor) -> list[Projection]:
+def load_space_projections(space_in_DB, cursor, space, subspaces=None, things=None) -> list[Projection]:
 
     # Загружаем только развертки. Подразвертки не загружаем в список разверток id_parent_projection IS NULL
     query = """
@@ -343,10 +343,12 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
                 id_parent_space=id_parent_space_DB,
                 id_parent_thing=id_parent_thing_DB,
                 original_pixmap=scaled_cropped_pixmap,
-                scaled_projection_pixmap=QGraphicsPixmapItem(scaled_cropped_pixmap)
+                scaled_projection_pixmap=QGraphicsPixmapItem(scaled_cropped_pixmap),
+
+                reference_to_parent_space=space
             )
 
-            projection_from_DB.sub_projections = load_projection_subprojections(projection_from_DB, cursor)
+            projection_from_DB.sub_projections = load_projection_subprojections(projection_from_DB, cursor, subspaces=subspaces, things=things)
 
             print(f"projection_from_DB.sub_projections: {projection_from_DB.sub_projections}")
 
@@ -359,7 +361,7 @@ def load_space_projections(space_in_DB, cursor) -> list[Projection]:
     return projections
 
 
-def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]:
+def load_projection_subprojections(proj: Projection, cursor, subspaces=None, things=None) -> list[Projection]:
 
     query = """
         SELECT 
@@ -426,6 +428,7 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
             int(round(y_scale * height_DB))
         )
 
+
         try:
             subprojection = Projection(
                 projection_name=projection_name_DB,
@@ -444,6 +447,26 @@ def load_projection_subprojections(proj: Projection, cursor) -> list[Projection]
             )
 
             subprojection.reference_to_parent_projection = proj
+
+            # привязка к подпространству
+            if subspaces is not None and id_parent_space_DB is not None:
+                parent_subspace = next(
+                    (subspace for subspace in subspaces if
+                     subprojection.id_parent_space == id_parent_space_DB),
+                    None
+                )
+                if parent_subspace:
+                    subprojection.reference_to_parent_space = parent_subspace
+
+            # привязка к вещи
+            if things is not None and id_parent_thing_DB is not None:
+                parent_thing = next(
+                    (th for th in things if subprojection.id_parent_thing == id_parent_thing_DB),
+                    None
+                )
+                if parent_thing:
+                    subprojection.reference_to_parent_thing = parent_thing
+
 
         except Exception as e:
             print(f"Ошибка при создании Projection: {e}")

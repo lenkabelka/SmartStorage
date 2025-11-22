@@ -146,8 +146,7 @@ class TreeWidgetForSearch(QTreeView):
         node = index.internalPointer()
         print(f"NODE: {node.ref}")
 
-        # TODO: вещь не подсветится, если пространство новое
         self.app_ref.load_space_from_DB(
-            index.internalPointer().ref.id_parent_space,
+            node.ref.id_parent_space,
             thing_to_show=node.ref
         )

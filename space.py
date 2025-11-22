@@ -197,7 +197,10 @@ def load_space_by_id(id_space: int) -> Space:
                 space_from_DB.space_images = im.load_images_for_parent(id_space_db, "space", cursor)
                 space_from_DB.subspaces = load_space_subspaces(id_space_db, cursor)
                 space_from_DB.things = th.load_space_things(space_from_DB, cursor)
-                space_from_DB.projections = projection.load_space_projections(space_from_DB, cursor)
+                space_from_DB.projections = projection.load_space_projections(space_from_DB, cursor,
+                                                                              space=space_from_DB,
+                                                                              subspaces=space_from_DB.subspaces,
+                                                                              things=space_from_DB.things)
 
                 return space_from_DB
     finally:
