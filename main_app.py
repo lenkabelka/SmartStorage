@@ -116,6 +116,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         try:
             if self.main_widget.is_current_space_saved():
+                self.main_widget.tree_view_of_full_space_structure.close()
                 event.accept()
 
             else:
@@ -142,6 +143,7 @@ class MainWindow(QMainWindow):
                     event.accept()
 
                 elif reply == QMessageBox.StandardButton.No:
+                    self.main_widget.tree_view_of_full_space_structure.close()
                     event.accept()
 
                 elif reply == QMessageBox.StandardButton.Cancel:
