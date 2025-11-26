@@ -2897,11 +2897,11 @@ class MainWidget(QWidget):
                 self.placeholder_for_projection_2 = None
 
             if self.main_projection is not None:
-                if self.main_projection.scaled_projection_pixmap is None:
-                    self.main_projection.scaled_projection_pixmap \
-                        = QGraphicsPixmapItem(self.main_projection.original_pixmap)
+                #if self.main_projection.scaled_projection_pixmap is None:
+                self.main_projection.scaled_projection_pixmap \
+                    = QGraphicsPixmapItem(self.main_projection.original_pixmap)
                 # min_z = min((item.zValue() for item in self.scene.items()), default=0)
-                # self.main_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний план
+                # self.main_projection.scaled_projection_pixmap.setZValue(min_z - 1)  # Отправляем фон на самый задний планq
                 self.main_projection.scaled_projection_pixmap.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
                 self.scene.addItem(self.main_projection.scaled_projection_pixmap)
 
